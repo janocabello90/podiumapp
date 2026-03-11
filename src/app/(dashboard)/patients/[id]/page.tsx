@@ -84,6 +84,7 @@ export default async function PatientDetailPage({
                   <AnamnesisActions
                     patientId={patient.id}
                     clinicId={patient.clinic_id}
+                    patientName={patient.full_name}
                     currentAnamnesis={latestAnamnesis}
                   />
                 </div>
