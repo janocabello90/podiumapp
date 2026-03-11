@@ -33,6 +33,7 @@ export default async function PatientDetailPage({
   const latestAssessment = patient.assessments?.[0]
   const patientDocuments = patient.documents || []
   const hasDocuments = patientDocuments.length > 0
+  const latestReport = patient.reports?.[0]
   const age = patient.date_of_birth
     ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
@@ -166,16 +167,57 @@ export default async function PatientDetailPage({
               </div>
 
               {/* Step 4: Report */}
-              <div className="flex items-start gap-4 p-4 rounded-xl border border-gray-100">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 text-gray-400">
+              <div className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  latestReport?.status === 'approved'
+                    ? 'bg-green-100 text-green-600'
+                    : latestReport
+                    ? 'bg-yellow-100 text-yellow-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}>
                   <FileText className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
                   <h3 className="font-medium text-gray-900">4. Informe final</h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Generación automática con IA
+                    {latestReport?.status === 'approved'
+                      ? 'Informe aprobado'
+                      : latestReport
+                      ? 'Borrador generado — pendiente de revisi\u00f3n'
+                      : 'Generaci\u00f3n autom\u00e1tica con IA'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">Disponible en Fase 3</p>
+                  <div className="mt-3">
+                    {latestReport?.status === 'approved' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
+                          <Check className="w-3 h-3" />
+                          Aprobado
+                        </span>
+                        <Link
+                          href={`/patients/${patient.id}/report`}
+                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                          Ver / editar / PDF
+                        </Link>
+                      </div>
+                    ) : latestReport ? (
+                      <Link
+                        href={`/patients/${patient.id}/report`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Revisar borrador
+                      </Link>
+                    ) : (
+                      <Link
+                        href={`/patients/${patient.id}/report`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Generar informe
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
