@@ -5,14 +5,16 @@ import { createClient } from '@/lib/supabase/client'
 import { Send, Copy, Check, ExternalLink } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { AnamnesisForm } from '@/types/database'
+import AnamnesisViewer from './AnamnesisViewer'
 
 interface Props {
   patientId: string
   clinicId: string
+  patientName: string
   currentAnamnesis: AnamnesisForm | null | undefined
 }
 
-export default function AnamnesisActions({ patientId, clinicId, currentAnamnesis }: Props) {
+export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis }: Props) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [anamnesisLink, setAnamnesisLink] = useState<string | null>(
@@ -74,9 +76,11 @@ export default function AnamnesisActions({ patientId, clinicId, currentAnamnesis
           <Check className="w-3 h-3" />
           Completada
         </span>
-        <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-          Ver respuestas
-        </button>
+        <AnamnesisViewer
+          formData={currentAnamnesis.form_data || {}}
+          patientName={patientName}
+          completedAt={currentAnamnesis.completed_at}
+        />
       </div>
     )
   }
