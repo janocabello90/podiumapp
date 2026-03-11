@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Send, FileText, Upload, Mic, Check } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
+import DocumentSection from '@/components/documents/DocumentSection'
 
 export default async function PatientDetailPage({
   params,
@@ -30,6 +31,8 @@ export default async function PatientDetailPage({
 
   const latestAnamnesis = patient.anamnesis_forms?.[0]
   const latestAssessment = patient.assessments?.[0]
+  const patientDocuments = patient.documents || []
+  const hasDocuments = patientDocuments.length > 0
   const age = patient.date_of_birth
     ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
@@ -137,16 +140,28 @@ export default async function PatientDetailPage({
               </div>
 
               {/* Step 3: VALD */}
-              <div className="flex items-start gap-4 p-4 rounded-xl border border-gray-100">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-gray-100 text-gray-400">
+              <div className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  hasDocuments
+                    ? 'bg-green-100 text-green-600'
+                    : 'bg-blue-100 text-blue-600'
+                }`}>
                   <Upload className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">3. Informe VALD</h3>
+                  <h3 className="font-medium text-gray-900">3. Informes VALD</h3>
                   <p className="text-sm text-gray-500 mt-0.5">
-                    Subir PDF de valoración funcional
+                    {hasDocuments
+                      ? `${patientDocuments.length} informe${patientDocuments.length > 1 ? 's' : ''} subido${patientDocuments.length > 1 ? 's' : ''}`
+                      : 'Sube los PDF de valoración funcional'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-2">Disponible en Fase 2</p>
+                  <div className="mt-3">
+                    <DocumentSection
+                      patientId={patient.id}
+                      clinicId={patient.clinic_id}
+                      initialDocuments={patientDocuments}
+                    />
+                  </div>
                 </div>
               </div>
 
