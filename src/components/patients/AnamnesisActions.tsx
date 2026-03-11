@@ -80,6 +80,7 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
           formData={currentAnamnesis.form_data || {}}
           patientName={patientName}
           completedAt={currentAnamnesis.completed_at}
+          anamnesisId={currentAnamnesis.id}
         />
       </div>
     )
