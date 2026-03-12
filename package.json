@@ -17,7 +17,7 @@
     "react-dom": "^18",
     "react-hot-toast": "^2.6.0",
     "uuid": "^13.0.0"
-    "@anthropic-ai/sdk": "^0.39.0"
+    "@anthropic-ai/sdk": "^0.39.0",
     "jspdf": "^2.5.2",
   },
   "devDependencies": {
