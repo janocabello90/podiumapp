@@ -42,18 +42,21 @@ function addFooter(doc: jsPDF) {
   doc.text(FOOTER_TEXT, PAGE_WIDTH / 2, pageHeight - 12, { align: 'center' })
 }
 
-function addHeader(doc: jsPDF) {
-  // PODIUM title as header
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(22)
-  doc.setTextColor(50, 50, 50)
-  doc.text('PODIUM', PAGE_WIDTH / 2, 20, { align: 'center' })
+function addHeader(doc: jsPDF, logoDataUrl?: string | null, logoExt?: string) {
+  if (logoDataUrl && logoExt) {
+    // Logo centered in header, max 30mm wide x 12mm tall
+    doc.addImage(logoDataUrl, logoExt, PAGE_WIDTH / 2 - 15, 8, 30, 12)
+  }
 
   // Gold underline
   doc.setDrawColor(218, 165, 32)
   doc.setLineWidth(0.5)
   doc.line(MARGIN_LEFT, 24, PAGE_WIDTH - MARGIN_RIGHT, 24)
 }
+
+// Module-level variables for logo in headers (set once per request)
+let _headerLogoDataUrl: string | null = null
+let _headerLogoExt: string | null = null
 
 function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSize?: number; fontStyle?: string; color?: number[] }): number {
   const fontSize = options?.fontSize || 10
@@ -71,7 +74,7 @@ function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSiz
     if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 10) {
       addFooter(doc)
       doc.addPage()
-      addHeader(doc)
+      addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
       y = MARGIN_TOP + 10
     }
     doc.text(line, MARGIN_LEFT, y)
@@ -85,7 +88,7 @@ function writeSectionTitle(doc: jsPDF, title: string, y: number): number {
   if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 30) {
     addFooter(doc)
     doc.addPage()
-    addHeader(doc)
+    addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
     y = MARGIN_TOP + 10
   }
 
@@ -107,7 +110,7 @@ function writeSubsectionTitle(doc: jsPDF, title: string, y: number): number {
   if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 20) {
     addFooter(doc)
     doc.addPage()
-    addHeader(doc)
+    addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
     y = MARGIN_TOP + 10
   }
 
@@ -133,7 +136,11 @@ export async function POST(request: NextRequest) {
 
     // ===== PAGE 1: COVER =====
 
-    // If clinic has a logo, add it at the top of the cover
+    // Reset logo globals
+    _headerLogoDataUrl = null
+    _headerLogoExt = null
+
+    // If clinic has a logo, load it for cover and headers
     let coverY = 45
     if (clinicLogoUrl) {
       try {
@@ -145,35 +152,32 @@ export async function POST(request: NextRequest) {
           const ext = contentType.includes('png') ? 'PNG' : contentType.includes('svg') ? 'PNG' : 'JPEG'
           const logoDataUrl = `data:${contentType};base64,${logoBase64}`
 
-          // Add logo centered, max 40mm wide x 20mm tall
-          doc.addImage(logoDataUrl, ext, PAGE_WIDTH / 2 - 20, 15, 40, 20)
-          coverY = 42 // Adjust cover start position
+          // Save for headers on subsequent pages
+          _headerLogoDataUrl = logoDataUrl
+          _headerLogoExt = ext
+
+          // Add logo centered on cover, max 50mm wide x 25mm tall
+          doc.addImage(logoDataUrl, ext, PAGE_WIDTH / 2 - 25, 15, 50, 25)
+          coverY = 48
         }
       } catch (e) {
-        // If logo fails to load, continue without it
         console.error('Logo load error:', e)
       }
     }
 
-    // PODIUM header large
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(36)
-    doc.setTextColor(50, 50, 50)
-    doc.text('PODIUM', PAGE_WIDTH / 2, coverY, { align: 'center' })
-
-    // Gold line
+    // Gold line under logo
     doc.setDrawColor(218, 165, 32)
     doc.setLineWidth(0.8)
-    doc.line(MARGIN_LEFT, coverY + 7, PAGE_WIDTH - MARGIN_RIGHT, coverY + 7)
+    doc.line(MARGIN_LEFT, coverY + 2, PAGE_WIDTH - MARGIN_RIGHT, coverY + 2)
 
     // Title
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(16)
     doc.setTextColor(30, 30, 30)
-    doc.text('INFORME VALORACIÓN INTEGRAL AVANZADA PODIUM', PAGE_WIDTH / 2, coverY + 23, { align: 'center' })
+    doc.text('INFORME VALORACIÓN INTEGRAL AVANZADA', PAGE_WIDTH / 2, coverY + 18, { align: 'center' })
 
     // Patient data
-    let y = coverY + 37
+    let y = coverY + 32
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
     doc.setTextColor(50, 50, 50)
@@ -213,7 +217,7 @@ export async function POST(request: NextRequest) {
 
     // ===== PAGE 2: ANAMNESIS =====
     doc.addPage()
-    addHeader(doc)
+    addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
     y = MARGIN_TOP + 10
 
     y = writeSectionTitle(doc, 'RESUMEN DE LA ANAMNESIS', y)
@@ -223,7 +227,7 @@ export async function POST(request: NextRequest) {
 
     // ===== PAGE 3+: EXPLORACIÓN =====
     doc.addPage()
-    addHeader(doc)
+    addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
     y = MARGIN_TOP + 10
 
     y = writeSectionTitle(doc, 'EXPLORACIÓN FÍSICA', y)
@@ -269,7 +273,7 @@ export async function POST(request: NextRequest) {
 
     // ===== CONCLUSIONES =====
     doc.addPage()
-    addHeader(doc)
+    addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
     y = MARGIN_TOP + 10
 
     y = writeSectionTitle(doc, 'CONCLUSIONES FINALES', y)
@@ -280,7 +284,7 @@ export async function POST(request: NextRequest) {
     if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 50) {
       addFooter(doc)
       doc.addPage()
-      addHeader(doc)
+      addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
       y = MARGIN_TOP + 10
     }
 
@@ -296,7 +300,7 @@ export async function POST(request: NextRequest) {
 
     // ===== METHODOLOGY PAGE =====
     doc.addPage()
-    addHeader(doc)
+    addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
     y = MARGIN_TOP + 10
 
     y = writeSectionTitle(doc, 'NUESTRA METODOLOGÍA', y)
