@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -140,7 +140,7 @@ function ProfileSection({ currentUser, currentUserEmail, supabase }: { currentUs
   )
 }
 
-// ===================== CLINIC (via API route) =====================
+// ===================== CLINIC (via API route with service_role) =====================
 function ClinicSection({ clinic }: { clinic: Clinic | null }) {
   const [name, setName] = useState(clinic?.name || '')
   const [phone, setPhone] = useState(clinic?.phone || '')
@@ -444,18 +444,27 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
 
 // ===================== REPORT CUSTOMIZATION + LOGO UPLOAD =====================
 function ReportSection({ clinic }: { clinic: Clinic | null }) {
-  const [footerText, setFooterText] = useState(
-    clinic?.address
-      ? `${clinic.name} - ${clinic.phone || ''} - ${clinic.address}`
-      : 'www.clinicapodium.com - 608392019 - C/ Almagro 16 50004 Zaragoza'
-  )
-  const [disclaimerText, setDisclaimerText] = useState(
-    'Este informe es confidencial y ha sido elaborado para uso exclusivo del paciente mencionado. La información contenida no constituye un diagnóstico médico definitivo, sino una evaluación fisioterapéutica basada en la evidencia disponible al momento de la exploración.'
-  )
+  const defaultFooter = clinic?.address
+    ? `${clinic.name} - ${clinic.phone || ''} - ${clinic.address}`
+    : 'www.clinicapodium.com - 608392019 - C/ Almagro 16 50004 Zaragoza'
+
+  const defaultDisclaimer = 'Este informe es confidencial y ha sido elaborado para uso exclusivo del paciente mencionado. La información contenida no constituye un diagnóstico médico definitivo, sino una evaluación fisioterapéutica basada en la evidencia disponible al momento de la exploración.'
+
+  const [footerText, setFooterText] = useState(defaultFooter)
+  const [disclaimerText, setDisclaimerText] = useState(defaultDisclaimer)
   const [logoUrl, setLogoUrl] = useState(clinic?.logo_url || '')
   const [uploading, setUploading] = useState(false)
-  const [saved, setSaved] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Load saved values from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedFooter = localStorage.getItem('podium_report_footer')
+      const savedDisclaimer = localStorage.getItem('podium_report_disclaimer')
+      if (savedFooter) setFooterText(savedFooter)
+      if (savedDisclaimer) setDisclaimerText(savedDisclaimer)
+    }
+  }, [])
 
   async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -480,7 +489,6 @@ function ReportSection({ clinic }: { clinic: Clinic | null }) {
       toast.error(error.message || 'Error al subir logo')
     }
     setUploading(false)
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -489,9 +497,7 @@ function ReportSection({ clinic }: { clinic: Clinic | null }) {
       localStorage.setItem('podium_report_footer', footerText)
       localStorage.setItem('podium_report_disclaimer', disclaimerText)
     }
-    setSaved(true)
     toast.success('Configuración del informe guardada')
-    setTimeout(() => setSaved(false), 2000)
   }
 
   return (
