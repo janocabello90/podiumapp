@@ -63,18 +63,18 @@ export default async function AssessmentPage({
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Link
           href={`/patients/${params.id}`}
-          className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
         >
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Valoración del fisio</h1>
-          <p className="text-gray-500 mt-0.5">{patient.full_name} · Sesión {assessment.session_number}</p>
+        <div className="min-w-0">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Valoración del fisio</h1>
+          <p className="text-sm text-gray-500 mt-0.5 truncate">{patient.full_name} · Sesión {assessment.session_number}</p>
         </div>
       </div>
 
