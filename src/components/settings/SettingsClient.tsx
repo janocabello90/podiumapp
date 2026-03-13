@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Mail } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
 
@@ -56,7 +56,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
         <ProfileSection currentUser={currentUser} currentUserEmail={currentUserEmail} supabase={supabase} />
       )}
       {activeTab === 'clinic' && (
-        <ClinicSection clinic={clinic} supabase={supabase} />
+        <ClinicSection clinic={clinic} />
       )}
       {activeTab === 'team' && (
         <TeamSection
@@ -67,7 +67,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
         />
       )}
       {activeTab === 'report' && (
-        <ReportSection clinic={clinic} supabase={supabase} />
+        <ReportSection clinic={clinic} />
       )}
     </div>
   )
@@ -140,8 +140,8 @@ function ProfileSection({ currentUser, currentUserEmail, supabase }: { currentUs
   )
 }
 
-// ===================== CLINIC =====================
-function ClinicSection({ clinic, supabase }: { clinic: Clinic | null; supabase: any }) {
+// ===================== CLINIC (via API route) =====================
+function ClinicSection({ clinic }: { clinic: Clinic | null }) {
   const [name, setName] = useState(clinic?.name || '')
   const [phone, setPhone] = useState(clinic?.phone || '')
   const [email, setEmail] = useState(clinic?.email || '')
@@ -151,15 +151,17 @@ function ClinicSection({ clinic, supabase }: { clinic: Clinic | null; supabase: 
   async function handleSave() {
     if (!clinic) return
     setSaving(true)
-    const { error } = await supabase
-      .from('clinics')
-      .update({ name, phone, email, address })
-      .eq('id', clinic.id)
-
-    if (error) {
-      toast.error('Error al guardar')
-    } else {
+    try {
+      const res = await fetch('/api/clinic', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, email, address }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al guardar')
       toast.success('Datos de la clínica actualizados')
+    } catch (error: any) {
+      toast.error(error.message || 'Error al guardar')
     }
     setSaving(false)
   }
@@ -205,7 +207,7 @@ function ClinicSection({ clinic, supabase }: { clinic: Clinic | null; supabase: 
   )
 }
 
-// ===================== TEAM =====================
+// ===================== TEAM (via API route) =====================
 function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   teamMembers: UserType[]
   currentUserId: string
@@ -218,6 +220,9 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   const [newEmail, setNewEmail] = useState('')
   const [newRole, setNewRole] = useState<'physio' | 'admin'>('physio')
   const [adding, setAdding] = useState(false)
+  const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   async function toggleActive(member: UserType) {
     const newStatus = !member.is_active
@@ -240,33 +245,47 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
       return
     }
     setAdding(true)
+    setTempPassword(null)
 
     try {
-      // Note: This creates the user record but the auth user needs to be created
-      // separately via Supabase dashboard or an admin API endpoint
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          clinic_id: clinicId,
-          full_name: newName.trim(),
+      const res = await fetch('/api/users/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: newName.trim(),
           email: newEmail.trim(),
           role: newRole,
-          is_active: true,
-        })
-        .select()
-        .single()
+        }),
+      })
 
-      if (error) throw error
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al crear usuario')
 
-      setMembers(prev => [...prev, data])
-      setNewName('')
-      setNewEmail('')
-      setShowAdd(false)
-      toast.success('Miembro añadido. Recuerda crear su usuario en Supabase Auth.')
+      setMembers(prev => [...prev, data.user])
+      setTempPassword(data.tempPassword)
+      toast.success('Usuario creado correctamente')
     } catch (error: any) {
       toast.error(error.message || 'Error al añadir')
     }
     setAdding(false)
+  }
+
+  function copyPassword() {
+    if (tempPassword) {
+      navigator.clipboard.writeText(tempPassword)
+      setCopied(true)
+      toast.success('Contraseña copiada')
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  function resetForm() {
+    setNewName('')
+    setNewEmail('')
+    setNewRole('physio')
+    setTempPassword(null)
+    setShowAdd(false)
+    setShowPassword(false)
   }
 
   return (
@@ -275,7 +294,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
         <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
           <h3 className="font-semibold text-gray-900">Equipo ({members.length})</h3>
           <button
-            onClick={() => setShowAdd(!showAdd)}
+            onClick={() => { setShowAdd(!showAdd); setTempPassword(null) }}
             className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg transition-colors"
           >
             <Plus className="w-3 h-3" />
@@ -285,48 +304,98 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
 
         {showAdd && (
           <div className="p-4 sm:p-6 border-b border-gray-100 bg-blue-50/30 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                type="text"
-                placeholder="Nombre completo"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as 'physio' | 'admin')}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-              >
-                <option value="physio">Fisioterapeuta</option>
-                <option value="admin">Administrador</option>
-              </select>
-              <button
-                onClick={handleAddMember}
-                disabled={adding}
-                className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              >
-                {adding ? 'Añadiendo...' : 'Guardar'}
-              </button>
-              <button
-                onClick={() => setShowAdd(false)}
-                className="px-3 py-2 text-gray-500 text-sm hover:text-gray-700"
-              >
-                Cancelar
-              </button>
-            </div>
-            <p className="text-xs text-amber-600">
-              ⚠️ También necesitas crear el usuario en Supabase Authentication con el mismo email para que pueda iniciar sesión.
-            </p>
+            {!tempPassword ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Nombre completo"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <select
+                    value={newRole}
+                    onChange={(e) => setNewRole(e.target.value as 'physio' | 'admin')}
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="physio">Fisioterapeuta</option>
+                    <option value="admin">Administrador</option>
+                  </select>
+                  <button
+                    onClick={handleAddMember}
+                    disabled={adding}
+                    className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-50 inline-flex items-center gap-1.5"
+                  >
+                    {adding && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {adding ? 'Creando...' : 'Crear usuario'}
+                  </button>
+                  <button
+                    onClick={resetForm}
+                    className="px-3 py-2 text-gray-500 text-sm hover:text-gray-700"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                  <p className="text-sm font-medium text-green-800 mb-2">
+                    Usuario creado correctamente
+                  </p>
+                  <p className="text-xs text-green-700 mb-3">
+                    Envía estos datos al nuevo miembro para que pueda iniciar sesión:
+                  </p>
+                  <div className="bg-white rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Email:</span>
+                      <span className="text-sm font-medium text-gray-900">{newEmail}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500">Contraseña temporal:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="text-sm font-mono font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">
+                          {showPassword ? tempPassword : '••••••••'}
+                        </code>
+                        <button
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="p-1 text-gray-400 hover:text-gray-600"
+                          title={showPassword ? 'Ocultar' : 'Mostrar'}
+                        >
+                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                        <button
+                          onClick={copyPassword}
+                          className="p-1 text-gray-400 hover:text-gray-600"
+                          title="Copiar contraseña"
+                        >
+                          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-amber-600 mt-2">
+                    El usuario deberá cambiar esta contraseña en su primer inicio de sesión.
+                  </p>
+                </div>
+                <button
+                  onClick={resetForm}
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                >
+                  Cerrar
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -373,9 +442,8 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   )
 }
 
-// ===================== REPORT CUSTOMIZATION =====================
-function ReportSection({ clinic, supabase }: { clinic: Clinic | null; supabase: any }) {
-  // For now, simple text customization. Could add logo upload later.
+// ===================== REPORT CUSTOMIZATION + LOGO UPLOAD =====================
+function ReportSection({ clinic }: { clinic: Clinic | null }) {
   const [footerText, setFooterText] = useState(
     clinic?.address
       ? `${clinic.name} - ${clinic.phone || ''} - ${clinic.address}`
@@ -384,11 +452,39 @@ function ReportSection({ clinic, supabase }: { clinic: Clinic | null; supabase: 
   const [disclaimerText, setDisclaimerText] = useState(
     'Este informe es confidencial y ha sido elaborado para uso exclusivo del paciente mencionado. La información contenida no constituye un diagnóstico médico definitivo, sino una evaluación fisioterapéutica basada en la evidencia disponible al momento de la exploración.'
   )
+  const [logoUrl, setLogoUrl] = useState(clinic?.logo_url || '')
+  const [uploading, setUploading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('logo', file)
+
+      const res = await fetch('/api/clinic/logo', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al subir logo')
+
+      setLogoUrl(data.logo_url)
+      toast.success('Logo actualizado')
+    } catch (error: any) {
+      toast.error(error.message || 'Error al subir logo')
+    }
+    setUploading(false)
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
 
   function handleSave() {
-    // In a real implementation, this would save to a clinic_settings table
-    // For now we store in localStorage as a quick solution
     if (typeof window !== 'undefined') {
       localStorage.setItem('podium_report_footer', footerText)
       localStorage.setItem('podium_report_disclaimer', disclaimerText)
@@ -402,7 +498,42 @@ function ReportSection({ clinic, supabase }: { clinic: Clinic | null; supabase: 
     <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-5">
       <div>
         <h3 className="font-semibold text-gray-900 mb-1">Personalización del informe</h3>
-        <p className="text-xs text-gray-400">Configura los textos que aparecen en el PDF generado</p>
+        <p className="text-xs text-gray-400">Configura los textos y el logo que aparecen en el PDF generado</p>
+      </div>
+
+      {/* Logo upload */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Logo de la clínica</label>
+        <div className="flex items-start gap-4">
+          <div className="w-24 h-24 border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center bg-gray-50 overflow-hidden flex-shrink-0">
+            {logoUrl ? (
+              <img src={logoUrl} alt="Logo clínica" className="w-full h-full object-contain p-1" />
+            ) : (
+              <ImageIcon className="w-8 h-8 text-gray-300" />
+            )}
+          </div>
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              onChange={handleLogoUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {uploading ? 'Subiendo...' : logoUrl ? 'Cambiar logo' : 'Subir logo'}
+            </button>
+            <p className="text-xs text-gray-400">PNG, JPG, WEBP o SVG. Máximo 2MB.</p>
+            {logoUrl && (
+              <p className="text-xs text-green-600">El logo aparecerá en la portada de los informes PDF.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div>
@@ -425,13 +556,6 @@ function ReportSection({ clinic, supabase }: { clinic: Clinic | null; supabase: 
           className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm resize-none"
         />
         <p className="text-xs text-gray-400 mt-1">Texto legal que aparece al final del informe</p>
-      </div>
-
-      <div className="bg-gray-50 rounded-xl p-4">
-        <h4 className="text-sm font-medium text-gray-700 mb-2">Logo de la clínica</h4>
-        <p className="text-xs text-gray-400">
-          Próximamente podrás subir el logo de tu clínica para que aparezca en los informes PDF.
-        </p>
       </div>
 
       <button

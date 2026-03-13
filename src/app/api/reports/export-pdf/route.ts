@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
+import { PDFDocument } from 'pdf-lib'
+import { createClient } from '@supabase/supabase-js'
 
 interface ReportData {
   portada_intro: string
@@ -16,6 +18,12 @@ interface ReportData {
   }
   conclusiones: string
   descargo: string
+}
+
+interface DocumentAttachment {
+  id: string
+  file_name: string
+  storage_path: string
 }
 
 const MARGIN_LEFT = 25
@@ -112,35 +120,60 @@ function writeSubsectionTitle(doc: jsPDF, title: string, y: number): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { reportData, patientName, patientDob, patientGender } = await request.json() as {
+    const { reportData, patientName, patientDob, patientGender, documents, clinicLogoUrl } = await request.json() as {
       reportData: ReportData
       patientName: string
       patientDob: string | null
       patientGender: string | null
+      documents?: DocumentAttachment[]
+      clinicLogoUrl?: string | null
     }
 
     const doc = new jsPDF('portrait', 'mm', 'a4')
 
     // ===== PAGE 1: COVER =====
+
+    // If clinic has a logo, add it at the top of the cover
+    let coverY = 45
+    if (clinicLogoUrl) {
+      try {
+        const logoResponse = await fetch(clinicLogoUrl)
+        if (logoResponse.ok) {
+          const logoBuffer = await logoResponse.arrayBuffer()
+          const logoBase64 = Buffer.from(logoBuffer).toString('base64')
+          const contentType = logoResponse.headers.get('content-type') || 'image/png'
+          const ext = contentType.includes('png') ? 'PNG' : contentType.includes('svg') ? 'PNG' : 'JPEG'
+          const logoDataUrl = `data:${contentType};base64,${logoBase64}`
+
+          // Add logo centered, max 40mm wide x 20mm tall
+          doc.addImage(logoDataUrl, ext, PAGE_WIDTH / 2 - 20, 15, 40, 20)
+          coverY = 42 // Adjust cover start position
+        }
+      } catch (e) {
+        // If logo fails to load, continue without it
+        console.error('Logo load error:', e)
+      }
+    }
+
     // PODIUM header large
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(36)
     doc.setTextColor(50, 50, 50)
-    doc.text('PODIUM', PAGE_WIDTH / 2, 45, { align: 'center' })
+    doc.text('PODIUM', PAGE_WIDTH / 2, coverY, { align: 'center' })
 
     // Gold line
     doc.setDrawColor(218, 165, 32)
     doc.setLineWidth(0.8)
-    doc.line(MARGIN_LEFT, 52, PAGE_WIDTH - MARGIN_RIGHT, 52)
+    doc.line(MARGIN_LEFT, coverY + 7, PAGE_WIDTH - MARGIN_RIGHT, coverY + 7)
 
     // Title
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(16)
     doc.setTextColor(30, 30, 30)
-    doc.text('INFORME VALORACIÓN INTEGRAL AVANZADA PODIUM', PAGE_WIDTH / 2, 68, { align: 'center' })
+    doc.text('INFORME VALORACIÓN INTEGRAL AVANZADA PODIUM', PAGE_WIDTH / 2, coverY + 23, { align: 'center' })
 
     // Patient data
-    let y = 82
+    let y = coverY + 37
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(10)
     doc.setTextColor(50, 50, 50)
@@ -309,10 +342,102 @@ export async function POST(request: NextRequest) {
 
     addFooter(doc)
 
-    // Generate PDF buffer
-    const pdfBuffer = Buffer.from(doc.output('arraybuffer'))
+    // Generate the main report PDF buffer
+    const mainPdfBytes = Buffer.from(doc.output('arraybuffer'))
 
-    return new NextResponse(pdfBuffer, {
+    // ===== MERGE VALD DOCUMENTS AS ANNEXES =====
+    const valdDocs = documents || []
+    if (valdDocs.length > 0) {
+      try {
+        // Create merged PDF using pdf-lib
+        const mergedPdf = await PDFDocument.load(mainPdfBytes)
+
+        // Add an ANNEXES cover page
+        const annexPage = mergedPdf.addPage([595.28, 841.89]) // A4 in points
+        const { width: aw, height: ah } = annexPage.getSize()
+
+        // Simple ANEXOS title on the page
+        annexPage.drawText('ANEXOS', {
+          x: aw / 2 - 40,
+          y: ah / 2 + 20,
+          size: 28,
+        })
+        annexPage.drawText('Documentación complementaria VALD', {
+          x: aw / 2 - 120,
+          y: ah / 2 - 15,
+          size: 12,
+        })
+
+        // Download and merge each VALD document
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+        if (serviceRoleKey && supabaseUrl) {
+          const adminSupabase = createClient(supabaseUrl, serviceRoleKey, {
+            auth: { autoRefreshToken: false, persistSession: false }
+          })
+
+          for (const valdDoc of valdDocs) {
+            try {
+              // Download the VALD PDF from Supabase Storage
+              const { data: fileData, error: downloadError } = await adminSupabase
+                .storage
+                .from('documents')
+                .download(valdDoc.storage_path)
+
+              if (downloadError || !fileData) {
+                console.error(`Failed to download ${valdDoc.file_name}:`, downloadError)
+                continue
+              }
+
+              const valdPdfBytes = await fileData.arrayBuffer()
+
+              // Try to load as PDF and merge pages
+              try {
+                const valdPdf = await PDFDocument.load(valdPdfBytes)
+                const valdPages = await mergedPdf.copyPages(valdPdf, valdPdf.getPageIndices())
+                valdPages.forEach(page => mergedPdf.addPage(page))
+              } catch (pdfError) {
+                // If not a valid PDF (could be an image), add as image on new page
+                console.error(`${valdDoc.file_name} is not a valid PDF, skipping merge:`, pdfError)
+
+                // Add a placeholder page mentioning the document
+                const placeholderPage = mergedPdf.addPage([595.28, 841.89])
+                placeholderPage.drawText(`Documento: ${valdDoc.file_name}`, {
+                  x: 50,
+                  y: 780,
+                  size: 14,
+                })
+                placeholderPage.drawText('(El archivo adjunto no pudo ser incorporado como PDF)', {
+                  x: 50,
+                  y: 750,
+                  size: 10,
+                })
+              }
+            } catch (e) {
+              console.error(`Error processing ${valdDoc.file_name}:`, e)
+            }
+          }
+        }
+
+        // Save merged PDF
+        const mergedPdfBytes = await mergedPdf.save()
+
+        return new NextResponse(Buffer.from(mergedPdfBytes), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="Informe_PODIUM_${patientName.replace(/\s+/g, '_')}.pdf"`,
+          },
+        })
+      } catch (mergeError) {
+        console.error('PDF merge error, returning main PDF only:', mergeError)
+        // Fall through to return main PDF without annexes
+      }
+    }
+
+    // Return main PDF (without annexes, or if merge failed)
+    return new NextResponse(mainPdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

@@ -21,6 +21,13 @@ interface ReportData {
   descargo: string
 }
 
+interface DocumentInfo {
+  id: string
+  doc_type: string
+  file_name: string
+  storage_path: string
+}
+
 interface Props {
   reportId: string
   patientName: string
@@ -28,6 +35,8 @@ interface Props {
   patientGender: string | null
   initialData: ReportData
   initialStatus: string
+  documents?: DocumentInfo[]
+  clinicLogoUrl?: string | null
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -60,7 +69,7 @@ function setNestedValue(obj: any, path: string, value: string): any {
   return clone
 }
 
-export default function ReportEditor({ reportId, patientName, patientDob, patientGender, initialData, initialStatus }: Props) {
+export default function ReportEditor({ reportId, patientName, patientDob, patientGender, initialData, initialStatus, documents, clinicLogoUrl }: Props) {
   const [reportData, setReportData] = useState<ReportData>(initialData)
   const [status, setStatus] = useState(initialStatus)
   const [editingSection, setEditingSection] = useState<string | null>(null)
@@ -69,6 +78,8 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
   const [exporting, setExporting] = useState(false)
   const [viewMode, setViewMode] = useState<'edit' | 'preview'>('edit')
   const saveTimeout = useRef<NodeJS.Timeout>()
+
+  const valdDocuments = (documents || []).filter(d => d.doc_type === 'vald_report')
 
   const debouncedSave = useCallback((data: ReportData) => {
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
@@ -129,6 +140,12 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
           patientName,
           patientDob,
           patientGender,
+          documents: valdDocuments.map(d => ({
+            id: d.id,
+            file_name: d.file_name,
+            storage_path: d.storage_path,
+          })),
+          clinicLogoUrl: clinicLogoUrl || null,
         }),
       })
 
@@ -214,6 +231,13 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700 flex items-center gap-2">
           <CheckCircle className="w-4 h-4 flex-shrink-0" />
           Informe aprobado. Puedes seguir editando o exportar a PDF.
+        </div>
+      )}
+
+      {valdDocuments.length > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700 flex items-center gap-2">
+          <FileText className="w-4 h-4 flex-shrink-0" />
+          {valdDocuments.length} documento{valdDocuments.length > 1 ? 's' : ''} VALD se incluirá{valdDocuments.length > 1 ? 'n' : ''} como anexo{valdDocuments.length > 1 ? 's' : ''} en el PDF.
         </div>
       )}
 

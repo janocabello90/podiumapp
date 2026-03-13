@@ -16,7 +16,8 @@ export default async function ReportPage({
     .from('patients')
     .select(`
       *,
-      reports(*)
+      reports(*),
+      documents(*)
     `)
     .eq('id', params.id)
     .single()
@@ -25,7 +26,32 @@ export default async function ReportPage({
     notFound()
   }
 
+  // Get clinic logo
+  const { data: { user } } = await supabase.auth.getUser()
+  let clinicLogoUrl: string | null = null
+  if (user) {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+    if (profile) {
+      const { data: clinic } = await supabase
+        .from('clinics')
+        .select('logo_url')
+        .eq('id', profile.clinic_id)
+        .single()
+      clinicLogoUrl = clinic?.logo_url || null
+    }
+  }
+
   const latestReport = patient.reports?.[0]
+  const documents = (patient.documents || []).map((d: any) => ({
+    id: d.id,
+    doc_type: d.doc_type,
+    file_name: d.file_name,
+    storage_path: d.storage_path,
+  }))
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -51,6 +77,8 @@ export default async function ReportPage({
           patientGender={patient.gender}
           initialData={latestReport.report_data}
           initialStatus={latestReport.status}
+          documents={documents}
+          clinicLogoUrl={clinicLogoUrl}
         />
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center">
