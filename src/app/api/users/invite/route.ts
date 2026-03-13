@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Error al crear perfil: ' + profileError.message }, { status: 500 })
     }
 
+    revalidatePath('/settings')
     return NextResponse.json({
       user: newUser,
       tempPassword,

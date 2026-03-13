@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Error al actualizar clínica: ' + updateError.message }, { status: 500 })
     }
 
+    revalidatePath('/settings')
     return NextResponse.json({ logo_url: logoUrl })
   } catch (error: any) {
     console.error('Logo upload error:', error)
