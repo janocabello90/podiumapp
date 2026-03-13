@@ -73,20 +73,20 @@ export default function NewPatientPage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
         <Link
           href="/patients"
           className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Nuevo paciente</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Nuevo paciente</h1>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
         {/* Name */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
@@ -102,8 +102,8 @@ export default function NewPatientPage() {
           />
         </div>
 
-        {/* Phone + Email */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Phone + Email — stack on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Teléfono
@@ -130,8 +130,8 @@ export default function NewPatientPage() {
           </div>
         </div>
 
-        {/* DOB + Gender */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* DOB + Gender — stack on mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
               Fecha de nacimiento
@@ -168,7 +168,7 @@ export default function NewPatientPage() {
           <textarea
             value={form.notes}
             onChange={(e) => updateField('notes', e.target.value)}
-            placeholder="Notas para el equipo (no visibles para el paciente)..."
+            placeholder="Notas para el equipo..."
             rows={3}
             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
           />
@@ -179,13 +179,13 @@ export default function NewPatientPage() {
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
           >
             {loading ? 'Creando...' : 'Crear paciente'}
           </button>
           <Link
             href="/patients"
-            className="px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+            className="hidden sm:inline-block px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
           >
             Cancelar
           </Link>
