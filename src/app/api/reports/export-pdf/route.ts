@@ -55,8 +55,8 @@ function addHeader(doc: jsPDF, logoDataUrl?: string | null, logoExt?: string) {
 }
 
 // Module-level variables for logo in headers (set once per request)
-let _headerLogoDataUrl: string | null = null
-let _headerLogoExt: string | null = null
+let _headerLogoDataUrl: string | undefined = undefined
+let _headerLogoExt: string | undefined = undefined
 
 function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSize?: number; fontStyle?: string; color?: number[] }): number {
   const fontSize = options?.fontSize || 10
@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
     // ===== PAGE 1: COVER =====
 
     // Reset logo globals
-    _headerLogoDataUrl = null
-    _headerLogoExt = null
+    _headerLogoDataUrl = undefined
+    _headerLogoExt = undefined
 
     // If clinic has a logo, load it for cover and headers
     let coverY = 45
