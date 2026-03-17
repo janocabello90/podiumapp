@@ -1,6 +1,7 @@
 // ============================================
 // Anamnesis Form Field Definitions
-// Based on Podium Anamnesis Spec (94 fields)
+// Quick Anamnesis Express — Post Professional Feedback
+// 6 bloques · 30 preguntas · <5 min para el paciente
 // ============================================
 
 export interface AnamnesisField {
@@ -12,528 +13,432 @@ export interface AnamnesisField {
   options?: string[]
   required?: boolean
   condition?: (data: Record<string, any>) => boolean
+  scaleLabels?: { min: string; max: string }
 }
 
 export interface AnamnesisBlock {
   id: string
   title: string
   description: string
+  icon?: string
   fields: AnamnesisField[]
+  internalNotes?: string[]
 }
 
 export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
   // ============================================
-  // BLOCK 1: Datos personales y estilo de vida
+  // BLOQUE 1 — Sobre ti
   // ============================================
   {
-    id: 'personal',
-    title: 'Datos personales',
-    description: 'Empecemos con algunos datos básicos',
+    id: 'about_you',
+    title: 'Sobre ti',
+    icon: '📋',
+    description: 'Cuéntanos un poco sobre ti antes de verte',
     fields: [
       {
-        key: 'occupation',
-        label: '¿A qué te dedicas?',
+        key: 'full_name',
+        label: 'Nombre completo',
         type: 'text',
-        placeholder: 'Ej: Oficinista, albañil, deportista profesional...',
-        description: 'Tu trabajo nos ayuda a entender las demandas físicas de tu día a día',
+        required: true,
       },
       {
-        key: 'work_hours',
-        label: '¿Cuántas horas trabajas al día?',
-        type: 'select',
-        options: ['Menos de 4h', '4-6h', '6-8h', '8-10h', 'Más de 10h'],
+        key: 'birth_date',
+        label: 'Fecha de nacimiento',
+        type: 'date',
+        required: true,
       },
       {
-        key: 'work_posture',
-        label: '¿Tu trabajo es principalmente...?',
-        type: 'select',
-        options: ['Sentado', 'De pie', 'Mixto (sentado y de pie)', 'En movimiento constante', 'Carga de peso'],
+        key: 'occupation',
+        label: 'Ocupación actual',
+        type: 'text',
+        description: 'Esto nos ayuda a entender las cargas de tu día a día',
+        required: true,
+      },
+      {
+        key: 'work_demands',
+        label: '¿Tu trabajo implica...? (marca todas las que apliquen)',
+        type: 'multiselect',
+        options: [
+          'Esfuerzo físico / carga de pesos',
+          'Postura sedentaria prolongada',
+          'De pie muchas horas',
+          'Movimientos repetitivos',
+          'Conducción prolongada',
+          'Ninguna de las anteriores',
+        ],
       },
       {
         key: 'physical_activity',
-        label: '¿Realizas actividad física regular?',
-        type: 'boolean',
+        label: '¿Practicas actividad física o deporte?',
+        type: 'select',
+        options: ['Sí, con regularidad', 'Ocasionalmente', 'No actualmente'],
       },
       {
-        key: 'activity_type',
-        label: '¿Qué actividad física realizas?',
+        key: 'activity_detail',
+        label: 'Si sí, ¿cuál y con qué frecuencia?',
         type: 'text',
-        placeholder: 'Ej: Correr, pádel, gym, natación...',
-        condition: (data) => data.physical_activity === true,
-      },
-      {
-        key: 'activity_frequency',
-        label: '¿Con qué frecuencia?',
-        type: 'select',
-        options: ['1-2 veces/semana', '3-4 veces/semana', '5+ veces/semana', 'Diario'],
-        condition: (data) => data.physical_activity === true,
-      },
-      {
-        key: 'activity_intensity',
-        label: '¿A qué intensidad?',
-        type: 'select',
-        options: ['Baja (pasear, yoga suave)', 'Moderada (trotar, bici tranquila)', 'Alta (running, crossfit, competición)'],
-        condition: (data) => data.physical_activity === true,
-      },
-      {
-        key: 'sleep_hours',
-        label: '¿Cuántas horas duermes de media?',
-        type: 'select',
-        options: ['Menos de 5h', '5-6h', '6-7h', '7-8h', 'Más de 8h'],
-      },
-      {
-        key: 'sleep_quality',
-        label: '¿Cómo es la calidad de tu sueño?',
-        type: 'select',
-        options: ['Muy mala', 'Mala', 'Regular', 'Buena', 'Muy buena'],
-      },
-      {
-        key: 'stress_level',
-        label: '¿Cuál es tu nivel de estrés actual?',
-        type: 'scale',
-        description: 'Del 0 (nada) al 10 (máximo)',
-      },
-      {
-        key: 'nutrition_quality',
-        label: '¿Cómo valorarías tu alimentación?',
-        type: 'select',
-        options: ['Muy desequilibrada', 'Mejorable', 'Aceptable', 'Buena', 'Muy saludable'],
-      },
-      {
-        key: 'hydration',
-        label: '¿Cuánta agua bebes al día aproximadamente?',
-        type: 'select',
-        options: ['Menos de 1 litro', '1-1.5 litros', '1.5-2 litros', 'Más de 2 litros'],
-      },
-      {
-        key: 'smoking',
-        label: '¿Fumas?',
-        type: 'select',
-        options: ['No', 'Sí, ocasionalmente', 'Sí, a diario', 'Exfumador/a'],
-      },
-      {
-        key: 'alcohol',
-        label: '¿Consumes alcohol?',
-        type: 'select',
-        options: ['No', 'Ocasionalmente (social)', 'Regularmente (varias veces/semana)', 'A diario'],
+        placeholder: 'Ej: Pádel 2 veces/semana, gym 3 días...',
+        condition: (data) => data.physical_activity === 'Sí, con regularidad' || data.physical_activity === 'Ocasionalmente',
       },
     ],
   },
 
   // ============================================
-  // BLOCK 2: Motivo de consulta y dolor
+  // BLOQUE 2 — Tu problema
   // ============================================
   {
-    id: 'consultation',
-    title: 'Motivo de consulta',
-    description: 'Cuéntanos por qué vienes',
+    id: 'your_problem',
+    title: 'Tu problema',
+    icon: '💡',
+    description: 'Esta sección nos permite preparar la valoración específicamente para ti',
     fields: [
       {
         key: 'main_reason',
-        label: '¿Cuál es el motivo principal de tu consulta?',
+        label: '¿Qué te trae a consulta? Cuéntanoslo con tus propias palabras.',
         type: 'textarea',
-        placeholder: 'Describe con tus palabras qué te ocurre...',
-        description: 'Cuéntanos con tus propias palabras. No te preocupes por usar términos médicos.',
+        required: true,
       },
       {
-        key: 'pain_location',
-        label: '¿Dónde sientes el dolor o molestia?',
-        type: 'text',
-        placeholder: 'Ej: Rodilla derecha, zona lumbar, hombro izquierdo...',
-      },
-      {
-        key: 'pain_side',
-        label: '¿Es en un lado concreto?',
+        key: 'duration',
+        label: '¿Cuánto tiempo llevas con este problema?',
         type: 'select',
-        options: ['Derecho', 'Izquierdo', 'Ambos lados', 'Central / No aplica'],
+        options: ['Menos de 2 semanas', '2-6 semanas', '2-6 meses', 'Más de 6 meses'],
+        required: true,
       },
-      {
-        key: 'pain_intensity_now',
-        label: '¿Cuánto dolor sientes ahora mismo?',
-        type: 'scale',
-        description: 'Del 0 (nada) al 10 (el peor dolor imaginable)',
-      },
-      {
-        key: 'pain_intensity_max',
-        label: '¿Cuál es el máximo de dolor que has sentido?',
-        type: 'scale',
-        description: 'Del 0 al 10, el peor momento',
-      },
-      {
-        key: 'pain_type',
-        label: '¿Cómo describirías el dolor?',
-        type: 'multiselect',
-        options: ['Agudo / punzante', 'Sordo / molesto', 'Quemazón', 'Hormigueo / eléctrico', 'Presión / peso', 'Palpitante', 'Rigidez', 'Otro'],
-      },
-      {
-        key: 'pain_pattern',
-        label: '¿Cuándo aparece el dolor?',
-        type: 'multiselect',
-        options: ['Constante', 'Al moverme', 'En reposo', 'Por la mañana', 'Por la noche', 'Después de esfuerzo', 'Variable'],
-      },
-      {
-        key: 'pain_aggravates',
-        label: '¿Qué empeora el dolor?',
-        type: 'textarea',
-        placeholder: 'Ej: Estar sentado mucho rato, subir escaleras, girar...',
-      },
-      {
-        key: 'pain_relieves',
-        label: '¿Qué alivia el dolor?',
-        type: 'textarea',
-        placeholder: 'Ej: Descansar, calor, analgésicos, estiramientos...',
-      },
-    ],
-  },
-
-  // ============================================
-  // BLOCK 3: Historia del problema
-  // ============================================
-  {
-    id: 'history',
-    title: 'Historia del problema',
-    description: 'Cuéntanos cómo empezó',
-    fields: [
       {
         key: 'onset',
         label: '¿Cómo empezó?',
         type: 'select',
-        options: ['De golpe (traumático)', 'Fue apareciendo poco a poco', 'Después de un esfuerzo', 'Sin motivo aparente', 'Tras una cirugía', 'Otro'],
-      },
-      {
-        key: 'onset_date',
-        label: '¿Cuándo empezó?',
-        type: 'text',
-        placeholder: 'Ej: Hace 2 semanas, en enero 2024, hace 3 años...',
+        options: [
+          'De repente (golpe / accidente)',
+          'Poco a poco, sin causa clara',
+          'Tras un esfuerzo concreto',
+          'No lo recuerdo / otro',
+        ],
+        required: true,
       },
       {
         key: 'onset_detail',
-        label: '¿Puedes describir cómo ocurrió?',
+        label: 'Describe brevemente qué ocurrió',
         type: 'textarea',
-        placeholder: 'Cuéntanos la situación en la que empezaste a notar la molestia...',
-        condition: (data) => data.onset === 'De golpe (traumático)' || data.onset === 'Después de un esfuerzo',
+        condition: (data) => data.onset === 'De repente (golpe / accidente)',
       },
       {
-        key: 'evolution',
-        label: '¿Cómo ha evolucionado desde entonces?',
+        key: 'pain_location',
+        label: '¿Dónde notas el dolor o la molestia principalmente?',
+        type: 'text',
+        placeholder: "Sé tan concreto/a como puedas: p. ej. 'cara posterior del muslo derecho'",
+        required: true,
+      },
+      {
+        key: 'pain_radiation',
+        label: '¿El dolor se queda en esa zona o se irradia/extiende a otra parte?',
         type: 'select',
-        options: ['Está mejor', 'Sigue igual', 'Está peor', 'Va y viene (episodios)'],
+        options: ['Se queda en el mismo sitio', 'Se extiende (irradia) hacia otra zona'],
       },
       {
-        key: 'previous_episodes',
-        label: '¿Has tenido episodios similares antes?',
-        type: 'boolean',
+        key: 'radiation_detail',
+        label: '¿Hacia dónde se irradia?',
+        type: 'text',
+        placeholder: "P. ej. 'baja por la pierna hasta el pie'",
+        condition: (data) => data.pain_radiation === 'Se extiende (irradia) hacia otra zona',
       },
       {
-        key: 'previous_episodes_detail',
-        label: '¿Cuántas veces y cuándo?',
-        type: 'textarea',
-        placeholder: 'Describe brevemente los episodios anteriores...',
-        condition: (data) => data.previous_episodes === true,
-      },
-      {
-        key: 'previous_treatments',
-        label: '¿Has recibido tratamiento previo para este problema?',
+        key: 'pain_sensation',
+        label: '¿Cómo describirías la sensación? (puedes marcar varias)',
         type: 'multiselect',
-        options: ['Fisioterapia', 'Medicación', 'Inyecciones / infiltraciones', 'Cirugía', 'Osteopatía', 'Acupuntura', 'Nada todavía', 'Otro'],
+        options: [
+          'Dolor sordo / pesado',
+          'Pinchazos / punzante',
+          'Quemazón / calor',
+          'Eléctrico / descarga',
+          'Hormigueo / adormecimiento',
+          'Opresivo / tensión',
+        ],
       },
       {
-        key: 'previous_treatments_result',
-        label: '¿Cómo fue el resultado de esos tratamientos?',
+        key: 'pain_constancy',
+        label: '¿El dolor es...?',
+        type: 'select',
+        options: ['Constante (siempre presente)', 'Intermitente (va y viene)'],
+      },
+      {
+        key: 'pain_intensity_7d',
+        label: 'Intensidad media en los últimos 7 días',
+        type: 'scale',
+        description: '1 = molestia mínima · 10 = el peor dolor imaginable',
+        scaleLabels: { min: 'Molestia mínima', max: 'Máximo dolor' },
+        required: true,
+      },
+      {
+        key: 'pain_mechanical_behavior',
+        label: '¿El dolor cambia según lo que hagas o la postura que adoptes?',
+        type: 'select',
+        options: [
+          'Sí, empeora con ciertas actividades o posturas',
+          'Sí, mejora con ciertos movimientos o descanso',
+          'No cambia, siempre está igual',
+          'Varía sin patrón claro',
+        ],
+        required: true,
+      },
+      {
+        key: 'pain_aggravates',
+        label: '¿Hay movimientos o actividades que claramente lo empeoren?',
         type: 'textarea',
-        placeholder: 'Cuéntanos si te ayudaron, si volvió el problema...',
-        condition: (data) => data.previous_treatments && !data.previous_treatments.includes('Nada todavía'),
       },
       {
-        key: 'imaging',
-        label: '¿Te han hecho pruebas de imagen?',
-        type: 'multiselect',
-        options: ['Radiografía', 'Ecografía', 'Resonancia magnética', 'TAC / Scanner', 'No me han hecho pruebas'],
+        key: 'pain_movement_timing',
+        label: '¿El dolor aparece al empezar el movimiento, durante o al final del recorrido?',
+        type: 'select',
+        options: [
+          'Al iniciar el movimiento',
+          'Durante todo el movimiento',
+          'Al final del rango de movimiento',
+          'No estoy seguro/a',
+        ],
       },
       {
-        key: 'imaging_findings',
-        label: '¿Qué hallazgos hubo? (si los recuerdas)',
+        key: 'pain_relieves',
+        label: '¿Hay algo que lo alivie?',
         type: 'textarea',
-        placeholder: 'Ej: Hernia discal L5-S1, rotura parcial del manguito...',
-        condition: (data) => data.imaging && !data.imaging.includes('No me han hecho pruebas'),
+        placeholder: 'P. ej. calor, frío, reposo, movimiento, medicación, posturas concretas...',
+      },
+      {
+        key: 'night_pain',
+        label: '¿Te despierta el dolor por la noche?',
+        type: 'select',
+        options: ['Sí, frecuentemente', 'A veces', 'No'],
+      },
+      {
+        key: 'night_pain_posture_relief',
+        label: '¿Mejora al cambiar de postura o al levantarte?',
+        type: 'select',
+        options: ['Sí, mejora al moverme / levantarme', 'No, sigue igual independientemente'],
+        condition: (data) => data.night_pain === 'Sí, frecuentemente' || data.night_pain === 'A veces',
+      },
+      {
+        key: 'morning_stiffness',
+        label: '¿Notas rigidez por las mañanas al levantarte?',
+        type: 'select',
+        options: [
+          'No',
+          'Sí, se pasa en menos de 30 min',
+          'Sí, dura más de 30 min',
+          'Sí, dura más de 1 hora',
+        ],
       },
     ],
   },
 
   // ============================================
-  // BLOCK 4: Red flags (banderas rojas)
+  // BLOQUE 3 — Señales de alerta (seguridad)
   // ============================================
   {
     id: 'red_flags',
     title: 'Señales de alerta',
-    description: 'Unas preguntas importantes para tu seguridad',
+    icon: '💡',
+    description: 'Necesitamos descartarlas antes de tu sesión. Responde con total tranquilidad.',
     fields: [
       {
-        key: 'unexplained_weight_loss',
-        label: '¿Has perdido peso de forma inexplicable recientemente?',
-        type: 'boolean',
-      },
-      {
-        key: 'fever',
-        label: '¿Has tenido fiebre sin motivo aparente?',
-        type: 'boolean',
-      },
-      {
-        key: 'night_pain',
-        label: '¿El dolor te despierta por la noche?',
-        type: 'boolean',
-      },
-      {
-        key: 'bladder_bowel',
-        label: '¿Has notado cambios en el control de vejiga o intestino?',
-        type: 'boolean',
-        description: 'Pérdida de control, incontinencia, retención...',
-      },
-      {
-        key: 'numbness_weakness',
-        label: '¿Tienes adormecimiento o debilidad progresiva en extremidades?',
-        type: 'boolean',
-      },
-      {
-        key: 'cancer_history',
-        label: '¿Tienes antecedentes de cáncer?',
-        type: 'boolean',
-      },
-      {
-        key: 'trauma_recent',
-        label: '¿Has sufrido un traumatismo fuerte recientemente?',
-        type: 'boolean',
-        description: 'Caída importante, accidente de tráfico, golpe fuerte...',
+        key: 'red_flags',
+        label: 'En las últimas semanas, ¿has tenido alguno de estos síntomas? (marca si aplica)',
+        type: 'multiselect',
+        options: [
+          'Fiebre / escalofríos sin causa aparente',
+          'Pérdida de peso sin explicación',
+          'Antecedentes de cáncer',
+          'Debilidad en brazos o piernas',
+          'Hormigueo o pérdida de sensibilidad',
+          'Dificultad para controlar orina o heces',
+          'Adormecimiento en zona genital / interior muslos',
+          'Ninguno de los anteriores',
+        ],
       },
     ],
   },
 
   // ============================================
-  // BLOCK 5: Limitaciones y vida diaria
+  // BLOQUE 4 — Impacto en tu vida
   // ============================================
   {
-    id: 'limitations',
-    title: 'Tu día a día',
-    description: 'Cómo afecta el problema a tu vida',
+    id: 'impact',
+    title: 'Impacto en tu vida',
+    icon: '📊',
+    description: 'Ayúdanos a entender cómo te afecta en tu día a día',
     fields: [
       {
         key: 'functional_limitation',
-        label: '¿Qué actividades no puedes hacer o te cuestan por este problema?',
+        label: '¿Qué actividades concretas no puedes hacer o has dejado de hacer por este problema?',
         type: 'textarea',
-        placeholder: 'Ej: No puedo correr, me cuesta agacharme, no puedo dormir del lado derecho...',
+        placeholder: "P. ej. 'no puedo correr', 'evito jugar con mis hijos', 'no puedo conducir más de 20 min'",
+        required: true,
       },
       {
-        key: 'daily_impact',
-        label: '¿Cuánto afecta a tu vida diaria?',
+        key: 'quality_of_life_impact',
+        label: '¿Cuánto afecta este problema a tu calidad de vida en este momento?',
         type: 'scale',
-        description: 'Del 0 (nada) al 10 (me impide hacer vida normal)',
-      },
-      {
-        key: 'work_impact',
-        label: '¿Afecta a tu trabajo?',
-        type: 'select',
-        options: ['No afecta', 'Algo, pero puedo trabajar', 'Bastante, necesito adaptaciones', 'Estoy de baja laboral'],
-      },
-      {
-        key: 'sport_impact',
-        label: '¿Afecta a tu deporte o actividad física?',
-        type: 'select',
-        options: ['No hago deporte', 'No afecta', 'He tenido que reducir', 'He tenido que parar del todo'],
-      },
-      {
-        key: 'sleep_impact',
-        label: '¿Afecta a tu sueño?',
-        type: 'select',
-        options: ['No afecta', 'Algo, tardo más en dormirme', 'Me despierto por el dolor', 'Duermo muy mal por el dolor'],
+        description: '1 = casi nada · 10 = lo afecta todo',
+        scaleLabels: { min: 'Apenas lo noto', max: 'Afecta todo mi día' },
+        required: true,
       },
     ],
   },
 
   // ============================================
-  // BLOCK 6: Historial médico general
+  // BLOQUE 5 — Tratamientos previos
   // ============================================
   {
-    id: 'medical_history',
-    title: 'Historial médico',
-    description: 'Tu salud en general',
+    id: 'previous_treatments',
+    title: 'Tratamientos previos',
+    icon: '🩺',
+    description: 'Cuéntanos qué has probado hasta ahora',
     fields: [
       {
-        key: 'medical_conditions',
-        label: '¿Tienes alguna enfermedad o condición diagnosticada?',
-        type: 'multiselect',
+        key: 'previous_treatment_status',
+        label: '¿Has recibido tratamiento antes por este problema?',
+        type: 'select',
         options: [
-          'Hipertensión',
-          'Diabetes',
-          'Asma / problemas respiratorios',
-          'Enfermedades cardíacas',
-          'Artritis / artrosis',
-          'Osteoporosis',
-          'Fibromialgia',
-          'Hipotiroidismo / hipertiroidismo',
-          'Depresión / ansiedad',
-          'Ninguna',
-          'Otra',
+          'No, es la primera vez',
+          'Sí, pero sin resultado satisfactorio',
+          'Sí, mejoré pero recaí',
+          'Sí, con buenos resultados pero volvió',
         ],
       },
       {
-        key: 'medical_conditions_other',
-        label: '¿Cuál?',
-        type: 'text',
-        placeholder: 'Especifica...',
-        condition: (data) => data.medical_conditions?.includes('Otra'),
-      },
-      {
-        key: 'surgeries',
-        label: '¿Te han operado alguna vez?',
-        type: 'boolean',
-      },
-      {
-        key: 'surgeries_detail',
-        label: '¿De qué y cuándo?',
-        type: 'textarea',
-        placeholder: 'Ej: Artroscopia de rodilla (2020), apendicitis (2015)...',
-        condition: (data) => data.surgeries === true,
-      },
-      {
-        key: 'implants_prosthetics',
-        label: '¿Tienes implantes, prótesis o material de osteosíntesis?',
-        type: 'boolean',
-        description: 'Placas, tornillos, prótesis de cadera/rodilla...',
-      },
-      {
-        key: 'implants_detail',
-        label: '¿Cuáles?',
-        type: 'text',
-        placeholder: 'Ej: Prótesis de cadera derecha, placa en clavícula...',
-        condition: (data) => data.implants_prosthetics === true,
-      },
-      {
-        key: 'medications',
-        label: '¿Tomas alguna medicación actualmente?',
-        type: 'boolean',
-      },
-      {
-        key: 'medications_detail',
-        label: '¿Cuáles?',
-        type: 'textarea',
-        placeholder: 'Nombre y para qué lo tomas...',
-        condition: (data) => data.medications === true,
-      },
-      {
-        key: 'allergies',
-        label: '¿Tienes alguna alergia?',
-        type: 'boolean',
-      },
-      {
-        key: 'allergies_detail',
-        label: '¿A qué?',
-        type: 'text',
-        placeholder: 'Ej: Penicilina, látex, ibuprofeno...',
-        condition: (data) => data.allergies === true,
-      },
-      {
-        key: 'pregnancy',
-        label: '¿Estás embarazada o en período de lactancia?',
-        type: 'select',
-        options: ['No', 'Embarazada', 'Lactancia', 'No aplica'],
-      },
-      {
-        key: 'family_history',
-        label: '¿Hay enfermedades relevantes en tu familia?',
-        type: 'textarea',
-        placeholder: 'Ej: Padre con diabetes, madre con artritis reumatoide...',
-        description: 'Padres, hermanos, abuelos...',
-      },
-    ],
-  },
-
-  // ============================================
-  // BLOCK 7: Emociones, motivación y expectativas
-  // ============================================
-  {
-    id: 'emotions',
-    title: 'Cómo te sientes',
-    description: 'Tu estado emocional es importante para nosotros',
-    fields: [
-      {
-        key: 'emotional_state',
-        label: '¿Cómo te sientes emocionalmente respecto a este problema?',
+        key: 'treatments_tried',
+        label: '¿Qué has probado hasta ahora? (marca todo lo que hayas hecho)',
         type: 'multiselect',
-        options: ['Tranquilo/a', 'Preocupado/a', 'Frustrado/a', 'Ansioso/a', 'Triste', 'Enfadado/a', 'Esperanzado/a', 'Confundido/a'],
+        options: [
+          'Fisioterapia',
+          'Médico / traumatólogo',
+          'Osteopatía / quiropraxia',
+          'Medicación / infiltraciones',
+          'Reposo',
+          'Nada todavía',
+        ],
+        condition: (data) => data.previous_treatment_status !== 'No, es la primera vez',
       },
       {
-        key: 'fear_avoidance',
-        label: '¿Evitas movimientos o actividades por miedo a empeorar?',
+        key: 'imaging_tests',
+        label: '¿Te han hecho pruebas (radiografía, resonancia, ecografía)?',
         type: 'select',
-        options: ['No, hago vida normal', 'Algo, evito algunas cosas', 'Bastante, evito muchas actividades', 'Sí, evito casi todo por miedo'],
+        options: ['No', 'Sí, con resultado normal', 'Sí, con hallazgos'],
       },
       {
-        key: 'beliefs',
-        label: '¿Qué crees que te pasa?',
+        key: 'imaging_findings',
+        label: 'Indica los hallazgos',
         type: 'textarea',
-        placeholder: 'Cuéntanos qué piensas sobre tu problema, aunque no estés seguro/a...',
-        description: 'No hay respuesta incorrecta. Queremos entender tu perspectiva.',
-      },
-      {
-        key: 'expectations',
-        label: '¿Qué esperas conseguir con el tratamiento?',
-        type: 'textarea',
-        placeholder: 'Ej: Volver a correr sin dolor, poder trabajar sin molestias...',
-      },
-      {
-        key: 'goals',
-        label: '¿Cuál es tu objetivo principal?',
-        type: 'textarea',
-        placeholder: 'Si pudieras pedir un deseo para tu salud, ¿cuál sería?',
-      },
-      {
-        key: 'motivation_level',
-        label: '¿Cómo de motivado/a estás para comprometerte con el tratamiento?',
-        type: 'scale',
-        description: 'Del 0 (nada) al 10 (totalmente comprometido/a)',
+        placeholder: 'Ej: Hernia discal L5-S1, rotura parcial del supraespinoso...',
+        condition: (data) => data.imaging_tests === 'Sí, con hallazgos',
       },
     ],
   },
 
   // ============================================
-  // BLOCK 8: Disposición y programa (sales)
+  // BLOQUE 6 — Lo más importante
   // ============================================
   {
-    id: 'disposition',
-    title: 'Para terminar',
-    description: 'Un par de preguntas más y habremos acabado',
+    id: 'most_important',
+    title: 'Lo más importante',
+    icon: '🎯',
+    description: 'Estas preguntas nos permiten diseñar un plan realmente útil para ti',
     fields: [
       {
-        key: 'how_found_us',
-        label: '¿Cómo nos has conocido?',
-        type: 'select',
-        options: ['Recomendación de un conocido', 'Google / búsqueda online', 'Instagram', 'Otro profesional sanitario', 'Otro'],
-      },
-      {
-        key: 'previous_physio',
-        label: '¿Has ido antes a un fisioterapeuta por este problema?',
-        type: 'boolean',
-      },
-      {
-        key: 'previous_physio_experience',
-        label: '¿Cómo fue tu experiencia?',
+        key: 'if_resolved',
+        label: 'Si este problema desapareciera, ¿qué sería lo primero que harías o recuperarías?',
         type: 'textarea',
-        placeholder: 'Cuéntanos brevemente...',
-        condition: (data) => data.previous_physio === true,
+        placeholder: "Sé concreto/a: 'volvería a correr', 'podría cargar a mi hijo', 'dormiría bien'",
+        required: true,
       },
       {
-        key: 'commitment_availability',
-        label: '¿Cuántas sesiones a la semana podrías asistir?',
-        type: 'select',
-        options: ['1 sesión/semana', '2 sesiones/semana', '3 o más sesiones/semana', 'Según necesidad'],
-      },
-      {
-        key: 'additional_info',
-        label: '¿Hay algo más que quieras contarnos?',
+        key: 'why_now',
+        label: '¿Por qué has decidido buscar ayuda ahora y no antes?',
         type: 'textarea',
-        placeholder: 'Cualquier información que consideres relevante...',
-        description: 'Este es tu espacio. Si hay algo que no te hemos preguntado y crees importante, cuéntanoslo aquí.',
+        required: true,
+      },
+      {
+        key: 'if_not_resolved',
+        label: '¿Qué crees que puede pasar si no resuelves esto en los próximos meses?',
+        type: 'textarea',
+      },
+      {
+        key: 'urgency',
+        label: '¿Cuánta urgencia sientes por solucionar este problema?',
+        type: 'scale',
+        description: '1 = puedo esperar · 10 = necesito resolverlo ya',
+        scaleLabels: { min: 'Puedo esperar', max: 'Necesito resolverlo ya' },
+        required: true,
+      },
+      {
+        key: 'commitment',
+        label: '¿Qué tan dispuesto/a estás a comprometerte con un programa de tratamiento?',
+        type: 'select',
+        options: [
+          'Haré lo que sea necesario para recuperarme',
+          'Estoy dispuesto/a a hacer cambios importantes',
+          'Solo si es rápido y sin mucho esfuerzo',
+          'No lo tengo claro todavía',
+        ],
+        required: true,
+      },
+      {
+        key: 'barriers',
+        label: '¿Algo podría dificultarte seguir un programa completo?',
+        type: 'multiselect',
+        options: [
+          'Falta de tiempo',
+          'Preocupación económica',
+          'Miedo a no mejorar',
+          'Constancia / motivación',
+          'No, ninguna barrera importante',
+          'Otro',
+        ],
+      },
+      {
+        key: 'barriers_other',
+        label: 'Especifica',
+        type: 'text',
+        condition: (data) => data.barriers?.includes('Otro'),
       },
     ],
+  },
+]
+
+// ============================================
+// NOTAS INTERNAS — Solo para el fisioterapeuta
+// Estas notas se muestran al profesional después
+// de que el paciente complete la anamnesis
+// ============================================
+export const INTERNAL_CLINICAL_NOTES = [
+  {
+    id: 'red_flag_alert',
+    emoji: '🔴',
+    label: 'BANDERAS ROJAS',
+    rule: 'Activar alerta si red_flags ≠ "Ninguno de los anteriores"',
+  },
+  {
+    id: 'nocioplastic_profile',
+    emoji: '🟡',
+    label: 'PERFIL NOCIOPLÁSTICO',
+    rule: 'Señales → dolor sin patrón mecánico (pain_mechanical_behavior = "No cambia" o "Varía sin patrón"), no varía con postura, no cambia con movimiento, + alteraciones sensibilidad (pain_sensation incluye hormigueo/quemazón), + sueño alterado → preparar abordaje biopsicosocial.',
+  },
+  {
+    id: 'nociceptive_profile',
+    emoji: '🟢',
+    label: 'PERFIL NOCICEPTIVO',
+    rule: 'Dolor mecánico claro (pain_mechanical_behavior = "Sí, empeora/mejora con..."), localizado (pain_radiation = "Se queda"), varía con actividad/reposo, sin irradiación → candidato directo a programa rehabilitador.',
+  },
+  {
+    id: 'high_disposition',
+    emoji: '💰',
+    label: 'ALTA DISPOSICIÓN',
+    rule: 'urgency ≥ 8 + commitment = "Haré lo que sea necesario" → candidato programa premium.',
+  },
+  {
+    id: 'expected_objections',
+    emoji: '⚠️',
+    label: 'OBJECIONES PREVISTAS',
+    rule: 'barriers incluye "Preocupación económica" o "Falta de tiempo" → preparar cierre con opciones de plan.',
   },
 ]

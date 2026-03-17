@@ -104,9 +104,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Check className="w-8 h-8 text-green-600" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">¡Listo!</h1>
+          <h1 className="text-xl font-bold text-gray-900">¡Ya estamos listos para tu sesión!</h1>
           <p className="text-gray-500 mt-2">
-            Hemos recibido tus respuestas. Tu fisioterapeuta las revisará antes de tu cita. ¡Gracias, {patientName}!
+            Hemos revisado tus respuestas antes de que llegues para aprovechar al máximo tu tiempo con nosotros. Nos vemos pronto, {patientName?.split(' ')[0]}!
           </p>
         </div>
       </div>
@@ -126,7 +126,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
               Hola{patientName ? `, ${patientName.split(' ')[0]}` : ''} 👋
             </h1>
             <p className="text-gray-500 mt-2 text-sm leading-relaxed">
-              Antes de tu primera visita, necesitamos que rellenes este formulario. Solo te llevará unos minutos y nos ayudará a preparar mejor tu sesión.
+              Cuéntanos un poco sobre ti antes de verte. Tardas menos de 5 minutos y nos permite dedicar más tiempo a ti en consulta.
             </p>
           </div>
 
@@ -191,7 +191,10 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
         <div className="w-full max-w-lg mx-auto">
           {/* Block header */}
           <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900">{block?.title}</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              {block?.icon && <span className="mr-2">{block.icon}</span>}
+              {block?.title}
+            </h2>
             <p className="text-sm text-gray-500 mt-1">{block?.description}</p>
           </div>
 
@@ -550,6 +553,8 @@ function FieldRenderer({
 
     case 'scale':
       const scaleValue = value ?? null
+      const minLabel = field.scaleLabels?.min || 'Nada'
+      const maxLabel = field.scaleLabels?.max || 'Máximo'
       return (
         <div>
           <label className="block text-sm font-medium text-gray-900 mb-1.5">
@@ -559,7 +564,7 @@ function FieldRenderer({
             <p className="text-xs text-gray-500 mb-3">{field.description}</p>
           )}
           <div className="flex gap-1.5 justify-center flex-wrap">
-            {Array.from({ length: 11 }, (_, i) => (
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((i) => (
               <button
                 key={i}
                 onClick={() => onChange(i)}
@@ -576,8 +581,8 @@ function FieldRenderer({
             ))}
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-400 px-1">
-            <span>Nada</span>
-            <span>Máximo</span>
+            <span>1 — {minLabel}</span>
+            <span>10 — {maxLabel}</span>
           </div>
         </div>
       )
