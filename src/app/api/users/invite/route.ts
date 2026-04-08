@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Solo los administradores pueden crear usuarios' }, { status: 403 })
     }
 
-    const { fullName, email, role } = await request.json()
+    const { fullName, email, role, sendInviteEmail } = await request.json()
 
     if (!fullName?.trim() || !email?.trim()) {
       return NextResponse.json({ error: 'Nombre y email son obligatorios' }, { status: 400 })
@@ -60,12 +60,26 @@ export async function POST(request: NextRequest) {
     // Generate temporary password
     const tempPassword = generatePassword()
 
-    // Create auth user
-    const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-      email: email.trim(),
-      password: tempPassword,
-      email_confirm: true, // Auto-confirm email so they can login immediately
-    })
+    // Create auth user - if sendInviteEmail, use inviteUserByEmail so they get a setup email
+    let authData: any
+    let authError: any
+
+    if (sendInviteEmail) {
+      const result = await adminSupabase.auth.admin.inviteUserByEmail(email.trim(), {
+        data: { full_name: fullName.trim() },
+        redirectTo: `${request.nextUrl.origin}/auth/callback?type=recovery`,
+      })
+      authData = result.data
+      authError = result.error
+    } else {
+      const result = await adminSupabase.auth.admin.createUser({
+        email: email.trim(),
+        password: tempPassword,
+        email_confirm: true, // Auto-confirm email so they can login immediately
+      })
+      authData = result.data
+      authError = result.error
+    }
 
     if (authError) {
       // Check if user already exists
@@ -104,7 +118,8 @@ export async function POST(request: NextRequest) {
     revalidatePath('/settings')
     return NextResponse.json({
       user: newUser,
-      tempPassword,
+      tempPassword: sendInviteEmail ? null : tempPassword,
+      inviteEmailSent: !!sendInviteEmail,
     })
   } catch (error: any) {
     console.error('Invite user error:', error)

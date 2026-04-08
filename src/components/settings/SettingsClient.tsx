@@ -221,6 +221,8 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   const [newRole, setNewRole] = useState<'physio' | 'admin'>('physio')
   const [adding, setAdding] = useState(false)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
+  const [inviteEmailSent, setInviteEmailSent] = useState(false)
+  const [sendInviteEmail, setSendInviteEmail] = useState(true)
   const [copied, setCopied] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -255,6 +257,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
           fullName: newName.trim(),
           email: newEmail.trim(),
           role: newRole,
+          sendInviteEmail,
         }),
       })
 
@@ -263,7 +266,8 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
 
       setMembers(prev => [...prev, data.user])
       setTempPassword(data.tempPassword)
-      toast.success('Usuario creado correctamente')
+      setInviteEmailSent(data.inviteEmailSent || false)
+      toast.success(data.inviteEmailSent ? 'Usuario creado y email de invitación enviado' : 'Usuario creado correctamente')
     } catch (error: any) {
       toast.error(error.message || 'Error al añadir')
     }
@@ -284,6 +288,8 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
     setNewEmail('')
     setNewRole('physio')
     setTempPassword(null)
+    setInviteEmailSent(false)
+    setSendInviteEmail(true)
     setShowAdd(false)
     setShowPassword(false)
   }
@@ -322,7 +328,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <select
                     value={newRole}
                     onChange={(e) => setNewRole(e.target.value as 'physio' | 'admin')}
@@ -331,6 +337,17 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
                     <option value="physio">Fisioterapeuta</option>
                     <option value="admin">Administrador</option>
                   </select>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={sendInviteEmail}
+                      onChange={(e) => setSendInviteEmail(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-xs text-gray-600">Enviar email de invitación</span>
+                  </label>
+                </div>
+                <div className="flex items-center gap-3">
                   <button
                     onClick={handleAddMember}
                     disabled={adding}
@@ -349,45 +366,59 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
               </>
             ) : (
               <div className="space-y-3">
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                  <p className="text-sm font-medium text-green-800 mb-2">
-                    Usuario creado correctamente
-                  </p>
-                  <p className="text-xs text-green-700 mb-3">
-                    Envía estos datos al nuevo miembro para que pueda iniciar sesión:
-                  </p>
-                  <div className="bg-white rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Email:</span>
-                      <span className="text-sm font-medium text-gray-900">{newEmail}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">Contraseña temporal:</span>
-                      <div className="flex items-center gap-2">
-                        <code className="text-sm font-mono font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">
-                          {showPassword ? tempPassword : '••••••••'}
-                        </code>
-                        <button
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="p-1 text-gray-400 hover:text-gray-600"
-                          title={showPassword ? 'Ocultar' : 'Mostrar'}
-                        >
-                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                        <button
-                          onClick={copyPassword}
-                          className="p-1 text-gray-400 hover:text-gray-600"
-                          title="Copiar contraseña"
-                        >
-                          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-                        </button>
+                {inviteEmailSent ? (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <p className="text-sm font-medium text-green-800 mb-2">
+                      Usuario creado y email de invitación enviado
+                    </p>
+                    <p className="text-xs text-green-700 mb-1">
+                      Se ha enviado un email a <strong>{newEmail}</strong> con un enlace para configurar su contraseña.
+                    </p>
+                    <p className="text-xs text-amber-600 mt-2">
+                      Si no recibe el email, puede pedir un restablecimiento desde la pantalla de login (¿Olvidaste tu contraseña?). También conviene revisar la carpeta de spam.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                    <p className="text-sm font-medium text-green-800 mb-2">
+                      Usuario creado correctamente
+                    </p>
+                    <p className="text-xs text-green-700 mb-3">
+                      Envía estos datos al nuevo miembro para que pueda iniciar sesión:
+                    </p>
+                    <div className="bg-white rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Email:</span>
+                        <span className="text-sm font-medium text-gray-900">{newEmail}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">Contraseña temporal:</span>
+                        <div className="flex items-center gap-2">
+                          <code className="text-sm font-mono font-medium text-gray-900 bg-gray-50 px-2 py-0.5 rounded">
+                            {showPassword ? tempPassword : '••••••••'}
+                          </code>
+                          <button
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="p-1 text-gray-400 hover:text-gray-600"
+                            title={showPassword ? 'Ocultar' : 'Mostrar'}
+                          >
+                            {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                          <button
+                            onClick={copyPassword}
+                            className="p-1 text-gray-400 hover:text-gray-600"
+                            title="Copiar contraseña"
+                          >
+                            {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
+                    <p className="text-xs text-amber-600 mt-2">
+                      El usuario deberá cambiar esta contraseña en su primer inicio de sesión.
+                    </p>
                   </div>
-                  <p className="text-xs text-amber-600 mt-2">
-                    El usuario deberá cambiar esta contraseña en su primer inicio de sesión.
-                  </p>
-                </div>
+                )}
                 <button
                   onClick={resetForm}
                   className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
