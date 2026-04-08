@@ -82,8 +82,8 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           form_data: formData,
           status: 'completed',
           completed_at: new Date().toISOString(),
-          consent_data_processing: true,
-          consent_ai_analysis: consentGiven,
+          consent_data_processing: consentDataProcessing,
+          consent_ai_analysis: consentAI,
           consent_timestamp: new Date().toISOString(),
         })
         .eq('token', token)
@@ -114,9 +114,14 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   }
 
   // Consent screen
+  const [consentDataProcessing, setConsentDataProcessing] = useState(false)
+  const [consentAI, setConsentAI] = useState(false)
+
   if (!consentGiven && currentBlock === 0) {
+    const canProceed = consentDataProcessing && consentAI
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-900 rounded-2xl mb-4">
@@ -130,33 +135,71 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h3 className="font-medium text-gray-900 text-sm mb-3">Sobre tus datos</h3>
-            <ul className="space-y-2 text-sm text-gray-600 mb-6">
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 mt-0.5">✓</span>
-                Tus datos son confidenciales y están protegidos
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 mt-0.5">✓</span>
-                Solo tu fisioterapeuta tendrá acceso
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 mt-0.5">✓</span>
-                Puedes usar el micrófono para dictar las respuestas largas
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-500 mt-0.5">✓</span>
-                Puedes interrumpir y continuar en cualquier momento
-              </li>
-            </ul>
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+            <div>
+              <h3 className="font-medium text-gray-900 text-sm mb-3">Sobre tus datos</h3>
+              <ul className="space-y-2 text-sm text-gray-600">
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  Tus datos son confidenciales y están protegidos
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  Solo tu fisioterapeuta y la clínica tendrán acceso
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  Puedes usar el micrófono para dictar las respuestas largas
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-green-500 mt-0.5">✓</span>
+                  Puedes interrumpir y continuar en cualquier momento
+                </li>
+              </ul>
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <h3 className="font-medium text-gray-900 text-sm">Consentimiento informado</h3>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consentDataProcessing}
+                  onChange={(e) => setConsentDataProcessing(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  Consiento el tratamiento de mis datos de salud por parte de la clínica con la finalidad de realizar mi valoración fisioterapéutica, elaborar un informe clínico y gestionar mi proceso terapéutico. Estos datos se conservarán durante el tiempo necesario para la prestación asistencial y el cumplimiento de obligaciones legales. Puedo ejercer mis derechos de acceso, rectificación, supresión, portabilidad y oposición contactando con la clínica. Más información en la{' '}
+                  <a href="/privacidad" target="_blank" className="text-blue-600 underline">política de privacidad</a>.
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consentAI}
+                  onChange={(e) => setConsentAI(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  Consiento que mis datos sean procesados por un sistema de inteligencia artificial (Anthropic Claude, vía API) para generar un borrador de informe clínico. Este borrador será siempre revisado y aprobado por un fisioterapeuta antes de su emisión. El proveedor de IA no almacena ni reutiliza mis datos para entrenar sus modelos.
+                </span>
+              </label>
+            </div>
 
             <button
-              onClick={() => setConsentGiven(true)}
-              className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors"
+              onClick={() => { if (canProceed) setConsentGiven(true) }}
+              disabled={!canProceed}
+              className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Empezar formulario
             </button>
+
+            {!canProceed && (
+              <p className="text-xs text-gray-400 text-center">
+                Debes aceptar ambos consentimientos para continuar
+              </p>
+            )}
           </div>
         </div>
       </div>

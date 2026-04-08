@@ -6,6 +6,7 @@ import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import DocumentSection from '@/components/documents/DocumentSection'
 import ImageGallerySection from '@/components/documents/ImageGallerySection'
 import RefreshButton from '@/components/patients/RefreshButton'
+import DeletePatientButton from '@/components/patients/DeletePatientButton'
 
 // Force dynamic rendering so refresh always gets fresh data
 export const dynamic = 'force-dynamic'
@@ -72,7 +73,10 @@ export default async function PatientDetailPage({
             </p>
           </div>
         </div>
-        <RefreshButton />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <DeletePatientButton patientId={patient.id} patientName={patient.full_name} />
+          <RefreshButton />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
