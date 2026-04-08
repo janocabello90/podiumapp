@@ -26,6 +26,7 @@ interface DocumentInfo {
   doc_type: string
   file_name: string
   storage_path: string
+  extracted_data?: Record<string, any> | null
 }
 
 interface Props {
@@ -80,6 +81,17 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
   const saveTimeout = useRef<NodeJS.Timeout>()
 
   const valdDocuments = (documents || []).filter(d => d.doc_type === 'vald_report')
+
+  // Images marked for inclusion in the report
+  const reportImages = (documents || []).filter(d => {
+    if (d.doc_type !== 'medical_image') return false
+    const meta = d.extracted_data?.notes
+      ? (typeof d.extracted_data.notes === 'string'
+        ? (() => { try { return JSON.parse(d.extracted_data.notes) } catch { return null } })()
+        : d.extracted_data.notes)
+      : null
+    return meta?.include_in_report !== false
+  })
 
   const debouncedSave = useCallback((data: ReportData) => {
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
@@ -145,6 +157,19 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
             file_name: d.file_name,
             storage_path: d.storage_path,
           })),
+          images: reportImages.map(d => {
+            const meta = d.extracted_data?.notes
+              ? (typeof d.extracted_data.notes === 'string'
+                ? (() => { try { return JSON.parse(d.extracted_data.notes) } catch { return null } })()
+                : d.extracted_data.notes)
+              : null
+            return {
+              id: d.id,
+              file_name: d.file_name,
+              storage_path: d.storage_path,
+              caption: meta?.caption || '',
+            }
+          }),
           clinicLogoUrl: clinicLogoUrl || null,
         }),
       })
@@ -234,10 +259,20 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
         </div>
       )}
 
-      {valdDocuments.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700 flex items-center gap-2">
-          <FileText className="w-4 h-4 flex-shrink-0" />
-          {valdDocuments.length} documento{valdDocuments.length > 1 ? 's' : ''} VALD se incluirá{valdDocuments.length > 1 ? 'n' : ''} como anexo{valdDocuments.length > 1 ? 's' : ''} en el PDF.
+      {(valdDocuments.length > 0 || reportImages.length > 0) && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm text-blue-700 space-y-1">
+          {valdDocuments.length > 0 && (
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 flex-shrink-0" />
+              {valdDocuments.length} documento{valdDocuments.length > 1 ? 's' : ''} VALD se incluirá{valdDocuments.length > 1 ? 'n' : ''} como anexo{valdDocuments.length > 1 ? 's' : ''} en el PDF.
+            </div>
+          )}
+          {reportImages.length > 0 && (
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 flex-shrink-0" />
+              {reportImages.length} imagen{reportImages.length > 1 ? 'es' : ''} clínica{reportImages.length > 1 ? 's' : ''} se incluirá{reportImages.length > 1 ? 'n' : ''} en el PDF.
+            </div>
+          )}
         </div>
       )}
 

@@ -26,6 +26,13 @@ interface DocumentAttachment {
   storage_path: string
 }
 
+interface ImageAttachment {
+  id: string
+  file_name: string
+  storage_path: string
+  caption: string
+}
+
 const MARGIN_LEFT = 25
 const MARGIN_RIGHT = 25
 const MARGIN_TOP = 30
@@ -123,12 +130,13 @@ function writeSubsectionTitle(doc: jsPDF, title: string, y: number): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { reportData, patientName, patientDob, patientGender, documents, clinicLogoUrl } = await request.json() as {
+    const { reportData, patientName, patientDob, patientGender, documents, images, clinicLogoUrl } = await request.json() as {
       reportData: ReportData
       patientName: string
       patientDob: string | null
       patientGender: string | null
       documents?: DocumentAttachment[]
+      images?: ImageAttachment[]
       clinicLogoUrl?: string | null
     }
 
@@ -345,6 +353,92 @@ export async function POST(request: NextRequest) {
     }
 
     addFooter(doc)
+
+    // ===== CLINICAL IMAGES SECTION =====
+    const clinicalImages = images || []
+    if (clinicalImages.length > 0) {
+      const serviceRoleKeyImg = process.env.SUPABASE_SERVICE_ROLE_KEY
+      const supabaseUrlImg = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+      if (serviceRoleKeyImg && supabaseUrlImg) {
+        const adminSupabaseImg = createClient(supabaseUrlImg, serviceRoleKeyImg, {
+          auth: { autoRefreshToken: false, persistSession: false }
+        })
+
+        // Add images section title page
+        doc.addPage()
+        addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
+        y = MARGIN_TOP + 10
+        y = writeSectionTitle(doc, 'IMÁGENES CLÍNICAS', y)
+        y = writeParagraph(doc, 'A continuación se muestran las imágenes clínicas capturadas durante la valoración (ecografías, fotografías de lesión u otras imágenes relevantes).', y, { fontStyle: 'italic' })
+        y += 5
+
+        for (const img of clinicalImages) {
+          try {
+            const { data: fileData, error: dlError } = await adminSupabaseImg
+              .storage
+              .from('documents')
+              .download(img.storage_path)
+
+            if (dlError || !fileData) {
+              console.error(`Failed to download image ${img.file_name}:`, dlError)
+              continue
+            }
+
+            const imgBuffer = await fileData.arrayBuffer()
+            const imgBase64 = Buffer.from(imgBuffer).toString('base64')
+
+            // Determine image format
+            const lowerName = img.file_name.toLowerCase()
+            let imgFormat = 'JPEG'
+            if (lowerName.endsWith('.png')) imgFormat = 'PNG'
+            else if (lowerName.endsWith('.webp')) imgFormat = 'WEBP'
+
+            const imgDataUrl = `data:image/${imgFormat.toLowerCase()};base64,${imgBase64}`
+
+            // Check if we need a new page (leave room for image + caption)
+            if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 100) {
+              addFooter(doc)
+              doc.addPage()
+              addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
+              y = MARGIN_TOP + 10
+            }
+
+            // Add image — fit within content area, max 120mm tall
+            const maxImgWidth = CONTENT_WIDTH - 10
+            const maxImgHeight = 120
+            try {
+              doc.addImage(imgDataUrl, imgFormat, MARGIN_LEFT + 5, y, maxImgWidth, maxImgHeight, undefined, 'FAST')
+            } catch (imgErr) {
+              console.error(`Could not embed image ${img.file_name}:`, imgErr)
+              // Write placeholder text instead
+              y = writeParagraph(doc, `[Imagen: ${img.file_name} — no se pudo incrustar]`, y, { fontStyle: 'italic', color: [150, 150, 150] })
+              if (img.caption) {
+                y = writeParagraph(doc, img.caption, y, { fontSize: 9, color: [80, 80, 80] })
+              }
+              y += 5
+              continue
+            }
+
+            y += maxImgHeight + 3
+
+            // Add caption below image
+            if (img.caption) {
+              y = writeParagraph(doc, img.caption, y, { fontSize: 9, fontStyle: 'italic', color: [80, 80, 80] })
+            }
+
+            // Image file name reference
+            y = writeParagraph(doc, img.file_name, y, { fontSize: 7, color: [150, 150, 150] })
+            y += 8
+
+          } catch (imgError) {
+            console.error(`Error processing image ${img.file_name}:`, imgError)
+          }
+        }
+
+        addFooter(doc)
+      }
+    }
 
     // Generate the main report PDF buffer
     const mainPdfBytes = Buffer.from(doc.output('arraybuffer'))

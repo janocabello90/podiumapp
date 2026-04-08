@@ -123,8 +123,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // VALD interpretation from patient record
+    if (patient.vald_interpretation) {
+      patientContext += `\n\nINTERPRETACIÓN DEL FISIOTERAPEUTA SOBRE INFORMES VALD:\n${patient.vald_interpretation}`
+    }
+
     if (documents.length > 0) {
-      const docNotes = documents
+      const valdDocs = documents.filter((d: any) => d.doc_type !== 'medical_image')
+      const imageDocs = documents.filter((d: any) => d.doc_type === 'medical_image')
+
+      const docNotes = valdDocs
         .filter((d: any) => d.extracted_data?.notes)
         .map((d: any) => `  ${d.file_name}: ${d.extracted_data.notes}`)
         .join('\n')
@@ -132,7 +140,34 @@ export async function POST(request: NextRequest) {
       if (docNotes) {
         patientContext += `\n\nNOTAS DE INFORMES VALD/DOCUMENTOS:\n${docNotes}`
       }
-      patientContext += `\n\nSe han subido ${documents.length} informe(s) de valoración funcional VALD.`
+
+      if (valdDocs.length > 0) {
+        patientContext += `\n\nSe han subido ${valdDocs.length} informe(s) de valoración funcional VALD.`
+      }
+
+      // Image captions (ecografías, fotografías clínicas)
+      const imageCaptions = imageDocs
+        .filter((d: any) => {
+          const meta = d.extracted_data?.notes ? (typeof d.extracted_data.notes === 'string' ? (() => { try { return JSON.parse(d.extracted_data.notes) } catch { return null } })() : d.extracted_data.notes) : null
+          return meta?.caption
+        })
+        .map((d: any) => {
+          const meta = typeof d.extracted_data.notes === 'string' ? JSON.parse(d.extracted_data.notes) : d.extracted_data.notes
+          return `  ${d.file_name}: ${meta.caption}`
+        })
+        .join('\n')
+
+      if (imageCaptions) {
+        patientContext += `\n\nDESCRIPCIONES DE IMÁGENES CLÍNICAS (ecografías/fotografías):\n${imageCaptions}`
+      }
+
+      if (imageDocs.length > 0) {
+        const includedImages = imageDocs.filter((d: any) => {
+          const meta = d.extracted_data?.notes ? (typeof d.extracted_data.notes === 'string' ? (() => { try { return JSON.parse(d.extracted_data.notes) } catch { return null } })() : d.extracted_data.notes) : null
+          return meta?.include_in_report !== false
+        })
+        patientContext += `\n\nSe han subido ${imageDocs.length} imagen(es) clínica(s), de las cuales ${includedImages.length} se incluirán en el informe.`
+      }
     }
 
     // Call Claude

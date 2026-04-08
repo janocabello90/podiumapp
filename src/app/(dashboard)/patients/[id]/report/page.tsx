@@ -51,6 +51,7 @@ export default async function ReportPage({
     doc_type: d.doc_type,
     file_name: d.file_name,
     storage_path: d.storage_path,
+    extracted_data: d.extracted_data,
   }))
 
   return (
