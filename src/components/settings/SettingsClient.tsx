@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
 
@@ -225,6 +225,11 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   const [sendInviteEmail, setSendInviteEmail] = useState(true)
   const [copied, setCopied] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  // Reset password state
+  const [resettingId, setResettingId] = useState<string | null>(null)
+  const [resetResult, setResetResult] = useState<{ userId: string; password: string; email: string; name: string } | null>(null)
+  const [resetShowPw, setResetShowPw] = useState(false)
+  const [resetCopied, setResetCopied] = useState(false)
 
   async function toggleActive(member: UserType) {
     const newStatus = !member.is_active
@@ -286,6 +291,37 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
       setCopied(true)
       toast.success('Contraseña copiada')
       setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  async function handleResetPassword(member: UserType) {
+    if (!confirm(`¿Resetear la contraseña de ${member.full_name}? Se generará una nueva contraseña temporal.`)) return
+    setResettingId(member.id)
+    setResetResult(null)
+    try {
+      const res = await fetch('/api/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: member.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al resetear')
+      setResetResult({ userId: member.id, password: data.newPassword, email: data.userEmail, name: data.userName })
+      setResetShowPw(false)
+      setResetCopied(false)
+      toast.success(`Contraseña de ${member.full_name} reseteada`)
+    } catch (err: any) {
+      toast.error(err.message || 'Error al resetear contraseña')
+    }
+    setResettingId(null)
+  }
+
+  function copyResetPassword() {
+    if (resetResult) {
+      navigator.clipboard.writeText(resetResult.password)
+      setResetCopied(true)
+      toast.success('Contraseña copiada')
+      setTimeout(() => setResetCopied(false), 2000)
     }
   }
 
@@ -436,6 +472,40 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
           </div>
         )}
 
+        {/* Reset password result banner */}
+        {resetResult && (
+          <div className="px-4 sm:px-6 py-3 border-b border-gray-100 bg-amber-50">
+            <div className="flex items-start justify-between gap-3">
+              <div className="space-y-1.5 flex-1">
+                <p className="text-sm font-medium text-amber-800">
+                  Nueva contraseña para {resetResult.name}
+                </p>
+                <div className="bg-white rounded-lg p-2.5 flex items-center justify-between gap-2">
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{resetResult.email}</span></p>
+                    <p className="text-xs text-gray-500">Contraseña:
+                      <code className="ml-1 text-sm font-mono font-medium text-gray-900 bg-gray-50 px-1.5 py-0.5 rounded">
+                        {resetShowPw ? resetResult.password : '••••••••••'}
+                      </code>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => setResetShowPw(!resetShowPw)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title={resetShowPw ? 'Ocultar' : 'Mostrar'}>
+                      {resetShowPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={copyResetPassword} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title="Copiar">
+                      {resetCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setResetResult(null)} className="text-amber-400 hover:text-amber-600 text-xs mt-0.5">
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="divide-y divide-gray-100">
           {members.map((member) => (
             <div key={member.id} className="flex items-center justify-between px-4 sm:px-6 py-3.5">
@@ -459,17 +529,27 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
               </div>
 
               {member.id !== currentUserId && (
-                <button
-                  onClick={() => toggleActive(member)}
-                  className={`p-2 rounded-lg transition-colors flex-shrink-0 ${
-                    member.is_active
-                      ? 'text-red-400 hover:bg-red-50 hover:text-red-600'
-                      : 'text-green-400 hover:bg-green-50 hover:text-green-600'
-                  }`}
-                  title={member.is_active ? 'Desactivar' : 'Activar'}
-                >
-                  {member.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                </button>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => handleResetPassword(member)}
+                    disabled={resettingId === member.id}
+                    className="p-2 rounded-lg transition-colors text-amber-400 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50"
+                    title="Resetear contraseña"
+                  >
+                    {resettingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => toggleActive(member)}
+                    className={`p-2 rounded-lg transition-colors ${
+                      member.is_active
+                        ? 'text-red-400 hover:bg-red-50 hover:text-red-600'
+                        : 'text-green-400 hover:bg-green-50 hover:text-green-600'
+                    }`}
+                    title={member.is_active ? 'Desactivar' : 'Activar'}
+                  >
+                    {member.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                  </button>
+                </div>
               )}
             </div>
           ))}
