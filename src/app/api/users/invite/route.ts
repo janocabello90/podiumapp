@@ -60,22 +60,49 @@ export async function POST(request: NextRequest) {
     // Generate temporary password
     const tempPassword = generatePassword()
 
-    // Create auth user - if sendInviteEmail, use inviteUserByEmail so they get a setup email
+    // Create auth user
+    // Strategy: if sendInviteEmail, try inviteUserByEmail first.
+    // If it fails (rate limit, etc.), fallback to createUser with temp password.
     let authData: any
     let authError: any
+    let inviteEmailActuallySent = false
+    let usedTempPassword = tempPassword
 
     if (sendInviteEmail) {
-      const result = await adminSupabase.auth.admin.inviteUserByEmail(email.trim(), {
+      // Try invite by email first
+      const inviteResult = await adminSupabase.auth.admin.inviteUserByEmail(email.trim(), {
         data: { full_name: fullName.trim() },
         redirectTo: `${request.nextUrl.origin}/auth/callback?type=recovery`,
       })
-      authData = result.data
-      authError = result.error
+
+      if (inviteResult.error) {
+        const errMsg = inviteResult.error.message || ''
+        // If rate limit or email error, fallback to createUser with password
+        if (errMsg.includes('rate limit') || errMsg.includes('Rate limit') || errMsg.includes('email') || errMsg.includes('smtp')) {
+          console.warn('Invite email failed, falling back to createUser:', errMsg)
+          const fallbackResult = await adminSupabase.auth.admin.createUser({
+            email: email.trim(),
+            password: tempPassword,
+            email_confirm: true,
+          })
+          authData = fallbackResult.data
+          authError = fallbackResult.error
+          inviteEmailActuallySent = false
+        } else {
+          authData = inviteResult.data
+          authError = inviteResult.error
+        }
+      } else {
+        authData = inviteResult.data
+        authError = null
+        inviteEmailActuallySent = true
+        usedTempPassword = null as any // No temp password when invite email works
+      }
     } else {
       const result = await adminSupabase.auth.admin.createUser({
         email: email.trim(),
         password: tempPassword,
-        email_confirm: true, // Auto-confirm email so they can login immediately
+        email_confirm: true,
       })
       authData = result.data
       authError = result.error
@@ -83,14 +110,14 @@ export async function POST(request: NextRequest) {
 
     if (authError) {
       // Check if user already exists
-      if (authError.message.includes('already been registered') || authError.message.includes('already exists')) {
+      if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
         return NextResponse.json({ error: 'Ya existe un usuario con ese email' }, { status: 409 })
       }
       console.error('Auth create error:', authError)
       return NextResponse.json({ error: 'Error al crear usuario: ' + authError.message }, { status: 500 })
     }
 
-    if (!authData.user) {
+    if (!authData?.user) {
       return NextResponse.json({ error: 'Error inesperado al crear usuario' }, { status: 500 })
     }
 
@@ -118,8 +145,9 @@ export async function POST(request: NextRequest) {
     revalidatePath('/settings')
     return NextResponse.json({
       user: newUser,
-      tempPassword: sendInviteEmail ? null : tempPassword,
-      inviteEmailSent: !!sendInviteEmail,
+      tempPassword: inviteEmailActuallySent ? null : usedTempPassword,
+      inviteEmailSent: inviteEmailActuallySent,
+      rateLimitFallback: sendInviteEmail && !inviteEmailActuallySent,
     })
   } catch (error: any) {
     console.error('Invite user error:', error)

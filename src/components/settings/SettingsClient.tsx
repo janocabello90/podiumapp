@@ -267,7 +267,13 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
       setMembers(prev => [...prev, data.user])
       setTempPassword(data.tempPassword)
       setInviteEmailSent(data.inviteEmailSent || false)
-      toast.success(data.inviteEmailSent ? 'Usuario creado y email de invitación enviado' : 'Usuario creado correctamente')
+      if (data.inviteEmailSent) {
+        toast.success('Usuario creado y email de invitación enviado')
+      } else if (data.rateLimitFallback) {
+        toast.success('Usuario creado. El email no se pudo enviar (límite de envíos), usa la contraseña temporal.')
+      } else {
+        toast.success('Usuario creado correctamente')
+      }
     } catch (error: any) {
       toast.error(error.message || 'Error al añadir')
     }

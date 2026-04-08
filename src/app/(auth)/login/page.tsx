@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 
@@ -48,7 +48,18 @@ export default function LoginPage() {
     })
 
     if (error) {
-      toast.error('Error al enviar el email. Inténtalo de nuevo.')
+      // Show specific error messages
+      if (error.message?.includes('rate limit') || error.message?.includes('Rate limit')) {
+        toast.error('Demasiados intentos. Espera unos minutos antes de intentarlo de nuevo.')
+      } else if (error.message?.includes('not found') || error.message?.includes('User not found')) {
+        // Don't reveal if email exists or not for security
+        setResetSent(true)
+        toast.success('Si el email existe, recibirás un enlace')
+        setLoading(false)
+        return
+      } else {
+        toast.error(`Error: ${error.message || 'No se pudo enviar el email. Inténtalo de nuevo.'}`)
+      }
       console.error('Reset password error:', error)
     } else {
       setResetSent(true)
