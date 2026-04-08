@@ -36,32 +36,41 @@ export async function POST(request: NextRequest) {
     const bucketName = 'documents'
     const fileName = `${profile.clinic_id}/${patientId}/${Date.now()}_${file.name}`
 
-    // Use admin client for storage uploads to bypass MIME type restrictions
-    let uploadData: any
-    let uploadError: any
-
+    // Get admin client for storage operations
+    let adminSupabase: ReturnType<typeof createAdminSupabaseClient> | null = null
     try {
-      const adminSupabase = createAdminSupabaseClient()
-      const result = await adminSupabase.storage
-        .from(bucketName)
-        .upload(fileName, file, {
-          contentType: file.type,
-          upsert: false,
-        })
-      uploadData = result.data
-      uploadError = result.error
-    } catch (adminErr: any) {
-      // Fallback to regular client if admin client not available
-      console.warn('Admin client unavailable, falling back to regular client:', adminErr.message)
-      const result = await supabase.storage
-        .from(bucketName)
-        .upload(fileName, file, {
-          contentType: file.type,
-          upsert: false,
-        })
-      uploadData = result.data
-      uploadError = result.error
+      adminSupabase = createAdminSupabaseClient()
+    } catch (e: any) {
+      console.warn('Admin client not available:', e.message)
     }
+
+    // If uploading an image, ensure bucket accepts image MIME types
+    if (isImage && adminSupabase) {
+      try {
+        await adminSupabase.storage.updateBucket(bucketName, {
+          public: false,
+          allowedMimeTypes: [
+            'application/pdf',
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+            'image/heic',
+            'image/heif',
+          ],
+        })
+      } catch (bucketErr: any) {
+        console.warn('Could not update bucket MIME types:', bucketErr.message)
+      }
+    }
+
+    // Upload file
+    const storageClient = adminSupabase || supabase
+    const { data: uploadData, error: uploadError } = await storageClient.storage
+      .from(bucketName)
+      .upload(fileName, file, {
+        contentType: file.type,
+        upsert: false,
+      })
 
     if (uploadError) {
       console.error('Upload error:', uploadError)
