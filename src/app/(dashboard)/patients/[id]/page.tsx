@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { ArrowLeft, Send, FileText, Upload, Mic, Check } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import DocumentSection from '@/components/documents/DocumentSection'
+import RefreshButton from '@/components/patients/RefreshButton'
+
+// Force dynamic rendering so refresh always gets fresh data
+export const dynamic = 'force-dynamic'
 
 export default async function PatientDetailPage({
   params,
@@ -29,7 +33,11 @@ export default async function PatientDetailPage({
     notFound()
   }
 
-  const latestAnamnesis = patient.anamnesis_forms?.[0]
+  // Sort anamnesis by creation date to get latest
+  const sortedAnamnesis = (patient.anamnesis_forms || []).sort(
+    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )
+  const latestAnamnesis = sortedAnamnesis[0]
   const latestAssessment = patient.assessments?.[0]
   const patientDocuments = patient.documents || []
   const hasDocuments = patientDocuments.length > 0
@@ -41,23 +49,26 @@ export default async function PatientDetailPage({
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <Link
-          href="/patients"
-          className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-500" />
-        </Link>
-        <div className="min-w-0">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{patient.full_name}</h1>
-          <p className="text-sm text-gray-500 mt-0.5 truncate">
-            {[
-              age ? `${age} años` : null,
-              patient.phone,
-              patient.email,
-            ].filter(Boolean).join(' · ')}
-          </p>
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <Link
+            href="/patients"
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5 text-gray-500" />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{patient.full_name}</h1>
+            <p className="text-sm text-gray-500 mt-0.5 truncate">
+              {[
+                age ? `${age} años` : null,
+                patient.phone,
+                patient.email,
+              ].filter(Boolean).join(' · ')}
+            </p>
+          </div>
         </div>
+        <RefreshButton />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -83,7 +94,7 @@ export default async function PatientDetailPage({
                     {latestAnamnesis?.status === 'completed'
                       ? 'Completada por el paciente'
                       : latestAnamnesis?.status === 'pending' || latestAnamnesis?.status === 'in_progress'
-                      ? 'Enlace enviado, esperando respuesta'
+                      ? 'Enlace enviado, esperando respuesta — pulsa Actualizar para comprobar'
                       : 'Envía el formulario al paciente'}
                   </p>
                   <AnamnesisActions
@@ -161,6 +172,7 @@ export default async function PatientDetailPage({
                       patientId={patient.id}
                       clinicId={patient.clinic_id}
                       initialDocuments={patientDocuments}
+                      initialInterpretation={patient.vald_interpretation || ''}
                     />
                   </div>
                 </div>

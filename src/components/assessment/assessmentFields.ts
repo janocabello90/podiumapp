@@ -56,7 +56,15 @@ const shoulderRegion: BodyRegion = {
         { key: 'skin_changes', label: 'Cambios en la piel', type: 'select', options: ['Ninguno', 'Enrojecimiento', 'Hematoma', 'Cicatriz', 'Otro'] },
       ],
     },
-    // 2. Valoración de la sensibilidad
+    // 2. Palpación
+    {
+      id: 'palpation',
+      title: 'Palpación',
+      description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular',
+      hasNotes: true,
+      fields: [],
+    },
+    // 3. Valoración de la sensibilidad
     {
       id: 'sensitivity',
       title: 'Valoración de la sensibilidad',
@@ -181,6 +189,13 @@ const kneeRegion: BodyRegion = {
       ],
     },
     {
+      id: 'palpation',
+      title: 'Palpación',
+      description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular',
+      hasNotes: true,
+      fields: [],
+    },
+    {
       id: 'sensitivity',
       title: 'Valoración de la sensibilidad',
       description: 'Exploración neurológica sensitiva',
@@ -275,6 +290,7 @@ const spineRegion: BodyRegion = {
         { key: 'pelvic_tilt', label: 'Basculación pélvica', type: 'select', options: ['Neutra', 'Anteversión', 'Retroversión'] },
       ],
     },
+    { id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [] },
     { id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica', hasNotes: true, fields: [] },
     { id: 'mobility', title: 'Valoración de la movilidad', description: 'Rango articular', hasNotes: true, fields: [
       { key: 'flexion', label: 'Flexión', type: 'select', options: ['Completa', 'Limitada leve', 'Limitada moderada', 'Limitada severa'] },
@@ -329,6 +345,9 @@ const hipRegion: BodyRegion = {
         { key: 'swelling', label: 'Inflamación / edema', type: 'boolean' },
         { key: 'muscle_atrophy', label: 'Atrofia glútea visible', type: 'boolean' },
       ],
+    },
+    {
+      id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [],
     },
     {
       id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica sensitiva', hasNotes: true,
@@ -426,6 +445,9 @@ const ankleRegion: BodyRegion = {
       ],
     },
     {
+      id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [],
+    },
+    {
       id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica sensitiva', hasNotes: true,
       fields: [
         { key: 'dermatome_l4', label: 'Dermatoma L4 (medial)', type: 'select', options: ['Normal', 'Hipoestesia', 'Hiperestesia', 'Anestesia'] },
@@ -515,6 +537,9 @@ const elbowRegion: BodyRegion = {
         { key: 'muscle_atrophy', label: 'Atrofia muscular visible', type: 'boolean' },
         { key: 'deformity', label: 'Deformidad', type: 'select', options: ['Ninguna', 'Nódulos', 'Bursitis olecraniana', 'Otra'] },
       ],
+    },
+    {
+      id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [],
     },
     {
       id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica sensitiva', hasNotes: true,
@@ -608,6 +633,9 @@ const wristRegion: BodyRegion = {
       ],
     },
     {
+      id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [],
+    },
+    {
       id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica sensitiva', hasNotes: true,
       fields: [
         { key: 'median_nerve', label: 'N. mediano (pulgar-medio)', type: 'select', options: ['Normal', 'Hipoestesia', 'Hiperestesia', 'Anestesia'] },
@@ -696,6 +724,9 @@ const cervicalRegion: BodyRegion = {
         { key: 'muscle_spasm', label: 'Espasmo muscular visible', type: 'boolean' },
         { key: 'torticollis', label: 'Tortícolis', type: 'boolean' },
       ],
+    },
+    {
+      id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [],
     },
     {
       id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica sensitiva', hasNotes: true,
@@ -794,6 +825,9 @@ const tmjRegion: BodyRegion = {
         { key: 'muscle_hypertrophy', label: 'Hipertrofia maseteros', type: 'boolean' },
         { key: 'cervical_posture', label: 'Postura cervical asociada', type: 'select', options: ['Normal', 'Anteriorizada', 'Extensión cervical alta'] },
       ],
+    },
+    {
+      id: 'palpation', title: 'Palpación', description: 'Hallazgos palpatorios: puntos dolorosos, tensión, temperatura, textura tisular', hasNotes: true, fields: [],
     },
     {
       id: 'sensitivity', title: 'Valoración de la sensibilidad', description: 'Exploración neurológica y muscular', hasNotes: true,
