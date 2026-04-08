@@ -1,9 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, FileText, Upload, Mic, Check } from 'lucide-react'
+import { ArrowLeft, Send, FileText, Upload, Mic, Check, Camera } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import DocumentSection from '@/components/documents/DocumentSection'
+import ImageGallerySection from '@/components/documents/ImageGallerySection'
 import RefreshButton from '@/components/patients/RefreshButton'
 
 // Force dynamic rendering so refresh always gets fresh data
@@ -39,8 +40,11 @@ export default async function PatientDetailPage({
   )
   const latestAnamnesis = sortedAnamnesis[0]
   const latestAssessment = patient.assessments?.[0]
-  const patientDocuments = patient.documents || []
+  const allDocuments = patient.documents || []
+  const patientDocuments = allDocuments.filter((d: any) => d.doc_type !== 'medical_image')
+  const patientImages = allDocuments.filter((d: any) => d.doc_type === 'medical_image')
   const hasDocuments = patientDocuments.length > 0
+  const hasImages = patientImages.length > 0
   const latestReport = patient.reports?.[0]
   const age = patient.date_of_birth
     ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
@@ -178,7 +182,33 @@ export default async function PatientDetailPage({
                 </div>
               </div>
 
-              {/* Step 4: Report */}
+              {/* Step 4: Images (Ultrasound / Photos) */}
+              <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
+                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  hasImages
+                    ? 'bg-green-100 text-green-600'
+                    : 'bg-purple-100 text-purple-600'
+                }`}>
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">4. Ecografías y fotografías</h3>
+                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
+                    {hasImages
+                      ? `${patientImages.length} imagen${patientImages.length > 1 ? 'es' : ''} subida${patientImages.length > 1 ? 's' : ''}`
+                      : 'Sube ecografías, fotos de lesión o imágenes clínicas'}
+                  </p>
+                  <div className="mt-2 sm:mt-3">
+                    <ImageGallerySection
+                      patientId={patient.id}
+                      clinicId={patient.clinic_id}
+                      initialImages={patientImages}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 5: Report */}
               <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
                 <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   latestReport?.status === 'approved'
@@ -190,7 +220,7 @@ export default async function PatientDetailPage({
                   <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">4. Informe final</h3>
+                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">5. Informe final</h3>
                   <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
                     {latestReport?.status === 'approved'
                       ? 'Informe aprobado'
