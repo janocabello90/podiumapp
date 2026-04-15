@@ -60,6 +60,10 @@ export default async function AnamnesisPage({
       token={params.token}
       patientName={(anamnesis.patients as any)?.full_name || ''}
       existingData={anamnesis.form_data || {}}
+      existingConsents={{
+        dataProcessing: anamnesis.consent_data_processing ?? false,
+        ai: anamnesis.consent_ai_analysis ?? false,
+      }}
     />
   )
 }

@@ -31,6 +31,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Archivo y patient_id requeridos' }, { status: 400 })
     }
 
+    // Verify patient belongs to this clinic (prevent cross-clinic upload)
+    const { data: patientCheck } = await supabase
+      .from('patients')
+      .select('id, clinic_id')
+      .eq('id', patientId)
+      .single()
+
+    if (!patientCheck || patientCheck.clinic_id !== profile.clinic_id) {
+      return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+    }
+
     // Determine storage bucket and path
     const isImage = file.type.startsWith('image/')
     const bucketName = 'documents'
@@ -122,11 +133,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const { data: profile } = await supabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    }
+
     const { searchParams } = new URL(request.url)
     const storagePath = searchParams.get('path')
 
     if (!storagePath) {
       return NextResponse.json({ error: 'Path requerido' }, { status: 400 })
+    }
+
+    // Verify the document belongs to user's clinic before generating signed URL
+    const { data: docCheck } = await supabase
+      .from('documents')
+      .select('id, clinic_id')
+      .eq('storage_path', storagePath)
+      .single()
+
+    if (!docCheck || docCheck.clinic_id !== profile.clinic_id) {
+      return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
     }
 
     // Try admin client first (no restrictions), fallback to regular

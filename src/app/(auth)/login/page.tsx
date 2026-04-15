@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 
@@ -204,6 +205,20 @@ export default function LoginPage() {
         <p className="text-center text-xs text-gray-400 mt-6">
           Método Podium · Fisioterapia basada en evidencia
         </p>
+
+        <div className="text-center text-xs text-gray-400 mt-4 space-x-3">
+          <Link href="/aviso-legal" className="hover:text-gray-600">
+            Aviso legal
+          </Link>
+          <span>·</span>
+          <Link href="/privacidad" className="hover:text-gray-600">
+            Privacidad
+          </Link>
+          <span>·</span>
+          <Link href="/cookies" className="hover:text-gray-600">
+            Cookies
+          </Link>
+        </div>
       </div>
     </div>
   )

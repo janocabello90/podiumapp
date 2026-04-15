@@ -11,15 +11,20 @@ interface Props {
   token: string
   patientName: string
   existingData: Record<string, any>
+  existingConsents?: { dataProcessing: boolean; ai: boolean }
 }
 
-export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData }: Props) {
+export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents }: Props) {
   const supabase = createClient()
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>(existingData)
   const [saving, setSaving] = useState(false)
   const [completed, setCompleted] = useState(false)
-  const [consentGiven, setConsentGiven] = useState(false)
+  // If both consents were already saved in DB, user can skip consent screen on reload
+  const preConsented = !!(existingConsents?.dataProcessing && existingConsents?.ai)
+  const [consentGiven, setConsentGiven] = useState(preConsented)
+  const [consentDataProcessing, setConsentDataProcessing] = useState(existingConsents?.dataProcessing ?? false)
+  const [consentAI, setConsentAI] = useState(existingConsents?.ai ?? false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const totalBlocks = ANAMNESIS_BLOCKS.length
@@ -114,9 +119,6 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   }
 
   // Consent screen
-  const [consentDataProcessing, setConsentDataProcessing] = useState(false)
-  const [consentAI, setConsentAI] = useState(false)
-
   if (!consentGiven && currentBlock === 0) {
     const canProceed = consentDataProcessing && consentAI
 
@@ -188,7 +190,23 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
             </div>
 
             <button
-              onClick={() => { if (canProceed) setConsentGiven(true) }}
+              onClick={async () => {
+                if (!canProceed) return
+                // Persist consents immediately so reloads don't lose them
+                try {
+                  await supabase
+                    .from('anamnesis_forms')
+                    .update({
+                      consent_data_processing: consentDataProcessing,
+                      consent_ai_analysis: consentAI,
+                      consent_timestamp: new Date().toISOString(),
+                    })
+                    .eq('token', token)
+                } catch (e) {
+                  console.error('Consent save error:', e)
+                }
+                setConsentGiven(true)
+              }}
               disabled={!canProceed}
               className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
 import { PDFDocument } from 'pdf-lib'
 import { createClient } from '@supabase/supabase-js'
+import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 interface ReportData {
   portada_intro: string
@@ -130,6 +131,23 @@ function writeSubsectionTitle(doc: jsPDF, title: string, y: number): number {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication
+    const authSupabase = createServerSupabaseClient()
+    const { data: { user } } = await authSupabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+    }
+
+    const { data: authProfile } = await authSupabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!authProfile) {
+      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    }
+
     const { reportData, patientName, patientDob, patientGender, documents, images, clinicLogoUrl } = await request.json() as {
       reportData: ReportData
       patientName: string
@@ -138,6 +156,30 @@ export async function POST(request: NextRequest) {
       documents?: DocumentAttachment[]
       images?: ImageAttachment[]
       clinicLogoUrl?: string | null
+    }
+
+    // Verify ownership of all attached documents/images (prevent cross-clinic data exfiltration)
+    const allAttachmentPaths = [
+      ...(documents || []).map((d) => d.storage_path),
+      ...(images || []).map((i) => i.storage_path),
+    ].filter(Boolean)
+
+    if (allAttachmentPaths.length > 0) {
+      const { data: ownedDocs } = await authSupabase
+        .from('documents')
+        .select('storage_path, clinic_id')
+        .in('storage_path', allAttachmentPaths)
+
+      const ownedPaths = new Set(
+        (ownedDocs || [])
+          .filter((d) => d.clinic_id === authProfile.clinic_id)
+          .map((d) => d.storage_path)
+      )
+
+      const unauthorized = allAttachmentPaths.some((p) => !ownedPaths.has(p))
+      if (unauthorized) {
+        return NextResponse.json({ error: 'Recursos no autorizados' }, { status: 403 })
+      }
     }
 
     const doc = new jsPDF('portrait', 'mm', 'a4')
@@ -152,7 +194,7 @@ export async function POST(request: NextRequest) {
     let coverY = 45
     if (clinicLogoUrl) {
       try {
-        const logoResponse = await fetch(clinicLogoUrl)
+        const logoResponse = await fetch(clinicLogoUrl, { signal: AbortSignal.timeout(5000) })
         if (logoResponse.ok) {
           const logoBuffer = await logoResponse.arrayBuffer()
           const logoBase64 = Buffer.from(logoBuffer).toString('base64')

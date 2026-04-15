@@ -58,12 +58,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
     }
 
+    const { data: profile } = await supabase
+      .from('users')
+      .select('clinic_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile) {
+      return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    }
+
     const { patientId } = await request.json()
     if (!patientId) {
       return NextResponse.json({ error: 'patientId requerido' }, { status: 400 })
     }
 
-    // Fetch all patient data
+    // Fetch all patient data (enforce clinic isolation)
     const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select(`
@@ -73,6 +83,7 @@ export async function POST(request: NextRequest) {
         documents(*)
       `)
       .eq('id', patientId)
+      .eq('clinic_id', profile.clinic_id)
       .single()
 
     if (patientError || !patient) {
