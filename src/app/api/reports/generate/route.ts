@@ -237,6 +237,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Error al guardar el informe' }, { status: 500 })
     }
 
+    // Fire-and-forget: auto-classify patient using the new report as richest context.
+    // Skipped if patient already has a manual classification.
+    try {
+      const origin = request.nextUrl.origin
+      fetch(`${origin}/api/patients/classify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: request.headers.get('cookie') || '',
+        },
+        body: JSON.stringify({ patientId }),
+      }).catch((e) => console.error('Auto-classify trigger failed:', e))
+    } catch (e) {
+      // non-blocking
+    }
+
     return NextResponse.json({ report })
   } catch (error: any) {
     console.error('Report generation error:', error)

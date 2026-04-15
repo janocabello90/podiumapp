@@ -96,6 +96,14 @@ export default function AssessmentForm({ assessmentId, patientId, initialData, i
       if (error) throw error
       setStatus('completed')
       toast.success('Valoración completada y guardada')
+      // Fire-and-forget: auto-classify patient from anamnesis + assessment
+      if (patientId) {
+        fetch('/api/patients/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patientId }),
+        }).catch(() => {})
+      }
     } catch (err: any) {
       toast.error('Error al completar la valoración')
     } finally {
