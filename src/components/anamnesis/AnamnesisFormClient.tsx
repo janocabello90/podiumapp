@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { ChevronRight, ChevronLeft, Check, Mic, MicOff, Loader2 } from 'lucide-react'
 import { ANAMNESIS_BLOCKS, type AnamnesisField } from './anamnesisFields'
 import toast from 'react-hot-toast'
@@ -15,7 +14,6 @@ interface Props {
 }
 
 export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents }: Props) {
-  const supabase = createClient()
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>(existingData)
   const [saving, setSaving] = useState(false)
@@ -40,18 +38,18 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   const autoSave = useCallback(async () => {
     if (Object.keys(formData).length === 0) return
     try {
-      await supabase
-        .from('anamnesis_forms')
-        .update({
+      await fetch(`/api/anamnesis/${token}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'autosave',
           form_data: formData,
-          status: 'in_progress',
-          started_at: new Date().toISOString(),
-        })
-        .eq('token', token)
+        }),
+      })
     } catch (e) {
       console.error('Auto-save error:', e)
     }
-  }, [formData, token, supabase])
+  }, [formData, token])
 
   useEffect(() => {
     const timeout = setTimeout(autoSave, 2000)
@@ -81,21 +79,26 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   async function submitForm() {
     setSaving(true)
     try {
-      await supabase
-        .from('anamnesis_forms')
-        .update({
+      const res = await fetch(`/api/anamnesis/${token}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'submit',
           form_data: formData,
-          status: 'completed',
-          completed_at: new Date().toISOString(),
           consent_data_processing: consentDataProcessing,
           consent_ai_analysis: consentAI,
-          consent_timestamp: new Date().toISOString(),
-        })
-        .eq('token', token)
-
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toast.error(err.error || 'Error al enviar el formulario')
+        setSaving(false)
+        return
+      }
       setCompleted(true)
     } catch (e) {
       console.error('Submit error:', e)
+      toast.error('No se pudo enviar el formulario. Revisa tu conexión.')
     } finally {
       setSaving(false)
     }
@@ -194,14 +197,15 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                 if (!canProceed) return
                 // Persist consents immediately so reloads don't lose them
                 try {
-                  await supabase
-                    .from('anamnesis_forms')
-                    .update({
+                  await fetch(`/api/anamnesis/${token}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      action: 'consent',
                       consent_data_processing: consentDataProcessing,
                       consent_ai_analysis: consentAI,
-                      consent_timestamp: new Date().toISOString(),
-                    })
-                    .eq('token', token)
+                    }),
+                  })
                 } catch (e) {
                   console.error('Consent save error:', e)
                 }
