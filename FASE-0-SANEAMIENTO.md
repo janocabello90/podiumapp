@@ -1,8 +1,9 @@
 # SHERPA — Priorización técnica y propuesta de Fase 0
 
 > Documento de decisión previo al flujo de grupos/equipos (Prompt 2).
-> Basado en `CLAUDE.md` (auditoría de código + validación contra la DB real `njzqyttrlivipnkwmbbt` vía MCP read-only, 2026-07).
-> **No implementa nada.** Solo prioriza y secuencia.
+> Basado en `CLAUDE.md` (auditoría de código + validación contra la DB real `njzqyttrlivipnkwmbbt` vía MCP, 2026-07).
+>
+> **✅ ESTADO: FASE 0 EJECUTADA Y COMPLETADA (2026-07).** Las 6 tareas de saneamiento (§4) están hechas y verificadas: drop de las dos policies `USING(TRUE)` de anamnesis, baseline de migraciones + tipos generados, lectura de anamnesis por service_role, recuperación de `vald_interpretation`, y protección de contraseñas filtradas. El sistema queda **seguro y ampliable** → luz verde para el diseño del Prompt 2. El resto del documento se conserva como registro de la priorización y decisiones.
 
 ---
 
@@ -122,7 +123,7 @@ P1.2 (orden no determinista) y el resto de P2 se abordan **dentro** del trabajo 
 | 3 | ✅ **HECHO (2026-07)** — Generar `types/database.ts` desde Supabase | P1.3 | `types/database.generated.ts` autogenerado (fuente de verdad) + `types/database.ts` deriva de él (solo overrides no-nulos/enum a mano). Build OK |
 | 4 | ✅ **HECHO (2026-07)** — Migrar lectura de anamnesis pública a service_role + borrar policy `SELECT USING(TRUE)` | P0.1 | Helper `src/lib/anamnesis/getByToken.ts` (service_role) + página consume el helper (desplegado). Policy borrada vía migración `20260724000000_drop_public_anamnesis_select_policy`. Verificado: anon 2→0, página pública OK |
 | 5 | ✅ **HECHO (2026-07)** — Recuperar `vald_interpretation` (crear columna) | P1.1 | `patients.vald_interpretation TEXT` vía `apply_migration` (`20260724163050`). Tipos regenerados. `DocumentSection` ya no traga el error (toast visible). Feature funciona en prod (el código desplegado ya la usa). Build OK |
-| 6 | Activar protección de contraseñas filtradas en Auth | P2.2 | 1 clic, gratis |
+| 6 | ✅ **HECHO (2026-07)** — Activar protección de contraseñas filtradas (HaveIBeenPwned) en Auth | P2.2 | Activada a mano en el dashboard (config de Auth, no gestionable por MCP/SQL). Verificado: advisor `auth_leaked_password_protection` ya no aparece. Solo afecta a contraseñas nuevas |
 
 **Fuera de Fase 0** (aunque tienten): todo P2 restante y todo P3. No entran.
 

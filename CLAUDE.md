@@ -290,7 +290,7 @@ Todas en `src/app/api/**/route.ts`. Patrón general: `getUser()` → cargar `pro
 - **`rls_policy_always_true`** → policy `Public can update anamnesis by token` (UPDATE) — coincide con §11.1 (código muerto, borrar).
 - **`function_search_path_mutable`** → `get_user_clinic_id` y `update_updated_at` no fijan `search_path`. Hardening recomendado (`SET search_path = ''` o `pg_catalog`).
 - **`anon_security_definer_function_executable`** / **`authenticated_...`** → `get_user_clinic_id()` y `rls_auto_enable()` son ejecutables vía RPC por `anon`/`authenticated`. `get_user_clinic_id` para anon devuelve null (bajo riesgo); `rls_auto_enable` es una función de event trigger que fuera de contexto no hace nada útil. Aun así, lo pulcro es `REVOKE EXECUTE`.
-- **`auth_leaked_password_protection`** → desactivada la comprobación contra HaveIBeenPwned. Activar en Auth settings.
+- **`auth_leaked_password_protection`** → ✅ **ACTIVADA (Fase 0 Tarea 6, 2026-07, confirmado).** Comprobación contra HaveIBeenPwned habilitada en Auth. Es config de **Auth (GoTrue)**, NO gestionable por SQL/MCP → se activó **a mano** en el dashboard (Authentication → Leaked password protection). Verificado: el advisor `auth_leaked_password_protection` ya no aparece. Impacto: solo afecta a contraseñas **nuevas** (alta/cambio/reset); no invalida las existentes. Doc: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
 
 Ninguno es *ERROR*; son endurecimientos. El riesgo grave real (SELECT abierto de anamnesis) **no lo cubre el linter** — ver §11.1.
 
