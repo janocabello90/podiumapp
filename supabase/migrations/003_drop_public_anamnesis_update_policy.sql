@@ -1,0 +1,24 @@
+-- ============================================
+-- Fase 0 — Tarea 1: cerrar agujero de escritura pública en anamnesis_forms
+-- ============================================
+-- Elimina la policy pública de UPDATE `USING (TRUE)`, que permitía a
+-- CUALQUIER portador de la anon key modificar cualquier anamnesis de
+-- cualquier clínica sin sesión ni validación de token.
+--
+-- Es CÓDIGO MUERTO: desde el refactor baa8b06, la escritura del paciente
+-- va por `PATCH /api/anamnesis/[token]` con service_role (que ignora RLS y
+-- valida el token). La edición del fisio (AnamnesisViewer) va con el cliente
+-- anon AUTENTICADO y queda cubierta por la policy clínica-scoped
+-- `Users can update clinic anamnesis` (clinic_id = get_user_clinic_id()),
+-- que NO se toca aquí. Las policies del mismo comando se combinan con OR,
+-- así que los flujos legítimos siguen funcionando.
+--
+-- NOTA: la policy pública de SELECT (`Public can view anamnesis by token`)
+-- NO se toca en esta migración — es load-bearing (la página pública la usa
+-- para leer). Se aborda en una tarea posterior de Fase 0 tras migrar la
+-- lectura a un endpoint server-side.
+--
+-- Idempotente: DROP POLICY IF EXISTS.
+-- ============================================
+
+DROP POLICY IF EXISTS "Public can update anamnesis by token" ON anamnesis_forms;
