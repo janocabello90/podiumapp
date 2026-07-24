@@ -1,7 +1,27 @@
-// ============================================
-// Database Types - Generated from schema
-// ============================================
+// ============================================================================
+// Alias de dominio de la app.
+// El esquema COMPLETO y autoritativo vive en ./database.generated.ts, generado
+// automáticamente desde Supabase (MCP generate_typescript_types). Al regenerarlo,
+// los nombres de columna y las columnas nuevas se propagan aquí solos (vía los
+// `Omit`/derivaciones de abajo, que fallarían en compilación si una columna
+// desaparece — señal para actualizar).
+//
+// Lo único que se mantiene a mano aquí son overrides deliberados sobre el tipo
+// generado, porque el generador de Supabase:
+//   (a) tipa como `string` las columnas con CHECK (perdemos las uniones), y
+//   (b) marca como nullable toda columna con DEFAULT (created_at, status, etc.),
+//       aunque en la práctica SIEMPRE tienen valor en las lecturas de la app.
+// Estos overrides reflejan los DEFAULT/CHECK reales de la DB y preservan el
+// contrato no-nulo con el que está escrita la app.
+// ============================================================================
 
+import type { Database } from './database.generated'
+
+export type { Database, Json } from './database.generated'
+
+type T = Database['public']['Tables']
+
+// --- Enums de dominio (espejo de los CHECK constraints de la DB) ---
 export type UserRole = 'admin' | 'physio'
 export type PatientStatus = 'active' | 'inactive' | 'archived'
 export type AnamnesisStatus = 'pending' | 'in_progress' | 'completed' | 'expired'
@@ -10,112 +30,78 @@ export type TranscriptionStatus = 'pending' | 'processing' | 'completed' | 'fail
 export type DocType = 'vald_report' | 'medical_image' | 'external_report' | 'other'
 export type ReportStatus = 'generating' | 'draft' | 'approved' | 'delivered'
 
-export interface Clinic {
-  id: string
-  name: string
-  slug: string
-  logo_url: string | null
-  address: string | null
-  phone: string | null
-  email: string | null
+// --- Row shapes derivados del esquema real (con overrides no-nulos/enum) ---
+
+export type Clinic = Omit<T['clinics']['Row'], 'created_at' | 'updated_at'> & {
   created_at: string
   updated_at: string
 }
 
-export interface User {
-  id: string
-  clinic_id: string
-  full_name: string
-  email: string
+export type User = Omit<T['users']['Row'], 'role' | 'is_active' | 'created_at' | 'updated_at'> & {
   role: UserRole
-  avatar_url: string | null
   is_active: boolean
   created_at: string
   updated_at: string
 }
 
-export interface Patient {
-  id: string
-  clinic_id: string
-  created_by: string | null
-  full_name: string
-  email: string | null
-  phone: string | null
-  date_of_birth: string | null
+export type Patient = Omit<
+  T['patients']['Row'],
+  'gender' | 'status' | 'created_at' | 'updated_at'
+> & {
   gender: 'male' | 'female' | 'other' | null
-  notes: string | null
   status: PatientStatus
   created_at: string
   updated_at: string
 }
 
-export interface AnamnesisForm {
-  id: string
-  patient_id: string
-  clinic_id: string
-  token: string
+export type AnamnesisForm = Omit<
+  T['anamnesis_forms']['Row'],
+  'status' | 'form_data' | 'consent_data_processing' | 'consent_ai_analysis' | 'expires_at' | 'created_at' | 'updated_at'
+> & {
   status: AnamnesisStatus
   form_data: Record<string, any>
   consent_data_processing: boolean
   consent_ai_analysis: boolean
-  consent_timestamp: string | null
-  started_at: string | null
-  completed_at: string | null
   expires_at: string
   created_at: string
   updated_at: string
 }
 
-export interface Assessment {
-  id: string
-  patient_id: string
-  clinic_id: string
-  physio_id: string
+export type Assessment = Omit<
+  T['assessments']['Row'],
+  'session_number' | 'status' | 'assessment_data' | 'created_at' | 'updated_at'
+> & {
   session_number: number
   status: AssessmentStatus
   assessment_data: Record<string, any>
-  notes: string | null
   created_at: string
   updated_at: string
 }
 
-export interface AudioRecording {
-  id: string
-  assessment_id: string
-  clinic_id: string
-  storage_path: string
-  duration_seconds: number | null
-  transcription: string | null
+export type AudioRecording = Omit<
+  T['audio_recordings']['Row'],
+  'transcription_status' | 'created_at'
+> & {
   transcription_status: TranscriptionStatus
   created_at: string
 }
 
-export interface Document {
-  id: string
-  patient_id: string
-  clinic_id: string
-  uploaded_by: string | null
+export type Document = Omit<
+  T['documents']['Row'],
+  'doc_type' | 'extracted_data' | 'extraction_status' | 'created_at'
+> & {
   doc_type: DocType
-  file_name: string
-  storage_path: string
   extracted_data: Record<string, any> | null
   extraction_status: string
   created_at: string
 }
 
-export interface Report {
-  id: string
-  patient_id: string
-  clinic_id: string
-  generated_by: string | null
+export type Report = Omit<
+  T['reports']['Row'],
+  'status' | 'report_data' | 'created_at' | 'updated_at'
+> & {
   status: ReportStatus
-  anamnesis_id: string | null
-  assessment_id: string | null
   report_data: Record<string, any>
-  pdf_storage_path: string | null
-  ai_model: string | null
-  ai_prompt_tokens: number | null
-  ai_completion_tokens: number | null
   created_at: string
   updated_at: string
 }
