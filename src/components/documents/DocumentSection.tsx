@@ -36,18 +36,19 @@ export default function DocumentSection({ patientId, clinicId, initialDocuments,
   const saveInterpretation = useCallback(async (text: string) => {
     setSavingInterpretation(true)
     try {
-      // Save as vald_interpretation in patient record
+      // Persist the physio's VALD interpretation on the patient record.
       const { error } = await supabase
         .from('patients')
         .update({ vald_interpretation: text })
         .eq('id', patientId)
 
       if (error) {
-        // Column might not exist yet - silently handle
-        console.warn('vald_interpretation column may not exist yet:', error.message)
+        console.error('Error al guardar interpretación VALD:', error.message)
+        toast.error('No se pudo guardar la interpretación')
       }
     } catch (err) {
       console.error('Error saving interpretation:', err)
+      toast.error('No se pudo guardar la interpretación')
     } finally {
       setSavingInterpretation(false)
     }
