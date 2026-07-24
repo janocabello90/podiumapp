@@ -1,27 +1,25 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import AnamnesisFormClient from '@/components/anamnesis/AnamnesisFormClient'
+import { getAnamnesisByToken } from '@/lib/anamnesis/getByToken'
+
+// Siempre server-render fresco (lectura por token en tiempo de request).
+export const dynamic = 'force-dynamic'
 
 export default async function AnamnesisPage({
   params,
 }: {
   params: { token: string }
 }) {
-  const supabase = createServerSupabaseClient()
+  // Lectura vía service_role (helper), NO con cliente anon.
+  // Ya no depende de la policy pública SELECT de anamnesis_forms.
+  const anamnesis = await getAnamnesisByToken(params.token)
 
-  // Fetch anamnesis by token (public access)
-  const { data: anamnesis, error } = await supabase
-    .from('anamnesis_forms')
-    .select('*, patients(full_name)')
-    .eq('token', params.token)
-    .single()
-
-  if (error || !anamnesis) {
+  if (!anamnesis) {
     notFound()
   }
 
   // Check if expired
-  if (anamnesis.status === 'expired' || new Date(anamnesis.expires_at) < new Date()) {
+  if (anamnesis.status === 'expired' || (anamnesis.expires_at && new Date(anamnesis.expires_at) < new Date())) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="text-center max-w-md">
@@ -58,11 +56,11 @@ export default async function AnamnesisPage({
     <AnamnesisFormClient
       anamnesisId={anamnesis.id}
       token={params.token}
-      patientName={(anamnesis.patients as any)?.full_name || ''}
-      existingData={anamnesis.form_data || {}}
+      patientName={anamnesis.patientName}
+      existingData={anamnesis.form_data}
       existingConsents={{
-        dataProcessing: anamnesis.consent_data_processing ?? false,
-        ai: anamnesis.consent_ai_analysis ?? false,
+        dataProcessing: anamnesis.consent_data_processing,
+        ai: anamnesis.consent_ai_analysis,
       }}
     />
   )

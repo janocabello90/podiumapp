@@ -1,0 +1,21 @@
+-- ============================================
+-- Fase 0 — Tarea 4: cerrar la fuga de PII por SELECT público en anamnesis_forms
+-- ============================================
+-- Elimina la policy pública `Public can view anamnesis by token` (SELECT USING(TRUE)),
+-- que permitía a CUALQUIER portador de la anon key (pública, va en el bundle) leer
+-- TODAS las anamnesis de TODAS las clínicas sin sesión ni token.
+--
+-- ⚠️ PRERREQUISITO DE DESPLIEGUE: esta policy es load-bearing para la página pública
+-- /anamnesis/[token] MIENTRAS esté desplegado el código antiguo (lectura con cliente
+-- anon). Aplicar esta migración SOLO DESPUÉS de desplegar el cambio que hace que la
+-- página lea vía service_role (helper src/lib/anamnesis/getByToken.ts). Si se aplica
+-- antes del deploy, la página pública dejará de cargar para los pacientes.
+--
+-- Tras aplicarla, la lectura pública sigue funcionando (service_role ignora RLS) y
+-- el acceso indiscriminado con anon key queda cerrado. La edición del fisio
+-- (autenticado) sigue cubierta por `Users can view clinic anamnesis` (clínica-scoped).
+--
+-- Idempotente: DROP POLICY IF EXISTS.
+-- ============================================
+
+DROP POLICY IF EXISTS "Public can view anamnesis by token" ON anamnesis_forms;
