@@ -418,6 +418,11 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Alta de jugador:** `patients/new?team_id=` fija el equipo y vuelve al roster.
 - **Ficha/lista:** `/patients/[id]` muestra card "Equipo"; `/patients` tiene filtro por equipo / "Sin equipo" (`PatientFilters` prop `teams`).
 - **UX:** Ajustes "Equipo" (staff) → **"Personal"** (el `id` interno del tab sigue siendo `team`); sidebar nueva entrada **"Equipos"** (→ `/groups`, icono Shield). Nota menor: "Equipos" no resalta en `/teams/[id]` (match `startsWith('/groups')`).
-- **Deporte NO incluido aún** (Fase B): `teams.sport_id` y catálogos vienen después.
+### Fase B — Deportes y pruebas (COMPLETADA 2026-07). Doc: `FASE-B-EQUIPOS.md`
+- **Datos:** tablas `sports`, `tests` (con `vald_interpretation_prompt` + `result_schema` JSONB reservado), `sport_tests` (N:M, UNIQUE `sport_id,test_id`); `teams.sport_id`/`patients.sport_id` NULLABLE (FK→sports ON DELETE SET NULL). Migración `20260725230101_create_sports_tests_and_sport_link`. RLS `FOR ALL` clínica-scoped en las 3.
+- **Config (Ajustes → pestaña "Deportes y pruebas"):** `/settings/tests` (catálogo de pruebas CRUD + prompt, `TestsManager`), `/settings/sports` + `/settings/sports/[id]` (deportes + editor de mapeo deporte→pruebas con orden/requerida, `SportTestsEditor`).
+- **Asignación:** deporte del equipo (`/teams/[id]`) y override del paciente (`/patients/[id]`) vía `components/sports/SportSelect.tsx`.
+- **Resolución:** helper puro `lib/clinical/sport.ts` `resolveSport()` = `session ?? patient ?? team` (sin consumidor hasta Fase D).
+- **Sin efecto en runtime aún:** deportes/pruebas NO dirigen ninguna valoración hasta la Fase D (entidad sesión).
 
-> Esto **actualiza** afirmaciones previas del doc (p. ej. §13 "no hay grupos/equipos"): esas describen el punto de partida de la auditoría; la capa organizativa ya existe a partir de la Fase A.
+> Esto **actualiza** afirmaciones previas del doc (p. ej. §13 "no hay grupos/equipos ni deportes/pruebas"): esas describen el punto de partida de la auditoría; la capa organizativa (Fase A) y los catálogos deporte/prueba (Fase B) ya existen.
