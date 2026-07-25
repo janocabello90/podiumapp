@@ -404,4 +404,20 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 
 > Para **aplicar** cambios (p.ej. corregir policies o crear la columna `vald_interpretation`) hay que quitar `--read-only` puntualmente o usar una variante con escritura. Mientras dure la auditoría, se mantiene solo lectura.
 > Reproducir el alta: ver el historial de este trabajo o el comando `claude mcp add supabase-sherpa -s local -e SUPABASE_ACCESS_TOKEN=… -- npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref=njzqyttrlivipnkwmbbt`. **Nunca** usar scope `project` (commitearía el `.mcp.json`).
-```
+
+---
+
+## 17. Flujo de equipos (Prompt 2/3) — progreso de implementación
+
+**[C]** Diseño y plan en `DISENO-EQUIPOS.md` y `PLAN-IMPLEMENTACION-EQUIPOS.md`. Fases A–G; el caso individual se conserva (todo aditivo, `patients.team_id` NULLABLE).
+
+### Fase A — Organización + roster (COMPLETADA 2026-07). Doc: `FASE-A-EQUIPOS.md`
+- **Datos:** tablas `groups` y `teams` (clínica-scoped, RLS `FOR ALL` USING+WITH CHECK); `patients.team_id` NULLABLE (FK→teams ON DELETE SET NULL). Migración `20260725152017_create_groups_teams_and_patient_team_link`.
+- **Rutas nuevas:** `/groups` (lista+crear grupo), `/groups/[id]` (equipos+crear equipo), `/teams/[id]` (roster + "Añadir jugador"). Añadidas a `isProtectedRoute` (`lib/supabase/middleware.ts`).
+- **Componentes:** `components/teams/CreateGroupForm.tsx`, `CreateTeamForm.tsx` (insert autenticado + `router.refresh()`).
+- **Alta de jugador:** `patients/new?team_id=` fija el equipo y vuelve al roster.
+- **Ficha/lista:** `/patients/[id]` muestra card "Equipo"; `/patients` tiene filtro por equipo / "Sin equipo" (`PatientFilters` prop `teams`).
+- **UX:** Ajustes "Equipo" (staff) → **"Personal"** (el `id` interno del tab sigue siendo `team`); sidebar nueva entrada **"Equipos"** (→ `/groups`, icono Shield). Nota menor: "Equipos" no resalta en `/teams/[id]` (match `startsWith('/groups')`).
+- **Deporte NO incluido aún** (Fase B): `teams.sport_id` y catálogos vienen después.
+
+> Esto **actualiza** afirmaciones previas del doc (p. ej. §13 "no hay grupos/equipos"): esas describen el punto de partida de la auditoría; la capa organizativa ya existe a partir de la Fase A.
