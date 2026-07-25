@@ -1,16 +1,19 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
-export default function NewPatientPage() {
+function NewPatientForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const teamId = searchParams.get('team_id')
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [teamName, setTeamName] = useState<string | null>(null)
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -19,6 +22,17 @@ export default function NewPatientPage() {
     gender: '',
     notes: '',
   })
+
+  // Si venimos desde un equipo, mostrar su nombre como contexto.
+  useEffect(() => {
+    if (!teamId) return
+    supabase
+      .from('teams')
+      .select('name')
+      .eq('id', teamId)
+      .single()
+      .then(({ data }) => setTeamName((data as any)?.name ?? null))
+  }, [teamId, supabase])
 
   function updateField(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }))
@@ -34,7 +48,6 @@ export default function NewPatientPage() {
     setLoading(true)
 
     try {
-      // Get current user's clinic_id
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('No autenticado')
 
@@ -51,6 +64,7 @@ export default function NewPatientPage() {
         .insert({
           clinic_id: profile.clinic_id,
           created_by: user.id,
+          team_id: teamId || null,
           full_name: form.full_name.trim(),
           email: form.email.trim() || null,
           phone: form.phone.trim() || null,
@@ -63,8 +77,9 @@ export default function NewPatientPage() {
 
       if (error) throw error
 
-      toast.success('Paciente creado')
-      router.push(`/patients/${patient.id}`)
+      toast.success(teamId ? 'Jugador añadido al equipo' : 'Paciente creado')
+      // Si venía de un equipo, volver al roster; si no, a la ficha.
+      router.push(teamId ? `/teams/${teamId}` : `/patients/${patient.id}`)
     } catch (error: any) {
       toast.error(error.message || 'Error al crear paciente')
     } finally {
@@ -72,18 +87,29 @@ export default function NewPatientPage() {
     }
   }
 
+  const backHref = teamId ? `/teams/${teamId}` : '/patients'
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <Link
-          href="/patients"
-          className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-        >
+        <Link href={backHref} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
-        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Nuevo paciente</h1>
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+          {teamId ? 'Nuevo jugador' : 'Nuevo paciente'}
+        </h1>
       </div>
+
+      {/* Contexto de equipo */}
+      {teamId && (
+        <div className="mb-4 flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800">
+          <Users className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Se añadirá al equipo{teamName ? <> <strong>{teamName}</strong></> : ''}.
+          </span>
+        </div>
+      )}
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-4 sm:space-y-5">
@@ -181,10 +207,10 @@ export default function NewPatientPage() {
             disabled={loading}
             className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
           >
-            {loading ? 'Creando...' : 'Crear paciente'}
+            {loading ? 'Creando...' : teamId ? 'Añadir jugador' : 'Crear paciente'}
           </button>
           <Link
-            href="/patients"
+            href={backHref}
             className="hidden sm:inline-block px-6 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
           >
             Cancelar
@@ -192,5 +218,13 @@ export default function NewPatientPage() {
         </div>
       </form>
     </div>
+  )
+}
+
+export default function NewPatientPage() {
+  return (
+    <Suspense fallback={<div className="max-w-2xl mx-auto text-sm text-gray-400">Cargando…</div>}>
+      <NewPatientForm />
+    </Suspense>
   )
 }

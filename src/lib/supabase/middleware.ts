@@ -39,7 +39,9 @@ export async function updateSession(request: NextRequest) {
 
   // Protected routes: redirect to login if not authenticated
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/patients') ||
-    request.nextUrl.pathname.startsWith('/settings')
+    request.nextUrl.pathname.startsWith('/settings') ||
+    request.nextUrl.pathname.startsWith('/groups') ||
+    request.nextUrl.pathname.startsWith('/teams')
 
   // Public routes: anamnesis form
   const isPublicRoute = request.nextUrl.pathname.startsWith('/anamnesis')
