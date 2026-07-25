@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, UserPlus, Users } from 'lucide-react'
 import { computeStage } from '@/lib/clinical/stage'
 import { getRegionLabel, getPathologyLabel } from '@/lib/clinical/taxonomy'
+import SportSelect from '@/components/sports/SportSelect'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,12 +25,20 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
   // Equipo + su grupo (defensa en profundidad: filtro clinic_id además de RLS)
   const { data: team } = await supabase
     .from('teams')
-    .select('id, name, category, group_id, groups(name)')
+    .select('id, name, category, group_id, sport_id, groups(name)')
     .eq('id', params.id)
     .eq('clinic_id', profile.clinic_id)
     .single()
 
   if (!team) notFound()
+
+  // Deportes activos de la clínica (para el selector de deporte del equipo)
+  const { data: sports } = await supabase
+    .from('sports')
+    .select('id, name')
+    .eq('clinic_id', profile.clinic_id)
+    .eq('is_active', true)
+    .order('name', { ascending: true })
 
   // Roster: jugadores del equipo (con relaciones para computeStage)
   const { data: rawPlayers } = await supabase
@@ -83,6 +92,19 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
           <span className="sm:hidden">Añadir</span>
         </Link>
       </div>
+
+      {/* Deporte del equipo */}
+      {(sports || []).length > 0 && (
+        <div className="mb-4 sm:mb-6 bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex items-center justify-between gap-3">
+          <SportSelect
+            table="teams"
+            rowId={team.id}
+            currentSportId={(team as any).sport_id ?? null}
+            sports={sports || []}
+            label="Deporte del equipo:"
+          />
+        </div>
+      )}
 
       {/* Roster */}
       {players.length === 0 ? (

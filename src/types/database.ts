@@ -49,6 +49,22 @@ export type Team = Omit<T['teams']['Row'], 'created_at' | 'updated_at'> & {
   updated_at: string
 }
 
+// Catálogos de deportes y pruebas (Fase B). `teams.sport_id` / `patients.sport_id`
+// (nullable) llegan solos a `Team` / `Patient` por derivación del Row.
+export type Sport = Omit<T['sports']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
+export type Test = Omit<T['tests']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
+export type SportTest = Omit<T['sport_tests']['Row'], 'created_at'> & {
+  created_at: string
+}
+
 export type User = Omit<T['users']['Row'], 'role' | 'is_active' | 'created_at' | 'updated_at'> & {
   role: UserRole
   is_active: boolean

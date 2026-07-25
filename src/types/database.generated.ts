@@ -347,6 +347,7 @@ export type Database = {
           pathology_label: string | null
           pathology_tag: string | null
           phone: string | null
+          sport_id: string | null
           status: string | null
           team_id: string | null
           updated_at: string | null
@@ -370,6 +371,7 @@ export type Database = {
           pathology_label?: string | null
           pathology_tag?: string | null
           phone?: string | null
+          sport_id?: string | null
           status?: string | null
           team_id?: string | null
           updated_at?: string | null
@@ -393,6 +395,7 @@ export type Database = {
           pathology_label?: string | null
           pathology_tag?: string | null
           phone?: string | null
+          sport_id?: string | null
           status?: string | null
           team_id?: string | null
           updated_at?: string | null
@@ -411,6 +414,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
             referencedColumns: ["id"]
           },
           {
@@ -509,6 +519,96 @@ export type Database = {
           },
         ]
       }
+      sport_tests: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_required: boolean | null
+          sport_id: string
+          test_id: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          sport_id: string
+          test_id: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          sport_id?: string
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sport_tests_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sport_tests_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sport_tests_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sports: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sports_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           category: string | null
@@ -518,6 +618,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          sport_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -528,6 +629,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          sport_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -538,6 +640,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          sport_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -553,6 +656,57 @@ export type Database = {
             columns: ["group_id"]
             isOneToOne: false
             referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tests: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          result_schema: Json | null
+          updated_at: string | null
+          vald_interpretation_prompt: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          result_schema?: Json | null
+          updated_at?: string | null
+          vald_interpretation_prompt?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          result_schema?: Json | null
+          updated_at?: string | null
+          vald_interpretation_prompt?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tests_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]

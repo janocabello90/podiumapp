@@ -2,11 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
 
-type Tab = 'profile' | 'clinic' | 'team' | 'report'
+type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'report'
 
 interface Props {
   currentUser: UserType
@@ -23,6 +24,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
     { id: 'profile' as Tab, label: 'Mi perfil', icon: User },
     { id: 'clinic' as Tab, label: 'Clínica', icon: Building2 },
     { id: 'team' as Tab, label: 'Personal', icon: Users },
+    { id: 'catalog' as Tab, label: 'Deportes y pruebas', icon: Dumbbell },
     { id: 'report' as Tab, label: 'Informe', icon: FileText },
   ]
 
@@ -65,6 +67,30 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
           clinicId={currentUser.clinic_id}
           supabase={supabase}
         />
+      )}
+      {activeTab === 'catalog' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Link href="/settings/sports" className="bg-white rounded-2xl border border-gray-200 p-5 hover:bg-gray-50 transition-colors flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Dumbbell className="w-5 h-5 text-blue-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900">Deportes</p>
+              <p className="text-xs text-gray-500">Deportes y las pruebas que les corresponden</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+          </Link>
+          <Link href="/settings/tests" className="bg-white rounded-2xl border border-gray-200 p-5 hover:bg-gray-50 transition-colors flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <ClipboardList className="w-5 h-5 text-blue-700" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900">Catálogo de pruebas</p>
+              <p className="text-xs text-gray-500">Pruebas disponibles y su prompt VALD</p>
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-300" />
+          </Link>
+        </div>
       )}
       {activeTab === 'report' && (
         <ReportSection clinic={clinic} />

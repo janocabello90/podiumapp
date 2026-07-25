@@ -7,6 +7,7 @@ import DocumentSection from '@/components/documents/DocumentSection'
 import ImageGallerySection from '@/components/documents/ImageGallerySection'
 import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
+import SportSelect from '@/components/sports/SportSelect'
 
 // Force dynamic rendering so refresh always gets fresh data
 export const dynamic = 'force-dynamic'
@@ -35,6 +36,14 @@ export default async function PatientDetailPage({
   if (error || !patient) {
     notFound()
   }
+
+  // Deportes activos de la clínica (para el override de deporte del paciente).
+  // RLS limita a la clínica del usuario autenticado.
+  const { data: sports } = await supabase
+    .from('sports')
+    .select('id, name')
+    .eq('is_active', true)
+    .order('name', { ascending: true })
 
   // Sort anamnesis by creation date to get latest
   const sortedAnamnesis = (patient.anamnesis_forms || []).sort(
@@ -293,6 +302,20 @@ export default async function PatientDetailPage({
                   )}
                 </div>
               </Link>
+            </div>
+          )}
+
+          {/* Deporte (override individual) */}
+          {(sports || []).length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Deporte</h3>
+              <SportSelect
+                table="patients"
+                rowId={patient.id}
+                currentSportId={(patient as any).sport_id ?? null}
+                sports={sports || []}
+              />
+              <p className="text-xs text-gray-400 mt-2">Override individual (si difiere del equipo).</p>
             </div>
           )}
 
