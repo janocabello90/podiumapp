@@ -293,6 +293,41 @@ export type Database = {
           },
         ]
       }
+      groups: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           activity_level: string | null
@@ -313,6 +348,7 @@ export type Database = {
           pathology_tag: string | null
           phone: string | null
           status: string | null
+          team_id: string | null
           updated_at: string | null
           vald_interpretation: string | null
         }
@@ -335,6 +371,7 @@ export type Database = {
           pathology_tag?: string | null
           phone?: string | null
           status?: string | null
+          team_id?: string | null
           updated_at?: string | null
           vald_interpretation?: string | null
         }
@@ -357,6 +394,7 @@ export type Database = {
           pathology_tag?: string | null
           phone?: string | null
           status?: string | null
+          team_id?: string | null
           updated_at?: string | null
           vald_interpretation?: string | null
         }
@@ -373,6 +411,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -460,6 +505,54 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          category: string | null
+          clinic_id: string
+          created_at: string | null
+          group_id: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          clinic_id: string
+          created_at?: string | null
+          group_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          group_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
             referencedColumns: ["id"]
           },
         ]

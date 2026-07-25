@@ -37,6 +37,18 @@ export type Clinic = Omit<T['clinics']['Row'], 'created_at' | 'updated_at'> & {
   updated_at: string
 }
 
+// Capa organizativa deportiva (Fase A). `patients.team_id` (nullable) llega
+// automáticamente al tipo `Patient` de abajo por derivación del Row.
+export type Group = Omit<T['groups']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
+export type Team = Omit<T['teams']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
 export type User = Omit<T['users']['Row'], 'role' | 'is_active' | 'created_at' | 'updated_at'> & {
   role: UserRole
   is_active: boolean
