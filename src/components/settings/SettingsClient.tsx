@@ -22,7 +22,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
   const tabs = [
     { id: 'profile' as Tab, label: 'Mi perfil', icon: User },
     { id: 'clinic' as Tab, label: 'Clínica', icon: Building2 },
-    { id: 'team' as Tab, label: 'Equipo', icon: Users },
+    { id: 'team' as Tab, label: 'Personal', icon: Users },
     { id: 'report' as Tab, label: 'Informe', icon: FileText },
   ]
 
@@ -340,7 +340,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="font-semibold text-gray-900">Equipo ({members.length})</h3>
+          <h3 className="font-semibold text-gray-900">Personal ({members.length})</h3>
           <button
             onClick={() => { setShowAdd(!showAdd); setTempPassword(null) }}
             className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg transition-colors"

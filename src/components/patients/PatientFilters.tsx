@@ -23,7 +23,13 @@ const AGE_RANGES: { value: string; label: string }[] = [
   { value: '71-120', label: '>70' },
 ]
 
-export default function PatientFilters({ totalCount }: { totalCount: number }) {
+export default function PatientFilters({
+  totalCount,
+  teams = [],
+}: {
+  totalCount: number
+  teams?: { id: string; name: string }[]
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
@@ -37,7 +43,11 @@ export default function PatientFilters({ totalCount }: { totalCount: number }) {
     age: searchParams.get('age') || '',
     gender: searchParams.get('gender') || '',
     stage: searchParams.get('stage') || '',
+    team: searchParams.get('team') || '',
   }
+
+  const teamLabel = (value: string) =>
+    value === 'none' ? 'Sin equipo' : teams.find((t) => t.id === value)?.name || value
 
   function updateParam(key: string, value: string) {
     const sp = new URLSearchParams(searchParams.toString())
@@ -63,6 +73,7 @@ export default function PatientFilters({ totalCount }: { totalCount: number }) {
     current.age,
     current.gender,
     current.stage,
+    current.team,
   ].filter(Boolean).length
 
   const pathologiesForRegion = current.region
@@ -125,6 +136,25 @@ export default function PatientFilters({ totalCount }: { totalCount: number }) {
               ))}
             </select>
           </div>
+
+          {/* Team */}
+          {teams.length > 0 && (
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Equipo</label>
+              <select
+                value={current.team}
+                onChange={(e) => updateParam('team', e.target.value)}
+                className="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isPending}
+              >
+                <option value="">Todos</option>
+                <option value="none">Sin equipo</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Body region */}
           <div>
@@ -211,6 +241,9 @@ export default function PatientFilters({ totalCount }: { totalCount: number }) {
       {/* Active chips (visible when collapsed) */}
       {!open && activeCount > 0 && (
         <div className="border-t border-gray-100 px-4 sm:px-5 py-2.5 flex flex-wrap gap-1.5">
+          {current.team && (
+            <Chip label={teamLabel(current.team)} onClear={() => updateParam('team', '')} />
+          )}
           {current.stage && (
             <Chip label={STAGE_OPTIONS.find((o) => o.value === current.stage)?.label || current.stage} onClear={() => updateParam('stage', '')} />
           )}

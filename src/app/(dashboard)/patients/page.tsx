@@ -22,10 +22,10 @@ function inAgeRange(age: number | null, range: string): boolean {
 export default async function PatientsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; region?: string; pathology?: string; activity?: string; age?: string; gender?: string; stage?: string }
+  searchParams: { q?: string; region?: string; pathology?: string; activity?: string; age?: string; gender?: string; stage?: string; team?: string }
 }) {
   const supabase = createServerSupabaseClient()
-  const { q, region, pathology, activity, age, gender, stage } = searchParams
+  const { q, region, pathology, activity, age, gender, stage, team } = searchParams
 
   let patientsQuery = supabase
     .from('patients')
@@ -39,8 +39,16 @@ export default async function PatientsPage({
   if (pathology) patientsQuery = patientsQuery.eq('pathology_tag', pathology)
   if (activity) patientsQuery = patientsQuery.eq('activity_level', activity)
   if (gender) patientsQuery = patientsQuery.eq('gender', gender)
+  if (team === 'none') patientsQuery = patientsQuery.is('team_id', null)
+  else if (team) patientsQuery = patientsQuery.eq('team_id', team)
 
   const { data: rawPatients } = await patientsQuery
+
+  // Equipos de la clínica para el filtro (RLS los limita a esta clínica)
+  const { data: teams } = await supabase
+    .from('teams')
+    .select('id, name')
+    .order('name', { ascending: true })
 
   // In-memory filters (derived values)
   let patients = rawPatients || []
@@ -96,6 +104,7 @@ export default async function PatientsPage({
           {age && <input type="hidden" name="age" value={age} />}
           {gender && <input type="hidden" name="gender" value={gender} />}
           {stage && <input type="hidden" name="stage" value={stage} />}
+          {team && <input type="hidden" name="team" value={team} />}
         </form>
       </div>
 
@@ -104,7 +113,7 @@ export default async function PatientsPage({
 
       {/* Filters */}
       <div className="mb-4 sm:mb-6">
-        <PatientFilters totalCount={patients.length} />
+        <PatientFilters totalCount={patients.length} teams={teams || []} />
       </div>
 
       {/* Patient List */}

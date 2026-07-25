@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, FileText, Upload, Mic, Check, Camera } from 'lucide-react'
+import { ArrowLeft, Send, FileText, Upload, Mic, Check, Camera, Shield } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import DocumentSection from '@/components/documents/DocumentSection'
 import ImageGallerySection from '@/components/documents/ImageGallerySection'
@@ -23,6 +23,7 @@ export default async function PatientDetailPage({
     .from('patients')
     .select(`
       *,
+      teams(id, name, category),
       anamnesis_forms(*),
       assessments(*),
       documents(*),
@@ -272,6 +273,29 @@ export default async function PatientDetailPage({
 
         {/* Sidebar - right column */}
         <div className="space-y-4 sm:space-y-6">
+          {/* Team card (only for players linked to a team) */}
+          {patient.teams && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Equipo</h3>
+              <Link
+                href={`/teams/${(patient.teams as any).id}`}
+                className="flex items-center gap-3 group"
+              >
+                <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-4 h-4 text-blue-700" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700">
+                    {(patient.teams as any).name}
+                  </p>
+                  {(patient.teams as any).category && (
+                    <p className="text-xs text-gray-500 truncate">{(patient.teams as any).category}</p>
+                  )}
+                </div>
+              </Link>
+            </div>
+          )}
+
           {/* Patient info card */}
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-3">Datos del paciente</h3>
