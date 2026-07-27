@@ -30,7 +30,7 @@ export async function PATCH(
     // Verify the anamnesis exists and is not expired or already completed
     const { data: existing, error: fetchError } = await adminSupabase
       .from('anamnesis_forms')
-      .select('id, status, expires_at')
+      .select('id, status, expires_at, patient_id, clinic_id')
       .eq('token', token)
       .single()
 
@@ -43,7 +43,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { action, form_data, consent_data_processing, consent_ai_analysis } = body
+    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis } = body
 
     const updatePayload: Record<string, any> = {}
 
@@ -87,6 +87,40 @@ export async function PATCH(
     if (updateError) {
       console.error('Anamnesis update error:', updateError)
       return NextResponse.json({ error: 'Error al guardar: ' + updateError.message }, { status: 500 })
+    }
+
+    // Trazabilidad de consentimientos: solo al enviar (autoritativo). service_role.
+    // No fatal: un fallo aquí no bloquea el envío del formulario del paciente.
+    if (action === 'submit') {
+      try {
+        const { data: versions } = await adminSupabase
+          .from('consent_versions')
+          .select('type, version_label, body')
+          .eq('clinic_id', existing.clinic_id)
+          .eq('is_active', true)
+        const vmap = new Map((versions || []).map((v: any) => [v.type, v]))
+        const granted: Record<string, boolean> = {
+          data_processing: !!consent_data_processing,
+          info_treatment: !!consent_info_treatment,
+          ai_analysis: !!consent_ai_analysis,
+        }
+        const rows = (['data_processing', 'info_treatment', 'ai_analysis'] as const).map((type) => ({
+          clinic_id: existing.clinic_id,
+          patient_id: existing.patient_id,
+          anamnesis_id: existing.id,
+          type,
+          granted: granted[type],
+          version_label: vmap.get(type)?.version_label ?? null,
+          version_body: vmap.get(type)?.body ?? null,
+          granted_at: new Date().toISOString(),
+        }))
+        // Idempotente: borrar los de esta anamnesis antes de reinsertar.
+        await adminSupabase.from('consents').delete().eq('anamnesis_id', existing.id)
+        const { error: consentErr } = await adminSupabase.from('consents').insert(rows)
+        if (consentErr) console.error('Consents insert error:', consentErr.message)
+      } catch (e: any) {
+        console.error('Consents recording failed (non-fatal):', e?.message)
+      }
     }
 
     return NextResponse.json({ success: true })

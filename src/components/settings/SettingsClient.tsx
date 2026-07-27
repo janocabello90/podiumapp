@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
 
-type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'report'
+type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'consents' | 'report'
 
 interface Props {
   currentUser: UserType
@@ -25,6 +25,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
     { id: 'clinic' as Tab, label: 'Clínica', icon: Building2 },
     { id: 'team' as Tab, label: 'Personal', icon: Users },
     { id: 'catalog' as Tab, label: 'Deportes y pruebas', icon: Dumbbell },
+    { id: 'consents' as Tab, label: 'Consentimientos', icon: ShieldCheck },
     { id: 'report' as Tab, label: 'Informe', icon: FileText },
   ]
 
@@ -91,6 +92,18 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
             <ChevronRight className="w-4 h-4 text-gray-300" />
           </Link>
         </div>
+      )}
+      {activeTab === 'consents' && (
+        <Link href="/settings/consents" className="bg-white rounded-2xl border border-gray-200 p-5 hover:bg-gray-50 transition-colors flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <ShieldCheck className="w-5 h-5 text-blue-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Textos de consentimientos</p>
+            <p className="text-xs text-gray-500">Protección de datos, tratamiento de la información y uso de IA</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300" />
+        </Link>
       )}
       {activeTab === 'report' && (
         <ReportSection clinic={clinic} />

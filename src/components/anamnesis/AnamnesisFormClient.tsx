@@ -11,9 +11,10 @@ interface Props {
   patientName: string
   existingData: Record<string, any>
   existingConsents?: { dataProcessing: boolean; ai: boolean }
+  consentTexts?: { data_processing?: string | null; info_treatment?: string | null; ai_analysis?: string | null }
 }
 
-export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents }: Props) {
+export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts }: Props) {
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>(existingData)
   const [saving, setSaving] = useState(false)
@@ -22,6 +23,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   const preConsented = !!(existingConsents?.dataProcessing && existingConsents?.ai)
   const [consentGiven, setConsentGiven] = useState(preConsented)
   const [consentDataProcessing, setConsentDataProcessing] = useState(existingConsents?.dataProcessing ?? false)
+  // `info_treatment` no tiene flag en anamnesis_forms: se siembra de `preConsented`
+  // (si ya se consintieron datos+IA, se aceptaron los 3 juntos en la misma pantalla).
+  const [consentInfoTreatment, setConsentInfoTreatment] = useState(preConsented)
   const [consentAI, setConsentAI] = useState(existingConsents?.ai ?? false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -86,6 +90,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           action: 'submit',
           form_data: formData,
           consent_data_processing: consentDataProcessing,
+          consent_info_treatment: consentInfoTreatment,
           consent_ai_analysis: consentAI,
         }),
       })
@@ -123,7 +128,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
 
   // Consent screen
   if (!consentGiven && currentBlock === 0) {
-    const canProceed = consentDataProcessing && consentAI
+    const canProceed = consentDataProcessing && consentInfoTreatment && consentAI
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
@@ -174,8 +179,22 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
                 <span className="text-xs text-gray-600 leading-relaxed">
-                  Consiento el tratamiento de mis datos de salud por parte de la clínica con la finalidad de realizar mi valoración fisioterapéutica, elaborar un informe clínico y gestionar mi proceso terapéutico. Estos datos se conservarán durante el tiempo necesario para la prestación asistencial y el cumplimiento de obligaciones legales. Puedo ejercer mis derechos de acceso, rectificación, supresión, portabilidad y oposición contactando con la clínica. Más información en la{' '}
-                  <a href="/privacidad" target="_blank" className="text-blue-600 underline">política de privacidad</a>.
+                  {consentTexts?.data_processing || (
+                    <>Consiento el tratamiento de mis datos de salud por parte de la clínica con la finalidad de realizar mi valoración fisioterapéutica, elaborar un informe clínico y gestionar mi proceso terapéutico. Estos datos se conservarán durante el tiempo necesario para la prestación asistencial y el cumplimiento de obligaciones legales. Puedo ejercer mis derechos de acceso, rectificación, supresión, portabilidad y oposición contactando con la clínica. Más información en la{' '}
+                    <a href="/privacidad" target="_blank" className="text-blue-600 underline">política de privacidad</a>.</>
+                  )}
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={consentInfoTreatment}
+                  onChange={(e) => setConsentInfoTreatment(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                />
+                <span className="text-xs text-gray-600 leading-relaxed">
+                  {consentTexts?.info_treatment || 'Consiento el tratamiento y la conservación de la información clínica recogida (anamnesis, exploración y pruebas) para el seguimiento de mi proceso asistencial y su uso con fines asistenciales por parte de la clínica.'}
                 </span>
               </label>
 
@@ -187,7 +206,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
                 <span className="text-xs text-gray-600 leading-relaxed">
-                  Consiento que mis datos sean procesados por un sistema de inteligencia artificial (Anthropic Claude, vía API) para generar un borrador de informe clínico. Este borrador será siempre revisado y aprobado por un fisioterapeuta antes de su emisión. El proveedor de IA no almacena ni reutiliza mis datos para entrenar sus modelos.
+                  {consentTexts?.ai_analysis || 'Consiento que mis datos sean procesados por un sistema de inteligencia artificial (Anthropic Claude, vía API) para generar un borrador de informe clínico. Este borrador será siempre revisado y aprobado por un fisioterapeuta antes de su emisión. El proveedor de IA no almacena ni reutiliza mis datos para entrenar sus modelos.'}
                 </span>
               </label>
             </div>
@@ -203,6 +222,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                     body: JSON.stringify({
                       action: 'consent',
                       consent_data_processing: consentDataProcessing,
+                      consent_info_treatment: consentInfoTreatment,
                       consent_ai_analysis: consentAI,
                     }),
                   })
@@ -219,7 +239,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
 
             {!canProceed && (
               <p className="text-xs text-gray-400 text-center">
-                Debes aceptar ambos consentimientos para continuar
+                Debes aceptar los consentimientos para continuar
               </p>
             )}
           </div>

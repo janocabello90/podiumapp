@@ -6,6 +6,12 @@ import { createAdminSupabaseClient } from '@/lib/supabase/admin'
 // Esto reemplaza la lectura anterior con cliente anon, que dependía de la
 // policy pública `SELECT USING(TRUE)` (fuga de PII — ver Fase 0 Tarea 4).
 
+export type ConsentTexts = {
+  data_processing?: string | null
+  info_treatment?: string | null
+  ai_analysis?: string | null
+}
+
 export type PublicAnamnesis = {
   id: string
   status: string | null
@@ -14,6 +20,7 @@ export type PublicAnamnesis = {
   consent_data_processing: boolean
   consent_ai_analysis: boolean
   patientName: string
+  consentTexts: ConsentTexts
 }
 
 export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesis | null> {
@@ -26,12 +33,25 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
 
   const { data, error } = await admin
     .from('anamnesis_forms')
-    .select('id, status, expires_at, form_data, consent_data_processing, consent_ai_analysis, patients(full_name)')
+    .select('id, status, expires_at, form_data, consent_data_processing, consent_ai_analysis, clinic_id, patients(full_name)')
     .eq('token', token)
     .single()
 
   if (error || !data) {
     return null
+  }
+
+  // Textos vigentes de los consentimientos de la clínica (versión activa por tipo).
+  const consentTexts: ConsentTexts = {}
+  if (data.clinic_id) {
+    const { data: versions } = await admin
+      .from('consent_versions')
+      .select('type, body')
+      .eq('clinic_id', data.clinic_id)
+      .eq('is_active', true)
+    for (const v of versions || []) {
+      consentTexts[(v as any).type as keyof ConsentTexts] = (v as any).body
+    }
   }
 
   return {
@@ -42,5 +62,6 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
     consent_data_processing: !!data.consent_data_processing,
     consent_ai_analysis: !!data.consent_ai_analysis,
     patientName: (data.patients as any)?.full_name || '',
+    consentTexts,
   }
 }

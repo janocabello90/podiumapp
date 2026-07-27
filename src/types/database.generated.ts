@@ -232,6 +232,108 @@ export type Database = {
         }
         Relationships: []
       }
+      consent_versions: {
+        Row: {
+          body: string
+          clinic_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          type: string
+          updated_at: string | null
+          version_label: string
+        }
+        Insert: {
+          body: string
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          type: string
+          updated_at?: string | null
+          version_label: string
+        }
+        Update: {
+          body?: string
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          type?: string
+          updated_at?: string | null
+          version_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_versions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consents: {
+        Row: {
+          anamnesis_id: string | null
+          clinic_id: string
+          created_at: string | null
+          granted: boolean
+          granted_at: string | null
+          id: string
+          patient_id: string
+          type: string
+          version_body: string | null
+          version_label: string | null
+        }
+        Insert: {
+          anamnesis_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          granted: boolean
+          granted_at?: string | null
+          id?: string
+          patient_id: string
+          type: string
+          version_body?: string | null
+          version_label?: string | null
+        }
+        Update: {
+          anamnesis_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          granted?: boolean
+          granted_at?: string | null
+          id?: string
+          patient_id?: string
+          type?: string
+          version_body?: string | null
+          version_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consents_anamnesis_id_fkey"
+            columns: ["anamnesis_id"]
+            isOneToOne: false
+            referencedRelation: "anamnesis_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           clinic_id: string

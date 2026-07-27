@@ -65,6 +65,19 @@ export type SportTest = Omit<T['sport_tests']['Row'], 'created_at'> & {
   created_at: string
 }
 
+// Consentimientos y trazabilidad (Fase C).
+export type ConsentVersion = Omit<T['consent_versions']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
+export type ConsentType = 'data_processing' | 'info_treatment' | 'ai_analysis'
+
+export type Consent = Omit<T['consents']['Row'], 'created_at' | 'granted_at'> & {
+  created_at: string
+  granted_at: string
+}
+
 export type User = Omit<T['users']['Row'], 'role' | 'is_active' | 'created_at' | 'updated_at'> & {
   role: UserRole
   is_active: boolean

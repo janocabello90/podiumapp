@@ -8,6 +8,7 @@ import ImageGallerySection from '@/components/documents/ImageGallerySection'
 import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
+import { consentLabel } from '@/lib/clinical/consents'
 
 // Force dynamic rendering so refresh always gets fresh data
 export const dynamic = 'force-dynamic'
@@ -44,6 +45,18 @@ export default async function PatientDetailPage({
     .select('id, name')
     .eq('is_active', true)
     .order('name', { ascending: true })
+
+  // Consentimientos registrados (trazabilidad) — último por tipo
+  const { data: rawConsents } = await supabase
+    .from('consents')
+    .select('type, granted, granted_at, version_label')
+    .eq('patient_id', params.id)
+    .order('granted_at', { ascending: false })
+  const consentsByType = new Map<string, any>()
+  for (const c of rawConsents || []) {
+    if (!consentsByType.has(c.type)) consentsByType.set(c.type, c)
+  }
+  const consents = Array.from(consentsByType.values())
 
   // Sort anamnesis by creation date to get latest
   const sortedAnamnesis = (patient.anamnesis_forms || []).sort(
@@ -316,6 +329,30 @@ export default async function PatientDetailPage({
                 sports={sports || []}
               />
               <p className="text-xs text-gray-400 mt-2">Override individual (si difiere del equipo).</p>
+            </div>
+          )}
+
+          {/* Consentimientos (trazabilidad) */}
+          {consents.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Consentimientos</h3>
+              <ul className="space-y-2">
+                {consents.map((c: any) => (
+                  <li key={c.type} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="text-gray-600 truncate">{consentLabel(c.type)}</span>
+                    <span className="flex items-center gap-2 flex-shrink-0">
+                      <span className={c.granted ? 'text-green-600' : 'text-red-500'}>
+                        {c.granted ? 'Aceptado' : 'Rechazado'}
+                      </span>
+                      {c.granted_at && (
+                        <span className="text-xs text-gray-400">
+                          {new Date(c.granted_at).toLocaleDateString('es-ES')}
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
