@@ -425,4 +425,10 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Resolución:** helper puro `lib/clinical/sport.ts` `resolveSport()` = `session ?? patient ?? team` (sin consumidor hasta Fase D).
 - **Sin efecto en runtime aún:** deportes/pruebas NO dirigen ninguna valoración hasta la Fase D (entidad sesión).
 
-> Esto **actualiza** afirmaciones previas del doc (p. ej. §13 "no hay grupos/equipos ni deportes/pruebas"): esas describen el punto de partida de la auditoría; la capa organizativa (Fase A) y los catálogos deporte/prueba (Fase B) ya existen.
+### Fase C — Consentimientos y trazabilidad (COMPLETADA 2026-07). Doc: `FASE-C-EQUIPOS.md`
+- **Datos:** `consent_versions` (textos versionados por tipo: `data_processing`/`info_treatment`/`ai_analysis`, `is_active`) y `consents` (registro con **copia** `version_body` para trazabilidad; FK a patients/anamnesis_forms). Migración `20260727154457_create_consents_and_consent_versions`. RLS: `consent_versions` `FOR ALL` clínica-scoped; `consents` SELECT+INSERT clínica-scoped (la escritura pública va por **service_role**, sin policy pública).
+- **Config:** Ajustes → pestaña **"Consentimientos"** → `/settings/consents` (`ConsentsManager`: edita el texto vigente por tipo).
+- **Anamnesis pública:** ahora **3** consentimientos (añadido "tratamiento de la información"); textos servidos desde `consent_versions` (fallback a textos por defecto). Al **enviar**, `/api/anamnesis/[token]` (service_role) registra 3 filas en `consents` (delete+insert idempotente por `anamnesis_id`); **no fatal** (un fallo no bloquea el envío). Los flags `consent_data_processing`/`consent_ai_analysis` en `anamnesis_forms` se conservan; `info_treatment` solo vive en `consents` (se siembra de `preConsented` en el cliente).
+- **Trazabilidad:** card "Consentimientos" en la ficha del paciente (tipo · aceptado/rechazado · fecha). Módulo compartido `lib/clinical/consents.ts` (tipos + labels).
+
+> Esto **actualiza** afirmaciones previas del doc (p. ej. §13 "no hay grupos/equipos ni deportes/pruebas"): esas describen el punto de partida de la auditoría; la capa organizativa (Fase A), los catálogos deporte/prueba (Fase B) y los consentimientos versionados (Fase C) ya existen.
