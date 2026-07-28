@@ -47,6 +47,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
       id, full_name, body_region, pathology_tag, pathology_label,
       anamnesis_forms(id, status, created_at),
       assessments(id, status, created_at),
+      sessions(id, status, created_at),
       documents(id, doc_type, created_at),
       reports(id, status, created_at)
     `)

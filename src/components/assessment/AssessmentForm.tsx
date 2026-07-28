@@ -22,9 +22,20 @@ interface Props {
   patientId: string
   initialData: Record<string, any>
   initialStatus: string
+  // Reutilizable: por defecto escribe en `assessments.assessment_data` (flujo antiguo);
+  // el flujo de sesión pasa table='sessions' y dataColumn='clinical_data'.
+  table?: string
+  dataColumn?: string
 }
 
-export default function AssessmentForm({ assessmentId, patientId, initialData, initialStatus }: Props) {
+export default function AssessmentForm({
+  assessmentId,
+  patientId,
+  initialData,
+  initialStatus,
+  table = 'assessments',
+  dataColumn = 'assessment_data',
+}: Props) {
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>(initialData)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
@@ -40,8 +51,8 @@ export default function AssessmentForm({ assessmentId, patientId, initialData, i
     setSaving(true)
     try {
       const { error } = await supabase
-        .from('assessments')
-        .update({ assessment_data: data, status: 'in_progress' })
+        .from(table)
+        .update({ [dataColumn]: data, status: 'in_progress' })
         .eq('id', assessmentId)
       if (error) throw error
     } catch (err: any) {
@@ -49,7 +60,7 @@ export default function AssessmentForm({ assessmentId, patientId, initialData, i
     } finally {
       setSaving(false)
     }
-  }, [assessmentId, supabase])
+  }, [assessmentId, supabase, table, dataColumn])
 
   function debouncedSave(data: Record<string, any>) {
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
@@ -90,8 +101,8 @@ export default function AssessmentForm({ assessmentId, patientId, initialData, i
     setSaving(true)
     try {
       const { error } = await supabase
-        .from('assessments')
-        .update({ assessment_data: formData, status: 'completed' })
+        .from(table)
+        .update({ [dataColumn]: formData, status: 'completed' })
         .eq('id', assessmentId)
       if (error) throw error
       setStatus('completed')

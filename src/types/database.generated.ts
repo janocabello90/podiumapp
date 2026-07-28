@@ -14,8 +14,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -548,6 +546,7 @@ export type Database = {
           patient_id: string
           pdf_storage_path: string | null
           report_data: Json | null
+          session_id: string | null
           status: string | null
           updated_at: string | null
         }
@@ -564,6 +563,7 @@ export type Database = {
           patient_id: string
           pdf_storage_path?: string | null
           report_data?: Json | null
+          session_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -580,6 +580,7 @@ export type Database = {
           patient_id?: string
           pdf_storage_path?: string | null
           report_data?: Json | null
+          session_id?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -617,6 +618,167 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_tests: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          display_order: number | null
+          id: string
+          is_required: boolean | null
+          notes: string | null
+          result_data: Json | null
+          session_id: string
+          status: string | null
+          test_id: string | null
+          test_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          notes?: string | null
+          result_data?: Json | null
+          session_id: string
+          status?: string | null
+          test_id?: string | null
+          test_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_required?: boolean | null
+          notes?: string | null
+          result_data?: Json | null
+          session_id?: string
+          status?: string | null
+          test_id?: string | null
+          test_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_tests_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_tests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_tests_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          clinic_id: string
+          clinical_data: Json | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          physio_id: string
+          session_number: number | null
+          source_assessment_id: string | null
+          sport_id: string | null
+          started_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          clinical_data?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          physio_id: string
+          session_number?: number | null
+          source_assessment_id?: string | null
+          sport_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          clinical_data?: Json | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          physio_id?: string
+          session_number?: number | null
+          source_assessment_id?: string | null
+          sport_id?: string | null
+          started_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_physio_id_fkey"
+            columns: ["physio_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_source_assessment_id_fkey"
+            columns: ["source_assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
             referencedColumns: ["id"]
           },
         ]

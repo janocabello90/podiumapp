@@ -16,6 +16,7 @@ export type PatientStageInput = {
   id: string
   anamnesis_forms?: Row[]
   assessments?: Row[]
+  sessions?: Row[]
   documents?: DocRow[]
   reports?: Row[]
 }
@@ -40,7 +41,9 @@ function getLatest<T extends { created_at?: string }>(rows: T[] | undefined): T 
 
 export function computeStage(patient: PatientStageInput): Stage {
   const latestReport = getLatest(patient.reports)
-  const latestAssessment = getLatest(patient.assessments)
+  // Preferir sesiones (Fase D); fallback a assessments (legacy) si no hay sesiones.
+  const valuations = (patient.sessions && patient.sessions.length) ? patient.sessions : patient.assessments
+  const latestAssessment = getLatest(valuations)
   const latestAnamnesis = getLatest(patient.anamnesis_forms)
   const hasVald = (patient.documents || []).some((d) => d.doc_type !== 'medical_image')
 

@@ -17,7 +17,7 @@ export default function SportSelect({
   sports,
   label,
 }: {
-  table: 'teams' | 'patients'
+  table: 'teams' | 'patients' | 'sessions'
   rowId: string
   currentSportId: string | null
   sports: SportOption[]

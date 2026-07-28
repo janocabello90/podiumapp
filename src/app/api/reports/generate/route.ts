@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
         *,
         anamnesis_forms(*),
         assessments(*),
+        sessions(*),
         documents(*)
       `)
       .eq('id', patientId)
@@ -93,6 +94,10 @@ export async function POST(request: NextRequest) {
     // Build context for Claude
     const anamnesis = patient.anamnesis_forms?.[0]
     const assessment = patient.assessments?.[0]
+    // Preferir la última sesión (Fase D); fallback a assessment legacy.
+    const session = ((patient.sessions as any[]) || []).sort((a: any, b: any) => (b.session_number || 0) - (a.session_number || 0))[0]
+    const clinicalData = session?.clinical_data ?? assessment?.assessment_data
+    const clinicalNotes = session?.notes ?? assessment?.notes
     const documents = patient.documents || []
 
     let patientContext = `DATOS DEL PACIENTE:
@@ -122,15 +127,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (assessment?.assessment_data) {
-      const ad = assessment.assessment_data
-      const assessmentEntries = Object.entries(ad)
+    if (clinicalData && Object.keys(clinicalData).length > 0) {
+      const assessmentEntries = Object.entries(clinicalData)
         .map(([key, value]) => `  ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
         .join('\n')
       patientContext += `\n\nDATOS DE LA EXPLORACIÓN FÍSICA / VALORACIÓN:\n${assessmentEntries}`
 
-      if (assessment.notes) {
-        patientContext += `\n\nNOTAS GENERALES DE LA VALORACIÓN:\n${assessment.notes}`
+      if (clinicalNotes) {
+        patientContext += `\n\nNOTAS GENERALES DE LA VALORACIÓN:\n${clinicalNotes}`
       }
     }
 
@@ -224,6 +228,7 @@ export async function POST(request: NextRequest) {
         status: 'draft',
         anamnesis_id: anamnesis?.id || null,
         assessment_id: assessment?.id || null,
+        session_id: session?.id || null,
         report_data: reportData,
         ai_model: 'claude-sonnet-4-20250514',
         ai_prompt_tokens: message.usage?.input_tokens || null,

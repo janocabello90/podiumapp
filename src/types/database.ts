@@ -78,6 +78,18 @@ export type Consent = Omit<T['consents']['Row'], 'created_at' | 'granted_at'> & 
   granted_at: string
 }
 
+// Entidad Sesión (Fase D). `clinical_data` (los 84 campos) se narrow a Record.
+export type Session = Omit<T['sessions']['Row'], 'clinical_data' | 'created_at' | 'updated_at'> & {
+  clinical_data: Record<string, any>
+  created_at: string
+  updated_at: string
+}
+
+export type SessionTest = Omit<T['session_tests']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
 export type User = Omit<T['users']['Row'], 'role' | 'is_active' | 'created_at' | 'updated_at'> & {
   role: UserRole
   is_active: boolean

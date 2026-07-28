@@ -66,6 +66,7 @@ export default async function DashboardPage() {
       id, full_name, created_by, created_at, updated_at, body_region, pathology_tag, pathology_label,
       anamnesis_forms(id, status, created_at, expires_at, completed_at),
       assessments(id, status, physio_id, created_at, updated_at),
+      sessions(id, status, created_at),
       documents(id, doc_type, created_at),
       reports(id, status, generated_by, created_at, updated_at)
     `)

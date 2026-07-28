@@ -9,6 +9,7 @@ import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
 import { consentLabel } from '@/lib/clinical/consents'
+import StartSessionButton from '@/components/sessions/StartSessionButton'
 
 // Force dynamic rendering so refresh always gets fresh data
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,7 @@ export default async function PatientDetailPage({
       teams(id, name, category),
       anamnesis_forms(*),
       assessments(*),
+      sessions(*),
       documents(*),
       reports(*)
     `)
@@ -63,7 +65,10 @@ export default async function PatientDetailPage({
     (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
   const latestAnamnesis = sortedAnamnesis[0]
-  const latestAssessment = patient.assessments?.[0]
+  const allSessions = ((patient.sessions as any[]) || []).sort(
+    (a: any, b: any) => (b.session_number || 0) - (a.session_number || 0)
+  )
+  const latestSession = allSessions[0]
   const allDocuments = patient.documents || []
   const patientDocuments = allDocuments.filter((d: any) => d.doc_type !== 'medical_image')
   const patientImages = allDocuments.filter((d: any) => d.doc_type === 'medical_image')
@@ -140,7 +145,7 @@ export default async function PatientDetailPage({
               {/* Step 2: Assessment */}
               <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
                 <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  latestAssessment?.status === 'completed'
+                  latestSession?.status === 'completed'
                     ? 'bg-green-100 text-green-600'
                     : 'bg-blue-100 text-blue-600'
                 }`}>
@@ -149,36 +154,31 @@ export default async function PatientDetailPage({
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-gray-900 text-sm sm:text-base">2. Valoración del fisio</h3>
                   <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {latestAssessment?.status === 'completed'
-                      ? 'Valoración completada'
-                      : latestAssessment
+                    {latestSession?.status === 'completed'
+                      ? 'Última valoración completada'
+                      : latestSession
                       ? 'Valoración en curso'
-                      : 'Exploración física + dictado por voz'}
+                      : 'Exploración física + pruebas + dictado por voz'}
                   </p>
-                  <div className="mt-2 sm:mt-3">
-                    {latestAssessment?.status === 'completed' ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
-                          <Check className="w-3 h-3" />
-                          Completada
-                        </span>
+                  <div className="mt-2 sm:mt-3 flex items-center gap-2 flex-wrap">
+                    {latestSession ? (
+                      <>
                         <Link
-                          href={`/patients/${patient.id}/assessment`}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                          href={`/patients/${patient.id}/sessions/${latestSession.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
                         >
-                          Ver / editar
+                          <Mic className="w-3 h-3" />
+                          {latestSession.status === 'completed' ? 'Ver / editar' : 'Continuar'}
                         </Link>
-                      </div>
+                        <StartSessionButton patientId={patient.id} label="Nueva valoración" />
+                      </>
                     ) : (
-                      <Link
-                        href={`/patients/${patient.id}/assessment`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-                      >
-                        <Mic className="w-3 h-3" />
-                        {latestAssessment ? 'Continuar valoración' : 'Iniciar valoración'}
-                      </Link>
+                      <StartSessionButton patientId={patient.id} label="Iniciar valoración" />
                     )}
                   </div>
+                  {allSessions.length > 1 && (
+                    <p className="text-[11px] text-gray-400 mt-1.5">{allSessions.length} sesiones</p>
+                  )}
                 </div>
               </div>
 
