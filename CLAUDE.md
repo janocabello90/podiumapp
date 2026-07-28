@@ -440,4 +440,11 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Página de sesión** `/patients/[id]/sessions/[sessionId]`: stepper — anamnesis+consentimientos (contexto) · exploración (`AssessmentForm` parametrizado `table='sessions'`/`dataColumn='clinical_data'`) · pruebas (`SessionTestsPanel`: notas por prueba + carga del deporte) · documentos/informe (en la ficha en esta fase).
 - **Session-aware:** `stage.ts` prefiere sesiones (fallback assessments); dashboard/lista/roster traen `sessions`; `reports/generate` lee `sessions.clinical_data` (fallback assessment) y guarda `reports.session_id`.
 - **Legacy conservado:** `assessments` y `/patients/[id]/assessment` intactos (respaldo); nada enlaza ya a la ruta vieja.
-- **Pendiente:** **Campañas** (nueva Fase E, agrupan sesiones de estudio de equipo, `sessions.campaign_id`); VALD/imágenes por sesión + informe individual sobre sesión (Fase F); informe de campaña (Fase G).
+- **Pendiente:** VALD/imágenes por sesión + informe individual sobre sesión (Fase F); informe de campaña (Fase G).
+
+### Fase E — Campañas (COMPLETADA 2026-07). Doc: `FASE-E-EQUIPOS.md`
+- **Datos:** `campaigns` (`group_id`, `status` active/closed, `start_date`/`end_date_planned`/`planned_consultations`/`closed_at`, notes) + `campaign_teams` (subconjunto de equipos del grupo, UNIQUE campaign+team) + `sessions.campaign_id` NULLABLE → agrupa las sesiones del estudio; `null` = individual. Migración `20260728074407`. RLS `FOR ALL` clínica-scoped.
+- **UI:** `/groups/[id]` sección **"Campañas"** (crear con `CreateCampaignForm`: nombre, equipos del grupo, inicio/fin previsto, nº seguimientos) + lista. `/campaigns/[id]`: detalle con **progreso** (valorados/total), **roster por equipo**, botón "Valorar/Seguimiento" por jugador, y cerrar campaña (`CloseCampaignButton`).
+- **Valorar en campaña:** `POST /api/sessions` acepta `campaignId` → crea sesión con `campaign_id`; reutiliza el stepper de sesión (Fase D). Soporta seguimientos (varias sesiones por jugador en la campaña).
+- `/campaigns` añadida a `isProtectedRoute`.
+- **Pendiente:** informe individual sobre sesión + VALD por sesión (Fase F); **informe de campaña** agregado por IA (Fase G).
