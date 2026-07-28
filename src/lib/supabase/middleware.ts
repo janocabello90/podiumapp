@@ -41,7 +41,8 @@ export async function updateSession(request: NextRequest) {
   const isProtectedRoute = request.nextUrl.pathname.startsWith('/patients') ||
     request.nextUrl.pathname.startsWith('/settings') ||
     request.nextUrl.pathname.startsWith('/groups') ||
-    request.nextUrl.pathname.startsWith('/teams')
+    request.nextUrl.pathname.startsWith('/teams') ||
+    request.nextUrl.pathname.startsWith('/campaigns')
 
   // Public routes: anamnesis form
   const isPublicRoute = request.nextUrl.pathname.startsWith('/anamnesis')

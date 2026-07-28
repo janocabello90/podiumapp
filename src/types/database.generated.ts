@@ -194,6 +194,112 @@ export type Database = {
           },
         ]
       }
+      campaign_teams: {
+        Row: {
+          campaign_id: string
+          clinic_id: string
+          created_at: string | null
+          id: string
+          team_id: string
+        }
+        Insert: {
+          campaign_id: string
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          team_id: string
+        }
+        Update: {
+          campaign_id?: string
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_teams_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_teams_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          clinic_id: string
+          closed_at: string | null
+          created_at: string | null
+          end_date_planned: string | null
+          group_id: string
+          id: string
+          name: string
+          notes: string | null
+          planned_consultations: number | null
+          start_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          closed_at?: string | null
+          created_at?: string | null
+          end_date_planned?: string | null
+          group_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          planned_consultations?: number | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          closed_at?: string | null
+          created_at?: string | null
+          end_date_planned?: string | null
+          group_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          planned_consultations?: number | null
+          start_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
@@ -698,6 +804,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          campaign_id: string | null
           clinic_id: string
           clinical_data: Json | null
           completed_at: string | null
@@ -714,6 +821,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          campaign_id?: string | null
           clinic_id: string
           clinical_data?: Json | null
           completed_at?: string | null
@@ -730,6 +838,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          campaign_id?: string | null
           clinic_id?: string
           clinical_data?: Json | null
           completed_at?: string | null
@@ -746,6 +855,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sessions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sessions_clinic_id_fkey"
             columns: ["clinic_id"]

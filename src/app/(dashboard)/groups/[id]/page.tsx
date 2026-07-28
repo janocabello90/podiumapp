@@ -1,8 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Users, ChevronRight, Shield } from 'lucide-react'
+import { ArrowLeft, Users, ChevronRight, Shield, Megaphone } from 'lucide-react'
 import CreateTeamForm from '@/components/teams/CreateTeamForm'
+import CreateCampaignForm from '@/components/teams/CreateCampaignForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +43,14 @@ export default async function GroupDetailPage({ params }: { params: { id: string
     ...t,
     playerCount: t.patients?.[0]?.count ?? 0,
   }))
+
+  // Campañas del grupo
+  const { data: campaigns } = await supabase
+    .from('campaigns')
+    .select('id, name, status, start_date')
+    .eq('group_id', group.id)
+    .eq('clinic_id', profile.clinic_id)
+    .order('created_at', { ascending: false })
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -104,6 +113,42 @@ export default async function GroupDetailPage({ params }: { params: { id: string
           </ul>
         </div>
       )}
+
+      {/* Campañas */}
+      <div className="mt-8 space-y-3">
+        <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <Megaphone className="w-4 h-4 text-blue-500" /> Campañas
+        </h2>
+        <CreateCampaignForm
+          clinicId={profile.clinic_id}
+          groupId={group.id}
+          teams={teams.map((t: any) => ({ id: t.id, name: t.name }))}
+        />
+        {(campaigns || []).length === 0 ? (
+          <p className="text-sm text-gray-400 bg-white rounded-2xl border border-gray-200 px-4 py-6 text-center">
+            Sin campañas en este grupo.
+          </p>
+        ) : (
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <ul className="divide-y divide-gray-100">
+              {(campaigns || []).map((c: any) => (
+                <li key={c.id}>
+                  <Link href={`/campaigns/${c.id}`} className="flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-gray-50 transition-colors">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {c.status === 'closed' ? 'Cerrada' : 'Activa'}
+                        {c.start_date ? ` · desde ${new Date(c.start_date).toLocaleDateString('es-ES')}` : ''}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0 ml-2" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       .single()
     if (!profile) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
 
-    const { patientId } = await request.json()
+    const { patientId, campaignId } = await request.json()
     if (!patientId) return NextResponse.json({ error: 'patientId requerido' }, { status: 400 })
 
     // Paciente (scoped por clínica) + resolución de deporte (paciente ?? equipo)
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         patient_id: patientId,
         physio_id: profile.id,
         sport_id: sportId,
+        campaign_id: campaignId || null,
         session_number: nextNumber,
         status: 'in_progress',
         clinical_data: {},

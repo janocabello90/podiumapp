@@ -7,9 +7,11 @@ import toast from 'react-hot-toast'
 
 export default function StartSessionButton({
   patientId,
+  campaignId,
   label = 'Iniciar valoración',
 }: {
   patientId: string
+  campaignId?: string
   label?: string
 }) {
   const router = useRouter()
@@ -21,7 +23,7 @@ export default function StartSessionButton({
       const res = await fetch('/api/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId }),
+        body: JSON.stringify({ patientId, campaignId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Error al crear la sesión')
