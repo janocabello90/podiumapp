@@ -242,3 +242,20 @@ Dependencias: **A → (B, C, G en paralelo) → D → E → F**. G depende solo 
 2. Cada fase: **kickoff con Opus** (desglose + DDL/policies) → **ejecución con Sonnet** (tarea a tarea, ritual Prompt 4) → **cierre** (docs + commit Jano).
 3. **Fase D** es el punto de máximo cuidado: copiar-no-mover + feature-flag + paridad + verificación + deploy-first en el repunte.
 4. Posponer G, canales y F hasta tener valor/uso real; nunca romper el caso individual (NULLABLE + fallbacks + flag).
+
+---
+
+## Adenda — Fase de Campañas + reordenación (2026-07)
+
+Nueva entidad **campaña** (ver adenda de `DISENO-EQUIPOS.md`): estudio de valoración de un grupo (subconjunto de equipos), con inicio/fin previsto y seguimientos, que **agrupa** las sesiones del estudio. Reordenación de las fases posteriores a D:
+
+- **D — Entidad Sesión (valoración individual como sesión).** Objetivo sin cambios; la sesión es **campaña-agnóstica** (`campaign_id` se añade en E, nullable → individual = null). El stepper de sesión se **reutiliza** para individual y campaña.
+- **E — Campañas (NUEVA):**
+  - E1: `campaigns` + `campaign_teams` + `sessions.campaign_id` + RLS + tipos.
+  - E2: UI de campañas — crear (grupo + equipos + inicio/fin previsto + nº seguimientos), lista, vista de campaña (equipos incluidos + roster + **progreso** de valoración).
+  - E3: valorar **dentro de campaña** — desde la campaña "valorar jugador" crea una `session` con `campaign_id`; soporta **seguimientos** (varias sesiones por jugador).
+- **F — VALD por sesión + informe individual sobre sesión** (antes E).
+- **G — Informe de CAMPAÑA** (antes "informe de equipo"): agrega las sesiones de una campaña (por equipo/posición/edad si aplica), cualitativo v1.
+- **H — Alta masiva CSV** (antes G).
+
+**Orden:** A·B·C (hechas) → **D** (sesión individual) → **E** (campañas) → F (VALD/informe individual) → G (informe de campaña) → H (CSV). El caso individual intacto en todas (`campaign_id`/`team_id`/`sport_id` NULLABLE).

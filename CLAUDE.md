@@ -432,3 +432,12 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Trazabilidad:** card "Consentimientos" en la ficha del paciente (tipo · aceptado/rechazado · fecha). Módulo compartido `lib/clinical/consents.ts` (tipos + labels).
 
 > Esto **actualiza** afirmaciones previas del doc (p. ej. §13 "no hay grupos/equipos ni deportes/pruebas"): esas describen el punto de partida de la auditoría; la capa organizativa (Fase A), los catálogos deporte/prueba (Fase B) y los consentimientos versionados (Fase C) ya existen.
+
+### Fase D — Entidad Sesión + refactor de valoración (COMPLETADA 2026-07, sin feature-flag). Doc: `FASE-D-EQUIPOS.md`
+- **Datos:** `sessions` (`clinical_data` JSONB = exploración de 84 campos; `sport_id`, `status`, `session_number`, `source_assessment_id`) + `session_tests` (pruebas de la sesión con `test_name` snapshot + **notas por prueba**) + `reports.session_id`. Migraciones `20260727183513` (esquema) y `20260728070429` (backfill). RLS `FOR ALL` clínica-scoped.
+- **Backfill (copiar-no-mover):** cada `assessments` → una `session` (`clinical_data = assessment_data`); **`assessments` intacto**; `source_assessment_id` traza el origen; reports repuntados. Verificado 2→2.
+- **Absorción, ir directo (sin flag):** la valoración va por sesión. Ficha `/patients/[id]` paso 2 crea/abre sesiones (`StartSessionButton` → `POST /api/sessions`, que resuelve deporte y genera `session_tests` del mapeo). **Multi-sesión** (seguimientos, `session_number`).
+- **Página de sesión** `/patients/[id]/sessions/[sessionId]`: stepper — anamnesis+consentimientos (contexto) · exploración (`AssessmentForm` parametrizado `table='sessions'`/`dataColumn='clinical_data'`) · pruebas (`SessionTestsPanel`: notas por prueba + carga del deporte) · documentos/informe (en la ficha en esta fase).
+- **Session-aware:** `stage.ts` prefiere sesiones (fallback assessments); dashboard/lista/roster traen `sessions`; `reports/generate` lee `sessions.clinical_data` (fallback assessment) y guarda `reports.session_id`.
+- **Legacy conservado:** `assessments` y `/patients/[id]/assessment` intactos (respaldo); nada enlaza ya a la ruta vieja.
+- **Pendiente:** **Campañas** (nueva Fase E, agrupan sesiones de estudio de equipo, `sessions.campaign_id`); VALD/imágenes por sesión + informe individual sobre sesión (Fase F); informe de campaña (Fase G).

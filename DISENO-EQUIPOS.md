@@ -210,3 +210,28 @@ Bloquean detalle técnico; conviene cerrarlas antes del Prompt 3 (implementació
 - **Navegación:** añadir "Equipos" (y opcional "Sesiones"), reorganizar Ajustes, renombrar staff.
 - **Orden de fases A→F** de menor a mayor riesgo, individual intacto en todas.
 - **9 decisiones** de clínica a cerrar; las #3, #4 y #5 son las que más condicionan el modelo.
+
+---
+
+## Adenda — Campañas (decisión de negocio, 2026-07)
+
+**Problema detectado:** una sesión cuelga solo del paciente → al valorar un equipo, **nada agrupa** esas sesiones como "el estudio de ese equipo", y no se distingue una consulta de **campaña** de un **seguimiento individual**. El informe agregado necesita esa agrupación.
+
+**Solución — entidad `campaigns` (campaña):** un estudio de valoración con contexto propio.
+
+### Entidades nuevas
+- **`campaigns`**: `id, clinic_id, group_id (FK groups, NOT NULL), name, status ('active'|'closed') default 'active', start_date (date), end_date_planned (date NULL — puede quedar abierta), planned_consultations (int NULL — nº de seguimientos previstos), closed_at (timestamptz NULL), notes, timestamps`.
+- **`campaign_teams`**: N:M `campaign_id ↔ team_id` (subconjunto de los equipos del grupo; `UNIQUE(campaign_id, team_id)` + `clinic_id`).
+- **`sessions.campaign_id`** NULLABLE → `campaigns(id)` ON DELETE SET NULL. **La clave:** sesión con campaña = parte del estudio; `null` = valoración individual (flujo antiguo intacto).
+
+### Reglas confirmadas con la clínica
+1. Una campaña = **un grupo**; incluye un **subconjunto** de sus equipos (no todos).
+2. Una sesión pertenece **como mucho a una campaña**. Un jugador puede tener sesiones de campaña **y** sueltas.
+3. Se valora a los jugadores de los equipos incluidos (todos o los que se presenten; normalmente todos). El "progreso" mide valorados vs roster.
+4. La campaña tiene **inicio + fin previsto (opcional) + seguimientos previstos** → varias consultas por jugador a lo largo de la campaña = varias `sessions` (`session_number`).
+5. Pueden coexistir **varias campañas** independientes.
+
+### Impacto
+- `sessions` gana `campaign_id` (nullable). Aditivo; el individual no cambia.
+- El **informe agregado** deja de ser "de equipo" genérico → pasa a ser **por campaña** (agrega las sesiones de la campaña, por equipo/conjunto). Más sólido.
+- Nueva capa de navegación **"Campañas"**: crear sobre un grupo → elegir equipos + fechas + seguimientos → valorar jugadores **en contexto**.
