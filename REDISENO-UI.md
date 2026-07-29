@@ -37,7 +37,10 @@
 **4b — Unificación de color + datos (HECHA 2026-07-29):**
 - **Azul de marca unificado a la paleta clínica** en toda la app (mecánico, ~22 ficheros): `bg-blue-900`→`bg-clinical-primary` (#0f52ba), `hover:bg-blue-800`→`hover:bg-clinical-navy`, `text-blue-900`→`text-clinical-navy`, `to-blue-900`→`to-clinical-navy`. Botones primarios, logo y estados activos ahora en el azul de Stitch.
 - **JetBrains Mono en datos** clave (contadores de progreso valorados/total, fechas) en Inicio y Estudios.
-**4c — Pendiente (opcional):** enriquecer los rails (informe IA del estudio con preview + acción sugerida; cockpit del paciente) y homogeneizar study cards / KPI tiles / pills en pantallas legacy (settings, anamnesis).
+**4c — Rail del informe IA del estudio (HECHA 2026-07-29):**
+- En `/campaigns/[id]`, la tarjeta "Informe de campaña" se enriquece: **cabecera degradada** (clinical-navy→primary) "Informe de campaña (IA)" + estado/fecha; **preview del resumen** del último informe (`report_data.resumen_campana`), **aviso de jugadores a vigilar** (`jugadores_a_vigilar`), **cobertura** valorados/total y acciones (Revisar informe · Regenerar). Sin informe: CTA de generar con gating.
+- Toque mono en el progreso del estudio.
+- Nota: los botones/estados legacy (settings, anamnesis) ya recibieron el color clínico en 4b; el resto de homogeneización fina queda opcional.
 
 ### Etapa 5 — Agenda / entidad "cita" *(fase propia, con diseño de datos)*
 - Modelar `appointments` (o similar) y construir la vista Agenda (día/semana, estados). Decidido aparte.
