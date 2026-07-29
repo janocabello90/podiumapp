@@ -42,6 +42,10 @@
 - Toque mono en el progreso del estudio.
 - Nota: los botones/estados legacy (settings, anamnesis) ya recibieron el color clínico en 4b; el resto de homogeneización fina queda opcional.
 
+**4d — Chrome de app: top bar + CTA (HECHA 2026-07-29):**
+- **TopBar** nuevo (`components/layout/TopBar.tsx`, desktop, sticky): breadcrumb por sección (derivado del pathname), **buscador global** (→ /patients), **campana de alertas** (→ /dashboard) y **chip de usuario** (nombre + rol en mono uppercase + avatar). Integrado en `(dashboard)/layout.tsx` (wrapper `lg:ml-64` con TopBar + main). Era la mayor diferencia estructural con Stitch (no había top bar).
+- **Sidebar**: botón **"Nueva consulta"** (CTA azul clínico → /patients) en el pie, como Stitch. (Se omite "Soporte": sin página real, para no dejar un enlace muerto.)
+
 ### Etapa 5 — Agenda / entidad "cita" *(fase propia, con diseño de datos)*
 - Modelar `appointments` (o similar) y construir la vista Agenda (día/semana, estados). Decidido aparte.
 
