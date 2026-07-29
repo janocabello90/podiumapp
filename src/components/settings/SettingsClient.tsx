@@ -30,31 +30,33 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
   ]
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Ajustes</h1>
         <p className="text-sm text-gray-500 mt-0.5">Configuración de tu cuenta y la clínica</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'bg-blue-50 text-clinical-navy'
-                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Rail de navegación secundaria */}
+        <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible lg:w-56 flex-shrink-0 pb-1 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2.5 px-3 sm:px-4 py-2.5 rounded-xl text-sm font-medium transition-colors whitespace-nowrap lg:w-full ${
+                activeTab === tab.id
+                  ? 'bg-clinical-soft text-clinical-navy'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
+              }`}
+            >
+              <tab.icon className="w-4 h-4 flex-shrink-0" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
 
-      {/* Content */}
+        {/* Contenido */}
+        <div className="flex-1 min-w-0 space-y-0">
       {activeTab === 'profile' && (
         <ProfileSection currentUser={currentUser} currentUserEmail={currentUserEmail} supabase={supabase} />
       )}
@@ -108,6 +110,8 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
       {activeTab === 'report' && (
         <ReportSection clinic={clinic} />
       )}
+        </div>
+      </div>
     </div>
   )
 }
