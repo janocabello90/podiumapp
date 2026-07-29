@@ -448,3 +448,11 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Valorar en campaña:** `POST /api/sessions` acepta `campaignId` → crea sesión con `campaign_id`; reutiliza el stepper de sesión (Fase D). Soporta seguimientos (varias sesiones por jugador en la campaña).
 - `/campaigns` añadida a `isProtectedRoute`.
 - **Pendiente:** informe individual sobre sesión + VALD por sesión (Fase F); **informe de campaña** agregado por IA (Fase G).
+
+### Fase F — VALD por sesión + informe individual sobre la sesión (COMPLETADA 2026-07-29). Doc: `FASE-F-EQUIPOS.md`
+- **Datos:** `documents.session_id` + `documents.session_test_id` NULLABLE (FK→sessions/session_tests **ON DELETE SET NULL**) + índices parciales. Migración `20260729083709_link_documents_to_sessions`. Aditivo: `patient_id` se conserva; documentos sin sesión (a nivel paciente) siguen válidos.
+- **Subida por sesión:** `POST /api/documents` acepta `session_id`/`session_test_id` (valida que la sesión es del paciente+clínica) y los persiste. `DocumentUploader`/`DocumentSection`/`ImageGallerySection` con prop opcional `sessionId`. La **página de sesión** `/patients/[id]/sessions/[sessionId]` deja de remitir a la ficha: pasos **4 Informes VALD** + **5 Ecografías/fotografías** reales, scoped a la sesión (`documents.session_id`).
+- **Informe individual sobre la sesión:** `POST /api/reports/generate` acepta `sessionId` opcional → usa **esa** sesión (no la última), añade al contexto IA las **pruebas de la sesión** (`session_tests`: notas por prueba + `tests.vald_interpretation_prompt` por prueba) y los **documentos de la sesión** (fallback a docs del paciente si la sesión no tiene ninguno). `ReportGenerateButton` con `sessionId`; página de sesión **paso 6** (generar + enlace a revisión). Se conserva `patients.vald_interpretation` como fuente adicional.
+- **Retrocompatible:** sin `sessionId`, el generador funciona igual que antes (última sesión + docs del paciente). La ficha del paciente conserva sus secciones de documentos a nivel paciente (consolidación = cosmético posterior).
+- **Encaje con campañas:** el informe de la Fase F es individual sobre una sesión, **da igual** si la sesión tiene `campaign_id`. La agregación por campaña es la **Fase G** (aparte).
+- **Pendiente:** **informe de campaña** agregado por IA (Fase G); alta masiva CSV (Fase H).
