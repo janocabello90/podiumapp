@@ -665,13 +665,15 @@ export type Database = {
           ai_prompt_tokens: number | null
           anamnesis_id: string | null
           assessment_id: string | null
+          campaign_id: string | null
           clinic_id: string
           created_at: string | null
           generated_by: string | null
           id: string
-          patient_id: string
+          patient_id: string | null
           pdf_storage_path: string | null
           report_data: Json | null
+          scope: string
           session_id: string | null
           status: string | null
           updated_at: string | null
@@ -682,13 +684,15 @@ export type Database = {
           ai_prompt_tokens?: number | null
           anamnesis_id?: string | null
           assessment_id?: string | null
+          campaign_id?: string | null
           clinic_id: string
           created_at?: string | null
           generated_by?: string | null
           id?: string
-          patient_id: string
+          patient_id?: string | null
           pdf_storage_path?: string | null
           report_data?: Json | null
+          scope?: string
           session_id?: string | null
           status?: string | null
           updated_at?: string | null
@@ -699,13 +703,15 @@ export type Database = {
           ai_prompt_tokens?: number | null
           anamnesis_id?: string | null
           assessment_id?: string | null
+          campaign_id?: string | null
           clinic_id?: string
           created_at?: string | null
           generated_by?: string | null
           id?: string
-          patient_id?: string
+          patient_id?: string | null
           pdf_storage_path?: string | null
           report_data?: Json | null
+          scope?: string
           session_id?: string | null
           status?: string | null
           updated_at?: string | null
@@ -716,6 +722,13 @@ export type Database = {
             columns: ["anamnesis_id"]
             isOneToOne: false
             referencedRelation: "anamnesis_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {

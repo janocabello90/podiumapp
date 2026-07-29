@@ -29,6 +29,7 @@ export type AssessmentStatus = 'in_progress' | 'completed'
 export type TranscriptionStatus = 'pending' | 'processing' | 'completed' | 'failed'
 export type DocType = 'vald_report' | 'medical_image' | 'external_report' | 'other'
 export type ReportStatus = 'generating' | 'draft' | 'approved' | 'delivered'
+export type ReportScope = 'individual' | 'campaign'
 
 // --- Row shapes derivados del esquema real (con overrides no-nulos/enum) ---
 
@@ -161,10 +162,11 @@ export type Document = Omit<
 
 export type Report = Omit<
   T['reports']['Row'],
-  'status' | 'report_data' | 'created_at' | 'updated_at'
+  'status' | 'report_data' | 'scope' | 'created_at' | 'updated_at'
 > & {
   status: ReportStatus
   report_data: Record<string, any>
+  scope: ReportScope
   created_at: string
   updated_at: string
 }

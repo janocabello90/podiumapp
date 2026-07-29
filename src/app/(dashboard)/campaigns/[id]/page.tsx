@@ -1,9 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Shield, Check } from 'lucide-react'
+import { ArrowLeft, Shield, Check, FileText } from 'lucide-react'
 import StartSessionButton from '@/components/sessions/StartSessionButton'
 import CloseCampaignButton from '@/components/teams/CloseCampaignButton'
+import CampaignReportButton from '@/components/teams/CampaignReportButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +48,17 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const valued = players.filter((p) => (sessionsByPatient.get(p.id) || 0) > 0).length
   const groupName = (campaign.groups as any)?.name as string | undefined
 
+  // Último informe de campaña (si existe).
+  const { data: latestReport } = await supabase
+    .from('reports')
+    .select('id, status, created_at')
+    .eq('campaign_id', campaign.id)
+    .eq('scope', 'campaign')
+    .eq('clinic_id', profile.clinic_id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
@@ -83,6 +95,27 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
           <p className="text-xs text-gray-400">Progreso</p>
           <p className="text-gray-800 font-medium">{valued} / {players.length} valorados</p>
         </div>
+      </div>
+
+      {/* Informe de campaña */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-blue-500" /> Informe de campaña
+          </h2>
+          <p className="text-xs text-gray-500 mt-1">
+            Informe agregado por IA de las valoraciones de la campaña (cualitativo). Revisable y exportable a PDF.
+            {latestReport && (
+              <>
+                {' · '}
+                <Link href={`/campaigns/${campaign.id}/report`} className="text-blue-600 hover:underline">
+                  Ver último ({latestReport.status === 'approved' ? 'aprobado' : 'borrador'})
+                </Link>
+              </>
+            )}
+          </p>
+        </div>
+        <CampaignReportButton campaignId={campaign.id} valued={valued} total={players.length} />
       </div>
 
       {/* Roster por equipo */}
