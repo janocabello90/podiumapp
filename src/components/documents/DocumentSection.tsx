@@ -14,9 +14,10 @@ interface Props {
   clinicId: string
   initialDocuments: Document[]
   initialInterpretation?: string
+  sessionId?: string
 }
 
-export default function DocumentSection({ patientId, clinicId, initialDocuments, initialInterpretation }: Props) {
+export default function DocumentSection({ patientId, clinicId, initialDocuments, initialInterpretation, sessionId }: Props) {
   const [documents, setDocuments] = useState<Document[]>(initialDocuments)
   const [interpretation, setInterpretation] = useState(initialInterpretation || '')
   const [showInterpretation, setShowInterpretation] = useState(!!initialInterpretation)
@@ -70,6 +71,7 @@ export default function DocumentSection({ patientId, clinicId, initialDocuments,
         patientId={patientId}
         clinicId={clinicId}
         onUploaded={handleUploaded}
+        sessionId={sessionId}
       />
       {documents.length > 0 && (
         <DocumentList documents={documents} onDelete={handleDelete} />

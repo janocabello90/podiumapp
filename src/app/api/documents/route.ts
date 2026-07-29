@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     const patientId = formData.get('patient_id') as string
     const docType = formData.get('doc_type') as string || 'vald_report'
+    // Fase F: vinculación opcional a una sesión / prueba de sesión.
+    const sessionId = (formData.get('session_id') as string) || null
+    const sessionTestId = (formData.get('session_test_id') as string) || null
 
     if (!file || !patientId) {
       return NextResponse.json({ error: 'Archivo y patient_id requeridos' }, { status: 400 })
@@ -40,6 +43,19 @@ export async function POST(request: NextRequest) {
 
     if (!patientCheck || patientCheck.clinic_id !== profile.clinic_id) {
       return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+    }
+
+    // If a session is provided, verify it belongs to this patient + clinic.
+    if (sessionId) {
+      const { data: sessionCheck } = await supabase
+        .from('sessions')
+        .select('id, patient_id, clinic_id')
+        .eq('id', sessionId)
+        .single()
+
+      if (!sessionCheck || sessionCheck.clinic_id !== profile.clinic_id || sessionCheck.patient_id !== patientId) {
+        return NextResponse.json({ error: 'Sesión no válida para este paciente' }, { status: 404 })
+      }
     }
 
     // Determine storage bucket and path
@@ -107,6 +123,8 @@ export async function POST(request: NextRequest) {
         file_name: file.name,
         storage_path: uploadData.path,
         extraction_status: isImage ? 'completed' : 'pending',
+        session_id: sessionId,
+        session_test_id: sessionTestId,
       })
       .select()
       .single()

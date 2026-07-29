@@ -5,7 +5,11 @@ import { ArrowLeft, FileText } from 'lucide-react'
 import AssessmentForm from '@/components/assessment/AssessmentForm'
 import SessionTestsPanel from '@/components/sessions/SessionTestsPanel'
 import SportSelect from '@/components/sports/SportSelect'
+import DocumentSection from '@/components/documents/DocumentSection'
+import ImageGallerySection from '@/components/documents/ImageGallerySection'
+import ReportGenerateButton from '@/components/report/ReportGenerateButton'
 import { consentLabel } from '@/lib/clinical/consents'
+import type { Document } from '@/types/database'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,21 +23,26 @@ export default async function SessionPage({ params }: { params: { id: string; se
 
   const { data: session } = await supabase
     .from('sessions')
-    .select('*, patients(full_name)')
+    .select('*, patients(full_name, vald_interpretation)')
     .eq('id', params.sessionId)
     .eq('patient_id', params.id)
     .eq('clinic_id', profile.clinic_id)
     .single()
   if (!session) notFound()
 
-  const [{ data: sessionTests }, { data: sports }, { data: anamnesis }, { data: consents }] = await Promise.all([
+  const [{ data: sessionTests }, { data: sports }, { data: anamnesis }, { data: consents }, { data: sessionDocs }] = await Promise.all([
     supabase.from('session_tests').select('id, test_name, status, notes, display_order, is_required').eq('session_id', session.id),
     supabase.from('sports').select('id, name').eq('clinic_id', profile.clinic_id).eq('is_active', true).order('name'),
     supabase.from('anamnesis_forms').select('status').eq('patient_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('consents').select('type, granted, granted_at').eq('patient_id', params.id).order('granted_at', { ascending: false }),
+    supabase.from('documents').select('*').eq('session_id', session.id).order('created_at', { ascending: false }),
   ])
 
   const patientName = (session.patients as any)?.full_name || ''
+  const valdInterpretation = (session.patients as any)?.vald_interpretation || ''
+  const docs = (sessionDocs || []) as Document[]
+  const valdDocs = docs.filter((d) => d.doc_type !== 'medical_image')
+  const imageDocs = docs.filter((d) => d.doc_type === 'medical_image')
   const consentsByType = new Map<string, any>()
   for (const c of consents || []) if (!consentsByType.has(c.type)) consentsByType.set(c.type, c)
 
@@ -101,14 +110,46 @@ export default async function SessionPage({ params }: { params: { id: string; se
         />
       </section>
 
-      {/* 4/5. Documentos e informe (a nivel de ficha en esta fase) */}
+      {/* 4. Informes VALD de la sesión */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">4. Documentos e informe</h2>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 text-sm text-gray-600 flex items-center justify-between gap-3">
-          <span>Los PDFs de VALD, imágenes y la generación del informe están en la ficha del paciente.</span>
-          <Link href={`/patients/${params.id}`} className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg flex-shrink-0">
-            <FileText className="w-3.5 h-3.5" /> Ir a la ficha
-          </Link>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">4. Informes VALD</h2>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <DocumentSection
+            patientId={params.id}
+            clinicId={profile.clinic_id}
+            sessionId={session.id}
+            initialDocuments={valdDocs}
+            initialInterpretation={valdInterpretation}
+          />
+        </div>
+      </section>
+
+      {/* 5. Imágenes clínicas de la sesión */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">5. Ecografías / fotografías</h2>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+          <ImageGallerySection
+            patientId={params.id}
+            clinicId={profile.clinic_id}
+            sessionId={session.id}
+            initialImages={imageDocs}
+          />
+        </div>
+      </section>
+
+      {/* 6. Informe individual sobre la sesión */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">6. Informe</h2>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-gray-600">
+            Genera el informe IA con el contexto de <strong>esta sesión</strong> (anamnesis, exploración, pruebas y VALD). Tras generarlo, se revisa y aprueba en la ficha.
+          </p>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <ReportGenerateButton patientId={params.id} sessionId={session.id} />
+            <Link href={`/patients/${params.id}/report`} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg">
+              <FileText className="w-3.5 h-3.5" /> Ver / revisar
+            </Link>
+          </div>
         </div>
       </section>
     </div>

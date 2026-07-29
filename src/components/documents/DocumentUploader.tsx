@@ -9,9 +9,10 @@ interface Props {
   patientId: string
   clinicId: string
   onUploaded: (doc: Document) => void
+  sessionId?: string
 }
 
-export default function DocumentUploader({ patientId, clinicId, onUploaded }: Props) {
+export default function DocumentUploader({ patientId, clinicId, onUploaded, sessionId }: Props) {
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadQueue, setUploadQueue] = useState<File[]>([])
@@ -22,6 +23,7 @@ export default function DocumentUploader({ patientId, clinicId, onUploaded }: Pr
     formData.append('file', file)
     formData.append('patient_id', patientId)
     formData.append('doc_type', 'vald_report')
+    if (sessionId) formData.append('session_id', sessionId)
 
     const response = await fetch('/api/documents', {
       method: 'POST',

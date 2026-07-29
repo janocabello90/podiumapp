@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
-    const { patientId } = await request.json()
+    const { patientId, sessionId } = await request.json()
     if (!patientId) {
       return NextResponse.json({ error: 'patientId requerido' }, { status: 400 })
     }
@@ -94,11 +94,39 @@ export async function POST(request: NextRequest) {
     // Build context for Claude
     const anamnesis = patient.anamnesis_forms?.[0]
     const assessment = patient.assessments?.[0]
-    // Preferir la última sesión (Fase D); fallback a assessment legacy.
-    const session = ((patient.sessions as any[]) || []).sort((a: any, b: any) => (b.session_number || 0) - (a.session_number || 0))[0]
+    // Fase F: si viene sessionId, usar ESA sesión; si no, la última (Fase D). Fallback a assessment legacy.
+    const allSessions = (patient.sessions as any[]) || []
+    const session = sessionId
+      ? allSessions.find((s: any) => s.id === sessionId)
+      : allSessions.sort((a: any, b: any) => (b.session_number || 0) - (a.session_number || 0))[0]
+
+    if (sessionId && !session) {
+      return NextResponse.json({ error: 'Sesión no encontrada para este paciente' }, { status: 404 })
+    }
+
     const clinicalData = session?.clinical_data ?? assessment?.assessment_data
     const clinicalNotes = session?.notes ?? assessment?.notes
-    const documents = patient.documents || []
+
+    // Fase F: pruebas de la sesión (notas por prueba + prompt VALD por prueba) y
+    // documentos vinculados a la sesión. Si la sesión no tiene documentos propios,
+    // se cae a los documentos a nivel paciente (retrocompatibilidad).
+    let sessionTests: any[] = []
+    let documents = patient.documents || []
+    if (session?.id) {
+      const [{ data: st }, { data: sessionDocs }] = await Promise.all([
+        supabase
+          .from('session_tests')
+          .select('test_name, notes, status, display_order, tests(vald_interpretation_prompt)')
+          .eq('session_id', session.id)
+          .order('display_order', { ascending: true }),
+        supabase
+          .from('documents')
+          .select('*')
+          .eq('session_id', session.id),
+      ])
+      sessionTests = st || []
+      if ((sessionDocs || []).length > 0) documents = sessionDocs as any[]
+    }
 
     let patientContext = `DATOS DEL PACIENTE:
 - Nombre: ${patient.full_name}
@@ -136,6 +164,20 @@ export async function POST(request: NextRequest) {
       if (clinicalNotes) {
         patientContext += `\n\nNOTAS GENERALES DE LA VALORACIÓN:\n${clinicalNotes}`
       }
+    }
+
+    // Fase F: pruebas de la sesión — notas por prueba + guía de interpretación VALD por prueba.
+    if (sessionTests.length > 0) {
+      const testsBlock = sessionTests
+        .map((t: any) => {
+          const parts: string[] = [`- ${t.test_name}${t.status ? ` (${t.status})` : ''}`]
+          if (t.notes && String(t.notes).trim()) parts.push(`    Notas del fisio: ${t.notes}`)
+          const prompt = t.tests?.vald_interpretation_prompt
+          if (prompt && String(prompt).trim()) parts.push(`    Guía de interpretación VALD: ${prompt}`)
+          return parts.join('\n')
+        })
+        .join('\n')
+      patientContext += `\n\nPRUEBAS FÍSICAS DE LA SESIÓN (con notas del fisio y guía de interpretación por prueba):\n${testsBlock}`
     }
 
     // VALD interpretation from patient record

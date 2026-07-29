@@ -448,6 +448,8 @@ export type Database = {
           file_name: string
           id: string
           patient_id: string
+          session_id: string | null
+          session_test_id: string | null
           storage_path: string
           uploaded_by: string | null
         }
@@ -460,6 +462,8 @@ export type Database = {
           file_name: string
           id?: string
           patient_id: string
+          session_id?: string | null
+          session_test_id?: string | null
           storage_path: string
           uploaded_by?: string | null
         }
@@ -472,6 +476,8 @@ export type Database = {
           file_name?: string
           id?: string
           patient_id?: string
+          session_id?: string | null
+          session_test_id?: string | null
           storage_path?: string
           uploaded_by?: string | null
         }
@@ -488,6 +494,20 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_session_test_id_fkey"
+            columns: ["session_test_id"]
+            isOneToOne: false
+            referencedRelation: "session_tests"
             referencedColumns: ["id"]
           },
           {

@@ -11,12 +11,13 @@ interface Props {
   patientId: string
   clinicId: string
   initialImages: Document[]
+  sessionId?: string
 }
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
 const MAX_SIZE_MB = 20
 
-export default function ImageGallerySection({ patientId, clinicId, initialImages }: Props) {
+export default function ImageGallerySection({ patientId, clinicId, initialImages, sessionId }: Props) {
   const [images, setImages] = useState<Document[]>(initialImages)
   const [uploading, setUploading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -35,6 +36,7 @@ export default function ImageGallerySection({ patientId, clinicId, initialImages
     formData.append('file', file)
     formData.append('patient_id', patientId)
     formData.append('doc_type', 'medical_image')
+    if (sessionId) formData.append('session_id', sessionId)
 
     const response = await fetch('/api/documents', {
       method: 'POST',

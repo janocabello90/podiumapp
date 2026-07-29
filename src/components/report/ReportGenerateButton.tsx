@@ -7,9 +7,10 @@ import toast from 'react-hot-toast'
 
 interface Props {
   patientId: string
+  sessionId?: string
 }
 
-export default function ReportGenerateButton({ patientId }: Props) {
+export default function ReportGenerateButton({ patientId, sessionId }: Props) {
   const [generating, setGenerating] = useState(false)
   const router = useRouter()
 
@@ -19,7 +20,7 @@ export default function ReportGenerateButton({ patientId }: Props) {
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ patientId }),
+        body: JSON.stringify({ patientId, sessionId }),
       })
 
       if (!response.ok) {
