@@ -5,6 +5,8 @@ import { ArrowLeft, UserPlus, Users } from 'lucide-react'
 import { computeStage } from '@/lib/clinical/stage'
 import { getRegionLabel, getPathologyLabel } from '@/lib/clinical/taxonomy'
 import SportSelect from '@/components/sports/SportSelect'
+import BulkImportPlayers from '@/components/teams/BulkImportPlayers'
+import { normalize } from '@/lib/patients/rosterImport'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +46,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
   const { data: rawPlayers } = await supabase
     .from('patients')
     .select(`
-      id, full_name, body_region, pathology_tag, pathology_label,
+      id, full_name, email, body_region, pathology_tag, pathology_label,
       anamnesis_forms(id, status, created_at),
       assessments(id, status, created_at),
       sessions(id, status, created_at),
@@ -58,6 +60,9 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
 
   const players = rawPlayers || []
   const groupName = (team.groups as any)?.name as string | undefined
+  const existingEmails = players
+    .map((p: any) => (p.email ? normalize(p.email) : ''))
+    .filter(Boolean)
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -84,14 +89,17 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
             </p>
           </div>
         </div>
-        <Link
-          href={`/patients/new?team_id=${team.id}`}
-          className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors flex-shrink-0"
-        >
-          <UserPlus className="w-4 h-4" />
-          <span className="hidden sm:inline">Añadir jugador</span>
-          <span className="sm:hidden">Añadir</span>
-        </Link>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <BulkImportPlayers teamId={team.id} clinicId={profile.clinic_id} existingEmails={existingEmails} />
+          <Link
+            href={`/patients/new?team_id=${team.id}`}
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline">Añadir jugador</span>
+            <span className="sm:hidden">Añadir</span>
+          </Link>
+        </div>
       </div>
 
       {/* Deporte del equipo */}
