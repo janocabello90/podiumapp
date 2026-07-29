@@ -464,3 +464,11 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Decisiones v1 (confirmadas):** generación con roster **parcial** + aviso de cobertura; desglose **solo por equipo** (edad, futuro); **varios drafts** (histórico, se revisa el último); **PDF mínimo funcional**. Cualitativo (no hay resultados numéricos estructurados: `session_tests.result_data` reservado para el futuro).
 - **Aislado del individual:** estructura de `report_data`, editor (`CampaignReportView`) y PDF de campaña **separados** del individual (`ReportEditor`/`export-pdf`), que quedan intactos.
 - **Pendiente:** alta masiva CSV de jugadores (Fase H).
+
+### Fase H — Alta masiva CSV/Excel de jugadores (COMPLETADA 2026-07-29). Doc: `FASE-H-EQUIPOS.md`
+- **Sin migración** (usa `patients`; reutiliza el patrón de alta individual: insert autenticado con RLS clínica-scoped). Dependencia nueva: `xlsx@0.18.5` (SheetJS), cargada por **import dinámico** (code-split; no infla el bundle del equipo).
+- **Util puro** `lib/patients/rosterImport.ts`: `parseCsv` (comillas dobles, `;` fallback Excel-ES, BOM), `parseXlsx` (async, primera hoja), `mapHeaders` (alias ES/EN, sin tildes/case), `validateRow` (full_name obligatorio; email regex; fecha `dd/mm/aaaa`|`aaaa-mm-dd`→ISO; gender normalizado hombre/mujer/H/M/…; phone/notes opc.), `tableToRows`, `buildTemplateCsv`.
+- **UI** `components/teams/BulkImportPlayers.tsx` (modal en `/teams/[id]`): elegir `.csv`/`.xlsx` + plantilla + **previsualización** con estado por fila (válida/duplicada/error+motivo) + toggle por fila; import en lote → `router.refresh()`.
+- **Decisiones v1:** formatos **CSV + XLSX**; **duplicado por email dentro del equipo** (y dentro del fichero), excluido por defecto; **todos los campos del alta**, solo `full_name` obligatorio; importador **en la página del equipo**.
+- **Modelo (importante):** `patients.team_id` es **un único equipo por ficha** → una persona en dos equipos = **dos fichas** (una por equipo); por eso el duplicado se comprueba **por email dentro del equipo** (el mismo email en otro equipo es otra ficha, no duplicado). El multi-equipo real (una persona compartida, tabla N:M) **no** está implementado; sería un rediseño futuro.
+- **Cierra el flujo de equipos A–H.** El caso individual permanece intacto en todas las fases.
