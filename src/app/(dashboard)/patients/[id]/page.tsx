@@ -75,6 +75,11 @@ export default async function PatientDetailPage({
   const hasDocuments = patientDocuments.length > 0
   const hasImages = patientImages.length > 0
   const latestReport = patient.reports?.[0]
+  // Informe por sesión (para el historial de consultas)
+  const reportBySession = new Map<string, any>()
+  for (const r of (patient.reports || []) as any[]) {
+    if (r.session_id && !reportBySession.has(r.session_id)) reportBySession.set(r.session_id, r)
+  }
   const age = patient.date_of_birth
     ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
@@ -110,6 +115,53 @@ export default async function PatientDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main content - left column */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          {/* Historial de consultas (timeline) */}
+          {allSessions.length > 0 && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Historial de consultas</h2>
+                <StartSessionButton patientId={patient.id} label="Nueva consulta" />
+              </div>
+              <div className="relative">
+                {allSessions.map((s: any, i: number) => {
+                  const num = s.session_number || 1
+                  const type = num === 1 ? 'Valoración inicial' : `Seguimiento ${num - 1}`
+                  const done = s.status === 'completed'
+                  const report = reportBySession.get(s.id)
+                  return (
+                    <div key={s.id} className="relative pl-8 pb-4 last:pb-0">
+                      {i < allSessions.length - 1 && (
+                        <span className="absolute left-[9px] top-5 -bottom-4 w-0.5 bg-gray-200" aria-hidden />
+                      )}
+                      <span className={`absolute left-0 top-2 w-[18px] h-[18px] rounded-full border-[3px] ${done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-blue-500'}`} aria-hidden />
+                      <div className="rounded-xl border border-gray-200 p-3.5">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{type}</span>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                            {done ? 'Completada' : 'En curso'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1.5 tabular-nums">
+                          {s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <Link href={`/patients/${patient.id}/sessions/${s.id}`} className="text-xs text-blue-600 font-medium hover:underline">Abrir consulta →</Link>
+                          {report && (
+                            <Link href={`/patients/${patient.id}/report`} className="text-xs text-gray-500 hover:text-blue-600 inline-flex items-center gap-1">
+                              <FileText className="w-3 h-3" />
+                              {report.status === 'approved' ? 'Informe aprobado' : 'Borrador de informe'}
+                            </Link>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Workflow steps */}
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Proceso del paciente</h2>

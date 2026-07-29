@@ -25,8 +25,9 @@
 - **Consultas recientes**: últimas sesiones (paciente + tipo valoración/seguimiento + estado en curso/completada + fecha), enlazan a la página de sesión.
 - **Conservado**: Alertas (anamnesis expirada / valoración estancada / borrador sin aprobar) y Distribución por etapa, ahora **scope-aware**. Se retiró el bloque placeholder "Seguimiento — Próximamente".
 
-### Etapa 3 — Historial del paciente (timeline) *(pendiente)*
-- Convertir la ficha `/patients/[id]` (o una sección) en **línea temporal de consultas** (valoración → seguimientos, con estado e informe). 100% construible con `sessions`.
+### Etapa 3 — Historial del paciente (timeline) (HECHA 2026-07-29)
+- Nueva tarjeta **"Historial de consultas"** (primera del bloque principal en `/patients/[id]`): timeline de todas las `sessions` (más reciente arriba) con tipo (Valoración inicial / Seguimiento N), fecha, estado (En curso/Completada), enlace **Abrir consulta** (→ página de sesión) y enlace al **informe** de esa sesión si existe (`reportBySession` por `reports.session_id`). Botón "Nueva consulta" en la cabecera.
+- Aditivo: el "Proceso del paciente" (workflow de 5 pasos) y el rail derecho se conservan intactos. Resuelve el "ver las consultas y su seguimiento" (antes solo se veía la última sesión + un "N sesiones" suelto).
 
 ### Etapa 4 — Refinamiento visual progresivo *(pendiente)*
 - Componentes compartidos (KPI tiles, study cards, status pills, timeline) y aplicación pantalla por pantalla. Sin big-bang.
