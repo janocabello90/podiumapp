@@ -205,7 +205,7 @@ function NewPatientForm() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 sm:flex-none px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
+            className="flex-1 sm:flex-none px-6 py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white font-medium rounded-xl transition-colors disabled:opacity-50"
           >
             {loading ? 'Creando...' : teamId ? 'Añadir jugador' : 'Crear paciente'}
           </button>

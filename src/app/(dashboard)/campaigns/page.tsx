@@ -107,13 +107,13 @@ export default async function EstudiosPage() {
 
         <div className="flex items-center gap-3">
           <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
-            <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-900" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-clinical-navy" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-xs font-semibold text-gray-700 tabular-nums min-w-[52px] text-right">{valued}/{total}</span>
+          <span className="text-xs font-semibold text-gray-700 tabular-nums font-mono min-w-[52px] text-right">{valued}/{total}</span>
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-xs text-gray-400 tabular-nums">
+          <span className="text-xs text-gray-400 tabular-nums font-mono">
             {c.start_date ? new Date(c.start_date).toLocaleDateString('es-ES') : '—'}
             {c.end_date_planned ? ` → ${new Date(c.end_date_planned).toLocaleDateString('es-ES')}` : ''}
           </span>
@@ -131,7 +131,7 @@ export default async function EstudiosPage() {
           <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Estudios</h1>
           <p className="text-sm text-gray-500 mt-1">Campañas de valoración por grupo deportivo.</p>
         </div>
-        <Link href="/groups" className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors">
+        <Link href="/groups" className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors">
           <Megaphone className="w-4 h-4" />
           <span className="hidden sm:inline">Nuevo estudio</span>
           <span className="sm:hidden">Nuevo</span>

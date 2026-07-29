@@ -122,7 +122,7 @@ export default function TestsManager({ clinicId, initialTests }: Props) {
         <button
           type="submit"
           disabled={savingNew}
-          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
         >
           <Plus className="w-4 h-4" />
           {savingNew ? 'Creando...' : 'Crear prueba'}
@@ -162,7 +162,7 @@ export default function TestsManager({ clinicId, initialTests }: Props) {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                   />
                   <div className="flex items-center gap-2">
-                    <button onClick={() => saveEdit(t.id)} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-900 text-white text-xs font-medium rounded-lg">
+                    <button onClick={() => saveEdit(t.id)} className="inline-flex items-center gap-1 px-3 py-1.5 bg-clinical-primary text-white text-xs font-medium rounded-lg">
                       <Check className="w-3.5 h-3.5" /> Guardar
                     </button>
                     <button onClick={() => setEditingId(null)} className="inline-flex items-center gap-1 px-3 py-1.5 text-gray-500 text-xs font-medium rounded-lg hover:bg-gray-50">

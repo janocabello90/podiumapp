@@ -60,7 +60,7 @@ export default function AuthConfirmPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900 rounded-2xl mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 bg-clinical-primary rounded-2xl mb-4">
           <span className="text-2xl font-bold text-white">P</span>
         </div>
 
@@ -69,7 +69,7 @@ export default function AuthConfirmPage() {
             <p className="text-sm text-red-600">{error}</p>
             <a
               href="/login"
-              className="inline-block px-4 py-2 bg-blue-900 text-white text-sm font-medium rounded-xl hover:bg-blue-800 transition-colors"
+              className="inline-block px-4 py-2 bg-clinical-primary text-white text-sm font-medium rounded-xl hover:bg-clinical-navy transition-colors"
             >
               Ir al login
             </a>

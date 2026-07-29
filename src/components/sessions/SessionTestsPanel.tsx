@@ -105,7 +105,7 @@ export default function SessionTestsPanel({
             <button
               onClick={loadFromSport}
               disabled={loadingSport}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-medium rounded-lg disabled:opacity-50"
             >
               {loadingSport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardList className="w-3.5 h-3.5" />}
               Cargar pruebas del deporte

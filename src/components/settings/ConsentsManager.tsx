@@ -88,7 +88,7 @@ export default function ConsentsManager({ clinicId, initialVersions }: Props) {
             <button
               onClick={() => save(type)}
               disabled={savingType === type}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
             >
               {savingType === type ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Guardar

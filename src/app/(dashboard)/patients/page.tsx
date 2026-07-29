@@ -79,7 +79,7 @@ export default async function PatientsPage({
         </div>
         <Link
           href="/patients/new"
-          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors"
+          className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Nuevo paciente</span>

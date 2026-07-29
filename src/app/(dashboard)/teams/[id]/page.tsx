@@ -93,7 +93,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
           <BulkImportPlayers teamId={team.id} clinicId={profile.clinic_id} existingEmails={existingEmails} />
           <Link
             href={`/patients/new?team_id=${team.id}`}
-            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors"
           >
             <UserPlus className="w-4 h-4" />
             <span className="hidden sm:inline">Añadir jugador</span>
@@ -124,7 +124,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
           <p className="text-sm text-gray-500 mb-3">Este equipo aún no tiene jugadores.</p>
           <Link
             href={`/patients/new?team_id=${team.id}`}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-medium rounded-lg transition-colors"
           >
             <UserPlus className="w-3.5 h-3.5" />
             Añadir jugador

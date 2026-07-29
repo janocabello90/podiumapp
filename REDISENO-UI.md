@@ -34,7 +34,10 @@
 - **Fuentes** de Stitch adoptadas vía `next/font`: **Inter** (`--font-sans`, UI) + **JetBrains Mono** (`--font-mono`, datos). Configuradas en `tailwind.config` (`fontFamily.sans/mono`) y `layout.tsx`. Antes: stack de sistema.
 - **Fondo** `#faf8ff` (token `clinical-bg`) en lugar de `gray-50`; tokens `clinical.*` (primary `#0f52ba`, navy `#003c90`, gold `#9a7726`, soft `#d9e2ff`) en Tailwind + CSS vars para adopción progresiva.
 - **Sidebar**: subtítulo "Método Podium™" en oro; estado activo con `clinical-soft`/`clinical-navy`.
-**4b — Pendiente:** pasar datos numéricos clave a `font-mono`; migrar `blue-900`→tokens clínicos donde proceda; enriquecer los rails (informe IA del estudio, cockpit del paciente) y homogeneizar study cards / KPI tiles / pills pantalla por pantalla.
+**4b — Unificación de color + datos (HECHA 2026-07-29):**
+- **Azul de marca unificado a la paleta clínica** en toda la app (mecánico, ~22 ficheros): `bg-blue-900`→`bg-clinical-primary` (#0f52ba), `hover:bg-blue-800`→`hover:bg-clinical-navy`, `text-blue-900`→`text-clinical-navy`, `to-blue-900`→`to-clinical-navy`. Botones primarios, logo y estados activos ahora en el azul de Stitch.
+- **JetBrains Mono en datos** clave (contadores de progreso valorados/total, fechas) en Inicio y Estudios.
+**4c — Pendiente (opcional):** enriquecer los rails (informe IA del estudio con preview + acción sugerida; cockpit del paciente) y homogeneizar study cards / KPI tiles / pills en pantallas legacy (settings, anamnesis).
 
 ### Etapa 5 — Agenda / entidad "cita" *(fase propia, con diseño de datos)*
 - Modelar `appointments` (o similar) y construir la vista Agenda (día/semana, estados). Decidido aparte.

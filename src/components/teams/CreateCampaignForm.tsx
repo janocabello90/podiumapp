@@ -82,7 +82,7 @@ export default function CreateCampaignForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors"
+        className="inline-flex items-center gap-1.5 px-3 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors"
       >
         <Plus className="w-4 h-4" /> Nueva campaña
       </button>
@@ -123,7 +123,7 @@ export default function CreateCampaignForm({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <button type="submit" disabled={loading} className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl disabled:opacity-50">
+        <button type="submit" disabled={loading} className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl disabled:opacity-50">
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Crear campaña
         </button>
         <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 text-gray-500 text-sm hover:bg-gray-50 rounded-xl">Cancelar</button>

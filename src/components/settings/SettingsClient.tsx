@@ -44,7 +44,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-blue-50 text-blue-900'
+                ? 'bg-blue-50 text-clinical-navy'
                 : 'text-gray-500 hover:bg-gray-50 hover:text-gray-700'
             }`}
           >
@@ -170,7 +170,7 @@ function ProfileSection({ currentUser, currentUserEmail, supabase }: { currentUs
       <button
         onClick={handleSave}
         disabled={saving || fullName === currentUser.full_name}
-        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         Guardar
@@ -237,7 +237,7 @@ function ClinicSection({ clinic }: { clinic: Clinic | null }) {
       <button
         onClick={handleSave}
         disabled={saving}
-        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
       >
         {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         Guardar
@@ -382,7 +382,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
           <h3 className="font-semibold text-gray-900">Personal ({members.length})</h3>
           <button
             onClick={() => { setShowAdd(!showAdd); setTempPassword(null) }}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg transition-colors"
+            className="inline-flex items-center gap-1 px-3 py-1.5 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-medium rounded-lg transition-colors"
           >
             <Plus className="w-3 h-3" />
             Añadir
@@ -722,7 +722,7 @@ function ReportSection({ clinic }: { clinic: Clinic | null }) {
 
       <button
         onClick={handleSave}
-        className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors"
+        className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors"
       >
         <Save className="w-4 h-4" />
         Guardar configuración

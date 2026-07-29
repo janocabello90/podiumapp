@@ -41,7 +41,7 @@ export default function PatientList({ patients }: { patients: PatientWithStages[
         <p className="text-gray-500">No hay pacientes que coincidan con los filtros</p>
         <Link
           href="/patients/new"
-          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors"
+          className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors"
         >
           Crear paciente
         </Link>

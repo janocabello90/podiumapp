@@ -185,7 +185,7 @@ export default function BulkImportPlayers({ teamId, clinicId, existingEmails }: 
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-lg"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-lg"
             >
               <Upload className="w-4 h-4" /> Elegir fichero
             </button>

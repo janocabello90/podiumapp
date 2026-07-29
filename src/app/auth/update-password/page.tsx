@@ -56,7 +56,7 @@ export default function UpdatePasswordPage() {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-900 rounded-2xl mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-clinical-primary rounded-2xl mb-4">
             <span className="text-2xl font-bold text-white">P</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Podium</h1>
@@ -130,7 +130,7 @@ export default function UpdatePasswordPage() {
               <button
                 type="submit"
                 disabled={loading || password.length < 6 || password !== confirmPassword}
-                className="w-full py-2.5 px-4 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 bg-clinical-primary hover:bg-clinical-navy text-white font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 {loading ? 'Actualizando...' : 'Actualizar contraseña'}

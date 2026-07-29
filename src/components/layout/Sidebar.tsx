@@ -40,7 +40,7 @@ export default function Sidebar({ userName }: { userName: string }) {
       {/* Mobile top header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-900 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-clinical-primary rounded-lg flex items-center justify-center">
             <span className="text-sm font-bold text-white">P</span>
           </div>
           <span className="font-bold text-gray-900">Podium</span>
@@ -111,11 +111,11 @@ export default function Sidebar({ userName }: { userName: string }) {
                 href={item.href}
                 className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[10px] font-medium transition-colors ${
                   isActive
-                    ? 'text-blue-900'
+                    ? 'text-clinical-navy'
                     : 'text-gray-400'
                 }`}
               >
-                <item.icon className={`w-5 h-5 ${isActive ? 'text-blue-900' : 'text-gray-400'}`} />
+                <item.icon className={`w-5 h-5 ${isActive ? 'text-clinical-navy' : 'text-gray-400'}`} />
                 {item.name}
               </Link>
             )
@@ -128,7 +128,7 @@ export default function Sidebar({ userName }: { userName: string }) {
         {/* Brand */}
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-900 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-clinical-primary rounded-xl flex items-center justify-center">
               <span className="text-lg font-bold text-white">P</span>
             </div>
             <div>
@@ -148,7 +148,7 @@ export default function Sidebar({ userName }: { userName: string }) {
                 href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-blue-900'
+                    ? 'bg-blue-50 text-clinical-navy'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >

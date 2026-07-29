@@ -180,8 +180,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <p className="text-sm text-gray-500 mt-0.5">Panel de {scopeLabel.toLowerCase()} · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1">
-          <Link href="/dashboard" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!mineOnly ? 'bg-white text-blue-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Toda la clínica</Link>
-          <Link href="/dashboard?scope=mine" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mineOnly ? 'bg-white text-blue-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Míos</Link>
+          <Link href="/dashboard" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Toda la clínica</Link>
+          <Link href="/dashboard?scope=mine" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Míos</Link>
         </div>
       </div>
 
@@ -209,8 +209,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
                   <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
                   <p className="text-xs text-gray-500 mt-0.5 truncate">{(c.groups as any)?.name || '—'}</p>
                   <div className="flex items-center gap-2 mt-3">
-                    <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-900" style={{ width: `${pct}%` }} /></div>
-                    <span className="text-xs font-semibold text-gray-700 tabular-nums">{valued}/{total}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden"><div className="h-full rounded-full bg-gradient-to-r from-blue-600 to-clinical-navy" style={{ width: `${pct}%` }} /></div>
+                    <span className="text-xs font-semibold text-gray-700 tabular-nums font-mono">{valued}/{total}</span>
                   </div>
                 </Link>
               )
@@ -278,7 +278,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         {recentConsultas.length === 0 ? (
           <div className="px-4 sm:px-5 py-10 text-center">
             <p className="text-sm text-gray-500 mb-3">Aún no hay consultas registradas.</p>
-            <Link href="/patients/new" className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-900 hover:bg-blue-800 text-white text-xs font-medium rounded-lg transition-colors"><UserPlus className="w-3.5 h-3.5" /> Nuevo paciente</Link>
+            <Link href="/patients/new" className="inline-flex items-center gap-1.5 px-3 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-medium rounded-lg transition-colors"><UserPlus className="w-3.5 h-3.5" /> Nuevo paciente</Link>
           </div>
         ) : (
           <ul className="divide-y divide-gray-100">
@@ -295,7 +295,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
                       <div className="min-w-0"><p className="text-sm font-medium text-gray-900 truncate">{name}</p><p className="text-xs text-gray-500 truncate">{type}{s.campaign_id ? ' · en estudio' : ''}</p></div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-xs text-gray-400 tabular-nums hidden sm:inline">{new Date(s.created_at).toLocaleDateString('es-ES')}</span>
+                      <span className="text-xs text-gray-400 tabular-nums font-mono hidden sm:inline">{new Date(s.created_at).toLocaleDateString('es-ES')}</span>
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                         <span className="hidden sm:inline">{done ? 'Completada' : 'En curso'}</span>

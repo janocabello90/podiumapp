@@ -49,7 +49,7 @@ export default function CreateGroupForm({ clinicId }: { clinicId: string }) {
       <button
         type="submit"
         disabled={loading}
-        className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 bg-blue-900 hover:bg-blue-800 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 flex-shrink-0"
+        className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50 flex-shrink-0"
       >
         <Plus className="w-4 h-4" />
         <span className="hidden sm:inline">{loading ? 'Creando...' : 'Crear grupo'}</span>

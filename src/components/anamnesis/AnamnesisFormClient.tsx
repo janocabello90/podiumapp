@@ -134,7 +134,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
         <div className="w-full max-w-lg">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 bg-blue-900 rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-clinical-primary rounded-2xl mb-4">
               <span className="text-xl font-bold text-white">P</span>
             </div>
             <h1 className="text-xl font-bold text-gray-900">
@@ -232,7 +232,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                 setConsentGiven(true)
               }}
               disabled={!canProceed}
-              className="w-full py-3 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3 bg-clinical-primary hover:bg-clinical-navy text-white font-medium rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Empezar formulario
             </button>
@@ -336,7 +336,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           ) : (
             <button
               onClick={nextBlock}
-              className="flex items-center gap-1 px-6 py-2.5 bg-blue-900 hover:bg-blue-800 text-white font-medium text-sm rounded-xl transition-colors"
+              className="flex items-center gap-1 px-6 py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white font-medium text-sm rounded-xl transition-colors"
             >
               Siguiente
               <ChevronRight className="w-4 h-4" />
@@ -583,7 +583,7 @@ function FieldRenderer({
                 onClick={() => onChange(option)}
                 className={`px-4 py-2 rounded-xl border text-sm transition-colors ${
                   value === option
-                    ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
+                    ? 'border-blue-500 bg-blue-50 text-clinical-navy font-medium'
                     : 'border-gray-200 hover:border-gray-300 text-gray-600'
                 }`}
               >
@@ -619,7 +619,7 @@ function FieldRenderer({
                   }}
                   className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm transition-colors ${
                     isSelected
-                      ? 'border-blue-500 bg-blue-50 text-blue-900 font-medium'
+                      ? 'border-blue-500 bg-blue-50 text-clinical-navy font-medium'
                       : 'border-gray-200 hover:border-gray-300 text-gray-600'
                   }`}
                 >
@@ -686,7 +686,7 @@ function FieldRenderer({
               onClick={() => onChange(true)}
               className={`flex-1 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                 value === true
-                  ? 'border-blue-500 bg-blue-50 text-blue-900'
+                  ? 'border-blue-500 bg-blue-50 text-clinical-navy'
                   : 'border-gray-200 hover:border-gray-300 text-gray-600'
               }`}
             >
@@ -696,7 +696,7 @@ function FieldRenderer({
               onClick={() => onChange(false)}
               className={`flex-1 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
                 value === false
-                  ? 'border-blue-500 bg-blue-50 text-blue-900'
+                  ? 'border-blue-500 bg-blue-50 text-clinical-navy'
                   : 'border-gray-200 hover:border-gray-300 text-gray-600'
               }`}
             >
