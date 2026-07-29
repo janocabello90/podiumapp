@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Users, FileText, Settings, LogOut, Activity, Menu, X, LayoutDashboard, Shield } from 'lucide-react'
+import { Users, FileText, Settings, LogOut, Activity, Menu, X, LayoutDashboard, Shield, Megaphone } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 
 const navigation = [
   { name: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Estudios', href: '/campaigns', icon: Megaphone },
   { name: 'Pacientes', href: '/patients', icon: Users },
   { name: 'Equipos', href: '/groups', icon: Shield },
   { name: 'Informes', href: '/reports', icon: FileText },
