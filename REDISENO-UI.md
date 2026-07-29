@@ -29,8 +29,12 @@
 - Nueva tarjeta **"Historial de consultas"** (primera del bloque principal en `/patients/[id]`): timeline de todas las `sessions` (más reciente arriba) con tipo (Valoración inicial / Seguimiento N), fecha, estado (En curso/Completada), enlace **Abrir consulta** (→ página de sesión) y enlace al **informe** de esa sesión si existe (`reportBySession` por `reports.session_id`). Botón "Nueva consulta" en la cabecera.
 - Aditivo: el "Proceso del paciente" (workflow de 5 pasos) y el rail derecho se conservan intactos. Resuelve el "ver las consultas y su seguimiento" (antes solo se veía la última sesión + un "N sesiones" suelto).
 
-### Etapa 4 — Refinamiento visual progresivo *(pendiente)*
-- Componentes compartidos (KPI tiles, study cards, status pills, timeline) y aplicación pantalla por pantalla. Sin big-bang.
+### Etapa 4 — Refinamiento visual (EN CURSO)
+**4a — Base tipográfica y de color (HECHA 2026-07-29):**
+- **Fuentes** de Stitch adoptadas vía `next/font`: **Inter** (`--font-sans`, UI) + **JetBrains Mono** (`--font-mono`, datos). Configuradas en `tailwind.config` (`fontFamily.sans/mono`) y `layout.tsx`. Antes: stack de sistema.
+- **Fondo** `#faf8ff` (token `clinical-bg`) en lugar de `gray-50`; tokens `clinical.*` (primary `#0f52ba`, navy `#003c90`, gold `#9a7726`, soft `#d9e2ff`) en Tailwind + CSS vars para adopción progresiva.
+- **Sidebar**: subtítulo "Método Podium™" en oro; estado activo con `clinical-soft`/`clinical-navy`.
+**4b — Pendiente:** pasar datos numéricos clave a `font-mono`; migrar `blue-900`→tokens clínicos donde proceda; enriquecer los rails (informe IA del estudio, cockpit del paciente) y homogeneizar study cards / KPI tiles / pills pantalla por pantalla.
 
 ### Etapa 5 — Agenda / entidad "cita" *(fase propia, con diseño de datos)*
 - Modelar `appointments` (o similar) y construir la vista Agenda (día/semana, estados). Decidido aparte.

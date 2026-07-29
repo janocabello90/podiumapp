@@ -67,7 +67,7 @@ export default function Sidebar({ userName }: { userName: string }) {
                     href={item.href}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                       isActive
-                        ? 'bg-blue-50 text-blue-900'
+                        ? 'bg-clinical-soft text-clinical-navy'
                         : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   >
@@ -132,8 +132,8 @@ export default function Sidebar({ userName }: { userName: string }) {
               <span className="text-lg font-bold text-white">P</span>
             </div>
             <div>
-              <h2 className="font-bold text-gray-900">Podium</h2>
-              <p className="text-xs text-gray-400">Clínica Podium</p>
+              <h2 className="font-bold text-gray-900 tracking-tight">Podium</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-clinical-gold">Método Podium™</p>
             </div>
           </div>
         </div>

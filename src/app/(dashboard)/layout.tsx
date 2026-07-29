@@ -24,7 +24,7 @@ export default async function DashboardLayout({
   const userName = profile?.full_name || user.email || 'Usuario'
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-clinical-bg">
       <Sidebar userName={userName} />
       {/* pt-14 for mobile header, pb-20 for mobile bottom nav, lg: only ml-64 */}
       <main className="pt-16 pb-20 px-4 lg:pt-8 lg:pb-8 lg:px-8 lg:ml-64">
