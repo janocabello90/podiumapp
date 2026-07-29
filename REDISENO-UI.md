@@ -18,8 +18,12 @@
 - **Sidebar**: añadida entrada **"Estudios"** (`/campaigns`, icono Megaphone) y reordenado a Inicio · Estudios · Pacientes · Equipos · Informes · Actividad · Ajustes. La bottom-nav móvil muestra las 4 primeras.
 - Resuelve el "entrar y ver los estudios activos" que faltaba (antes las campañas solo se veían dentro de `/groups/[id]`).
 
-### Etapa 2 — Inicio (dashboard) refinado *(siguiente)*
-- Añadir al dashboard: **Estudios activos** (tarjetas con progreso) + **Consultas recientes** + conmutador **Clínica / Míos**. Reutiliza queries existentes; reskin ligero.
+### Etapa 2 — Inicio (dashboard) refinado (HECHA 2026-07-29)
+- **Conmutador Clínica / Míos** (vía `?scope=mine`, server-side): "Toda la clínica" por defecto; "Míos" filtra por el fisio (created_by / assessment.physio_id / report.generated_by, y sesiones por physio_id).
+- **KPIs nuevos** (scope-aware): Estudios activos (→/campaigns) · Consultas · 7 días (sesiones) · Informes por revisar (drafts) · Pacientes activos (→/patients).
+- **Estudios activos**: tarjetas de campañas activas con progreso real (valorados/total), enlazando al detalle.
+- **Consultas recientes**: últimas sesiones (paciente + tipo valoración/seguimiento + estado en curso/completada + fecha), enlazan a la página de sesión.
+- **Conservado**: Alertas (anamnesis expirada / valoración estancada / borrador sin aprobar) y Distribución por etapa, ahora **scope-aware**. Se retiró el bloque placeholder "Seguimiento — Próximamente".
 
 ### Etapa 3 — Historial del paciente (timeline) *(pendiente)*
 - Convertir la ficha `/patients/[id]` (o una sección) en **línea temporal de consultas** (valoración → seguimientos, con estado e informe). 100% construible con `sessions`.
