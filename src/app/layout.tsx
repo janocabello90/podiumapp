@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swa
 const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" })
 
 export const metadata: Metadata = {
-  title: "Podium App",
-  description: "Plataforma de gestión clínica para fisioterapeutas",
+  title: "SHERPA",
+  description: "SHERPA · Plataforma de gestión clínica para fisioterapeutas",
 }
 
 export default function RootLayout({
