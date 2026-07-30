@@ -193,7 +193,11 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                               <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">Anamnesis pendiente</span>
                             )}
                           </Link>
-                          <StartSessionButton patientId={p.id} campaignId={campaign.id} label={count > 0 ? 'Seguimiento' : 'Valorar'} />
+                          {count === 0 ? (
+                            <StartSessionButton patientId={p.id} campaignId={campaign.id} label="Valorar" />
+                          ) : (
+                            <Link href={`/patients/${p.id}?ctx=equipo`} className="text-xs text-blue-600 font-medium hover:underline flex-shrink-0 whitespace-nowrap">Ver ficha →</Link>
+                          )}
                         </div>
                       )
                     })}
