@@ -83,6 +83,9 @@ export default async function PatientDetailPage({
   const age = patient.date_of_birth
     ? Math.floor((Date.now() - new Date(patient.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
     : null
+  // Paciente de equipo → hub centrado en sesiones (anamnesis + consultas).
+  // Paciente sin equipo → ficha clásica de 5 pasos (intacta).
+  const isTeamPatient = !!(patient as any).team_id
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -115,13 +118,34 @@ export default async function PatientDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main content - left column */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          {/* Anamnesis (pacientes de equipo — obligatoria, aviso no bloqueante) */}
+          {isTeamPatient && (
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Anamnesis</h2>
+                {latestAnamnesis?.status === 'completed' ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Completada</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pendiente</span>
+                )}
+              </div>
+              {latestAnamnesis?.status !== 'completed' && (
+                <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-1">Cada paciente debe tener su anamnesis rellena. Envíasela para que la complete (recomendado antes de valorar).</p>
+              )}
+              <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} />
+            </div>
+          )}
+
           {/* Historial de consultas (timeline) */}
-          {allSessions.length > 0 && (
+          {(isTeamPatient || allSessions.length > 0) && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900">Historial de consultas</h2>
                 <StartSessionButton patientId={patient.id} label="Nueva consulta" />
               </div>
+              {allSessions.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">Aún no hay consultas. Crea la primera con «Nueva consulta».</p>
+              ) : (
               <div className="relative">
                 {allSessions.map((s: any, i: number) => {
                   const num = s.session_number || 1
@@ -159,10 +183,12 @@ export default async function PatientDetailPage({
                   )
                 })}
               </div>
+              )}
             </div>
           )}
 
-          {/* Workflow steps */}
+          {/* Proceso del paciente (solo pacientes SIN equipo) */}
+          {!isTeamPatient && (
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
             <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Proceso del paciente</h2>
 
@@ -343,6 +369,7 @@ export default async function PatientDetailPage({
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Sidebar - right column */}

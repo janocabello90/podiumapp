@@ -45,6 +45,20 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     for (const s of sess || []) sessionsByPatient.set(s.patient_id, (sessionsByPatient.get(s.patient_id) || 0) + 1)
   }
 
+  // Estado de anamnesis por jugador (para avisar de las pendientes)
+  const anamnesisByPatient = new Map<string, string>()
+  if (players.length > 0) {
+    const { data: anam } = await supabase
+      .from('anamnesis_forms')
+      .select('patient_id, status, created_at')
+      .in('patient_id', players.map((p) => p.id))
+      .eq('clinic_id', profile.clinic_id)
+      .order('created_at', { ascending: false })
+    for (const a of anam || []) {
+      if (!anamnesisByPatient.has(a.patient_id)) anamnesisByPatient.set(a.patient_id, a.status || 'pending')
+    }
+  }
+
   const valued = players.filter((p) => (sessionsByPatient.get(p.id) || 0) > 0).length
   const groupName = (campaign.groups as any)?.name as string | undefined
 
@@ -166,14 +180,19 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                       const count = sessionsByPatient.get(p.id) || 0
                       return (
                         <div key={p.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <Link href={`/patients/${p.id}`} className="text-sm font-medium text-gray-900 truncate hover:text-blue-700">{p.full_name}</Link>
-                            {count > 0 && (
-                              <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                          <Link href={`/patients/${p.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 group">
+                            <span className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700">{p.full_name}</span>
+                            {count > 0 ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-green-600 flex-shrink-0">
                                 <Check className="w-3.5 h-3.5" /> {count} sesión{count !== 1 ? 'es' : ''}
                               </span>
+                            ) : (
+                              <span className="text-xs text-gray-400 flex-shrink-0">Sin valorar</span>
                             )}
-                          </div>
+                            {anamnesisByPatient.get(p.id) !== 'completed' && (
+                              <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">Anamnesis pendiente</span>
+                            )}
+                          </Link>
                           <StartSessionButton patientId={p.id} campaignId={campaign.id} label={count > 0 ? 'Seguimiento' : 'Valorar'} />
                         </div>
                       )
