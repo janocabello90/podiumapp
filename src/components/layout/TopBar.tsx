@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 const SECTION: Record<string, string> = {
   dashboard: 'Inicio',
   patients: 'Pacientes',
-  campaigns: 'Estudios',
+  estudios: 'Estudios',
   groups: 'Equipos',
   teams: 'Equipos',
   reports: 'Informes',

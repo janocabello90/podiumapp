@@ -35,7 +35,7 @@ export default async function CampaignReportPage({ params }: { params: { id: str
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center gap-3 sm:gap-4 mb-6">
-        <Link href={`/campaigns/${campaign.id}`} className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0">
+        <Link href={`/estudios/${campaign.id}`} className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0">
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
         <div className="min-w-0">
@@ -48,7 +48,7 @@ export default async function CampaignReportPage({ params }: { params: { id: str
         <div className="bg-white rounded-2xl border border-gray-200 px-4 py-10 text-center">
           <p className="text-sm text-gray-500">
             Este estudio aún no tiene informe. Genéralo desde{' '}
-            <Link href={`/campaigns/${campaign.id}`} className="text-blue-600 hover:underline">la página del estudio</Link>.
+            <Link href={`/estudios/${campaign.id}`} className="text-blue-600 hover:underline">la página del estudio</Link>.
           </p>
         </div>
       ) : (

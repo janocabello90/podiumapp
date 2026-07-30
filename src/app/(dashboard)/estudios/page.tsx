@@ -96,7 +96,7 @@ export default async function EstudiosPage() {
     const groupName = (c.groups as any)?.name as string | undefined
     return (
       <Link
-        href={`/campaigns/${c.id}`}
+        href={`/estudios/${c.id}`}
         className="bg-white rounded-2xl border border-gray-200 p-5 flex flex-col gap-3 hover:border-blue-300 hover:shadow-sm transition-all"
       >
         <div className="flex items-start justify-between gap-2">

@@ -133,7 +133,7 @@ export default async function GroupDetailPage({ params }: { params: { id: string
             <ul className="divide-y divide-gray-100">
               {(campaigns || []).map((c: any) => (
                 <li key={c.id}>
-                  <Link href={`/campaigns/${c.id}`} className="flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-gray-50 transition-colors">
+                  <Link href={`/estudios/${c.id}`} className="flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-gray-50 transition-colors">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{c.name}</p>
                       <p className="text-xs text-gray-500">

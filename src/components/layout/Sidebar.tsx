@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react'
 
 const navigation = [
   { name: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Estudios', href: '/campaigns', icon: Megaphone },
+  { name: 'Estudios', href: '/estudios', icon: Megaphone },
   { name: 'Pacientes', href: '/patients', icon: Users },
   { name: 'Equipos', href: '/groups', icon: Shield },
   { name: 'Informes', href: '/reports', icon: FileText },

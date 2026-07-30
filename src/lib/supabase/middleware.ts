@@ -42,7 +42,7 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/settings') ||
     request.nextUrl.pathname.startsWith('/groups') ||
     request.nextUrl.pathname.startsWith('/teams') ||
-    request.nextUrl.pathname.startsWith('/campaigns')
+    request.nextUrl.pathname.startsWith('/estudios')
 
   // Public routes: anamnesis form
   const isPublicRoute = request.nextUrl.pathname.startsWith('/anamnesis')

@@ -67,7 +67,7 @@ export default function CreateStudyForm({ clinicId, groups }: { clinicId: string
       if (ctErr) throw ctErr
 
       toast.success('Estudio creado')
-      router.push(`/campaigns/${(campaign as any).id}`)
+      router.push(`/estudios/${(campaign as any).id}`)
     } catch (err: any) {
       toast.error(err.message || 'Error al crear el estudio')
       setLoading(false)

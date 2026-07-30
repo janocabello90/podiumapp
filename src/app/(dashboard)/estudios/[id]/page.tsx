@@ -130,7 +130,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                 </div>
               )}
               <div className="mt-4 flex items-center gap-3 flex-wrap">
-                <Link href={`/campaigns/${campaign.id}/report`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-semibold rounded-lg transition-colors">
+                <Link href={`/estudios/${campaign.id}/report`} className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-semibold rounded-lg transition-colors">
                   Revisar informe
                 </Link>
                 <span className="text-xs text-gray-400 font-mono">Cobertura {valued}/{players.length}</span>

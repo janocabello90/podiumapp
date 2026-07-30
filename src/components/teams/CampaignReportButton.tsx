@@ -30,7 +30,7 @@ export default function CampaignReportButton({ campaignId, valued, total }: Prop
         throw new Error(err.error || 'Error al generar')
       }
       toast.success('Informe de estudio generado')
-      router.push(`/campaigns/${campaignId}/report`)
+      router.push(`/estudios/${campaignId}/report`)
     } catch (err: any) {
       toast.error(err.message || 'Error al generar el informe')
       setGenerating(false)

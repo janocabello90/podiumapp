@@ -187,7 +187,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <KpiCard label="Estudios activos" value={activeCampaigns.length} icon={Megaphone} color="blue" href="/campaigns" />
+        <KpiCard label="Estudios activos" value={activeCampaigns.length} icon={Megaphone} color="blue" href="/estudios" />
         <KpiCard label="Consultas · 7 días" value={consultas7d} icon={Stethoscope} color="emerald" />
         <KpiCard label="Informes por revisar" value={draftsToReview} icon={FileCheck} color="amber" emphasize={draftsToReview > 0} />
         <KpiCard label={mineOnly ? 'Mis pacientes activos' : 'Pacientes activos'} value={scopedPatients.length} icon={Users} color="violet" href="/patients" />
@@ -198,14 +198,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-900 text-sm flex items-center gap-2"><Megaphone className="w-4 h-4 text-blue-500" /> Estudios activos</h3>
-            <Link href="/campaigns" className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center gap-1">Ver todos <ArrowRight className="w-3 h-3" /></Link>
+            <Link href="/estudios" className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center gap-1">Ver todos <ArrowRight className="w-3 h-3" /></Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {activeCampaigns.slice(0, 3).map((c: any) => {
               const { valued, total } = campProgress(c.id)
               const pct = total > 0 ? Math.round((valued / total) * 100) : 0
               return (
-                <Link key={c.id} href={`/campaigns/${c.id}`} className="bg-white rounded-2xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all">
+                <Link key={c.id} href={`/estudios/${c.id}`} className="bg-white rounded-2xl border border-gray-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all">
                   <p className="font-semibold text-gray-900 text-sm truncate">{c.name}</p>
                   <p className="text-xs text-gray-500 mt-0.5 truncate">{(c.groups as any)?.name || '—'}</p>
                   <div className="flex items-center gap-2 mt-3">
