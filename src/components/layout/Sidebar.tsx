@@ -128,10 +128,10 @@ export default function Sidebar({ userName }: { userName: string }) {
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/favicon.png" alt="SHERPA" className="w-10 h-10 rounded-xl" />
-            <div>
-              <h2 className="font-bold text-gray-900 tracking-tight">SHERPA</h2>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Clínica Podium</p>
+            <img src="/brand/favicon.png" alt="SHERPA" className="w-10 h-10 rounded-xl flex-shrink-0" />
+            <div className="min-w-0">
+              <h2 className="font-bold text-gray-900 tracking-tight leading-none">SHERPA</h2>
+              <p className="text-[8.5px] font-medium uppercase tracking-wide text-[#2d6f73] leading-tight mt-1">Systematic Health Evaluation Roadmap Patient Assistant</p>
             </div>
           </div>
         </div>
