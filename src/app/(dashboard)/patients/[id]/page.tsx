@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, FileText, Upload, Mic, Check, Camera, Shield } from 'lucide-react'
+import { ArrowLeft, Send, FileText, Upload, Mic, Check, Camera, Shield, Megaphone } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import DocumentSection from '@/components/documents/DocumentSection'
 import ImageGallerySection from '@/components/documents/ImageGallerySection'
@@ -87,6 +87,67 @@ export default async function PatientDetailPage({
   // Paciente sin equipo → ficha clásica de 5 pasos (intacta).
   const isTeamPatient = !!(patient as any).team_id
 
+  // Agrupar consultas por estudio (campaign_id) + individuales (sin estudio).
+  const sessionsByCampaign = new Map<string, any[]>()
+  const individualSessions: any[] = []
+  for (const s of allSessions as any[]) {
+    if (s.campaign_id) {
+      const arr = sessionsByCampaign.get(s.campaign_id) || []
+      arr.push(s)
+      sessionsByCampaign.set(s.campaign_id, arr)
+    } else {
+      individualSessions.push(s)
+    }
+  }
+  const groupCampaignIds = Array.from(sessionsByCampaign.keys())
+  const campaignsById = new Map<string, string>()
+  if (isTeamPatient && groupCampaignIds.length > 0) {
+    const { data: camps } = await supabase.from('campaigns').select('id, name').in('id', groupCampaignIds)
+    for (const c of camps || []) campaignsById.set(c.id, c.name)
+  }
+  const campaignGroups = groupCampaignIds.map((id) => ({ id, name: campaignsById.get(id) || 'Estudio', sessions: sessionsByCampaign.get(id) || [] }))
+
+  // Render de un tramo de timeline (reutilizado por grupos e individual)
+  const renderTimeline = (sessions: any[]) => (
+    <div className="relative">
+      {sessions.map((s: any, i: number) => {
+        const num = s.session_number || 1
+        const type = num === 1 ? 'Valoración inicial' : `Seguimiento ${num - 1}`
+        const done = s.status === 'completed'
+        const report = reportBySession.get(s.id)
+        return (
+          <div key={s.id} className="relative pl-8 pb-4 last:pb-0">
+            {i < sessions.length - 1 && (
+              <span className="absolute left-[9px] top-5 -bottom-4 w-0.5 bg-gray-200" aria-hidden />
+            )}
+            <span className={`absolute left-0 top-2 w-[18px] h-[18px] rounded-full border-[3px] ${done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-blue-500'}`} aria-hidden />
+            <div className="rounded-xl border border-gray-200 p-3.5">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{type}</span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
+                  {done ? 'Completada' : 'En curso'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5 tabular-nums">
+                {s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+              </p>
+              <div className="flex items-center gap-4 mt-2">
+                <Link href={`/patients/${patient.id}/sessions/${s.id}`} className="text-xs text-blue-600 font-medium hover:underline">Abrir consulta →</Link>
+                {report && (
+                  <Link href={`/patients/${patient.id}/report`} className="text-xs text-gray-500 hover:text-blue-600 inline-flex items-center gap-1">
+                    <FileText className="w-3 h-3" />
+                    {report.status === 'approved' ? 'Informe aprobado' : 'Borrador de informe'}
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
@@ -141,48 +202,33 @@ export default async function PatientDetailPage({
             <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-base sm:text-lg font-semibold text-gray-900">Historial de consultas</h2>
-                <StartSessionButton patientId={patient.id} label="Nueva consulta" />
+                {!isTeamPatient && <StartSessionButton patientId={patient.id} label="Nueva consulta" />}
               </div>
-              {allSessions.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">Aún no hay consultas. Crea la primera con «Nueva consulta».</p>
-              ) : (
-              <div className="relative">
-                {allSessions.map((s: any, i: number) => {
-                  const num = s.session_number || 1
-                  const type = num === 1 ? 'Valoración inicial' : `Seguimiento ${num - 1}`
-                  const done = s.status === 'completed'
-                  const report = reportBySession.get(s.id)
-                  return (
-                    <div key={s.id} className="relative pl-8 pb-4 last:pb-0">
-                      {i < allSessions.length - 1 && (
-                        <span className="absolute left-[9px] top-5 -bottom-4 w-0.5 bg-gray-200" aria-hidden />
-                      )}
-                      <span className={`absolute left-0 top-2 w-[18px] h-[18px] rounded-full border-[3px] ${done ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-blue-500'}`} aria-hidden />
-                      <div className="rounded-xl border border-gray-200 p-3.5">
-                        <div className="flex items-center justify-between gap-2 flex-wrap">
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{type}</span>
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
-                            {done ? 'Completada' : 'En curso'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5 tabular-nums">
-                          {s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
-                        </p>
-                        <div className="flex items-center gap-4 mt-2">
-                          <Link href={`/patients/${patient.id}/sessions/${s.id}`} className="text-xs text-blue-600 font-medium hover:underline">Abrir consulta →</Link>
-                          {report && (
-                            <Link href={`/patients/${patient.id}/report`} className="text-xs text-gray-500 hover:text-blue-600 inline-flex items-center gap-1">
-                              <FileText className="w-3 h-3" />
-                              {report.status === 'approved' ? 'Informe aprobado' : 'Borrador de informe'}
-                            </Link>
-                          )}
-                        </div>
+              {isTeamPatient ? (
+                <div className="space-y-6">
+                  {campaignGroups.map((g) => (
+                    <div key={g.id}>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 flex items-center gap-1.5">
+                          <Megaphone className="w-3.5 h-3.5 text-blue-500" /> {g.name}
+                        </h3>
+                        <StartSessionButton patientId={patient.id} campaignId={g.id} label="Nueva consulta" />
                       </div>
+                      {renderTimeline(g.sessions)}
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                  <div>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Consultas individuales</h3>
+                      <StartSessionButton patientId={patient.id} label="Nueva consulta" />
+                    </div>
+                    {individualSessions.length > 0 ? renderTimeline(individualSessions) : (
+                      <p className="text-xs text-gray-400">Sin consultas individuales.</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                renderTimeline(allSessions)
               )}
             </div>
           )}
