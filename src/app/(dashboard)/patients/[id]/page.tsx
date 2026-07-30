@@ -27,7 +27,7 @@ export default async function PatientDetailPage({
     .from('patients')
     .select(`
       *,
-      teams(id, name, category, group_id, groups(name)),
+      teams(id, name, category, group_id, groups(name), sport_id, sports(name)),
       anamnesis_forms(*),
       assessments(*),
       sessions(*),
@@ -89,6 +89,12 @@ export default async function PatientDetailPage({
   const isTeamPatient = !!(patient as any).team_id
   const team = (patient as any).teams as any
   const backHref = isTeamPatient && team ? `/teams/${team.id}` : '/patients'
+  // Deporte efectivo: override del paciente → deporte del equipo.
+  const patientSportId = (patient as any).sport_id ?? null
+  const teamSportName = team?.sports?.name ?? null
+  const patientSportName = patientSportId ? ((sports || []).find((s: any) => s.id === patientSportId)?.name ?? null) : null
+  const effectiveSportName = patientSportName || teamSportName
+  const sportSource = patientSportName ? 'individual' : (teamSportName ? 'equipo' : null)
 
   // Agrupar consultas por estudio (campaign_id) + individuales (sin estudio).
   const sessionsByCampaign = new Map<string, any[]>()
@@ -485,13 +491,30 @@ export default async function PatientDetailPage({
           {(sports || []).length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Deporte</h3>
+              {isTeamPatient && (
+                <p className="text-sm text-gray-800 mb-3">
+                  {effectiveSportName ? (
+                    <>
+                      {effectiveSportName}
+                      <span className="text-xs text-gray-400"> · {sportSource === 'equipo' ? 'heredado del equipo' : 'override individual'}</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400">Sin deporte <span className="text-xs">· el equipo no tiene deporte asignado</span></span>
+                  )}
+                </p>
+              )}
               <SportSelect
                 table="patients"
                 rowId={patient.id}
-                currentSportId={(patient as any).sport_id ?? null}
+                currentSportId={patientSportId}
                 sports={sports || []}
+                label={isTeamPatient ? 'Override del paciente:' : undefined}
               />
-              <p className="text-xs text-gray-400 mt-2">Override individual (si difiere del equipo).</p>
+              <p className="text-xs text-gray-400 mt-2">
+                {isTeamPatient
+                  ? `Si lo dejas vacío, usa el deporte del equipo${teamSportName ? ` (${teamSportName})` : ''}.`
+                  : 'Override individual (si difiere del equipo).'}
+              </p>
             </div>
           )}
 
