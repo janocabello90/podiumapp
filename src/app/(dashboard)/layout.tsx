@@ -23,13 +23,12 @@ export default async function DashboardLayout({
     .single()
 
   const userName = profile?.full_name || user.email || 'Usuario'
-  const roleLabel = profile?.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'
 
   return (
     <div className="min-h-screen bg-clinical-bg">
       <Sidebar userName={userName} />
       <div className="lg:ml-64">
-        <TopBar userName={userName} roleLabel={roleLabel} />
+        <TopBar />
         {/* pt-16 for mobile header, pb-20 for mobile bottom nav */}
         <main className="pt-16 pb-20 px-4 lg:pt-6 lg:pb-8 lg:px-8">
           {children}
