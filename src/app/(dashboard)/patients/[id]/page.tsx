@@ -10,6 +10,7 @@ import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
 import { consentLabel } from '@/lib/clinical/consents'
 import StartSessionButton from '@/components/sessions/StartSessionButton'
+import DeleteSessionButton from '@/components/sessions/DeleteSessionButton'
 
 // Force dynamic rendering so refresh always gets fresh data
 export const dynamic = 'force-dynamic'
@@ -140,6 +141,7 @@ export default async function PatientDetailPage({
                     {report.status === 'approved' ? 'Informe aprobado' : 'Borrador de informe'}
                   </Link>
                 )}
+                <span className="ml-auto"><DeleteSessionButton sessionId={s.id} /></span>
               </div>
             </div>
           </div>
