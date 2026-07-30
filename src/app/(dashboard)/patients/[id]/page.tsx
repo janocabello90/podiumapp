@@ -102,13 +102,31 @@ export default async function PatientDetailPage({
       individualSessions.push(s)
     }
   }
-  const groupCampaignIds = Array.from(sessionsByCampaign.keys())
-  const campaignsById = new Map<string, string>()
-  if (isTeamPatient && groupCampaignIds.length > 0) {
-    const { data: camps } = await supabase.from('campaigns').select('id, name').in('id', groupCampaignIds)
-    for (const c of camps || []) campaignsById.set(c.id, c.name)
+  const sessionCampaignIds = Array.from(sessionsByCampaign.keys())
+  const campaignNames = new Map<string, string>()
+  const teamCampaignIds: string[] = []
+  // Estudios activos del equipo del paciente (para crear la 1ª consulta desde la ficha)
+  if (isTeamPatient && team?.id) {
+    const { data: ct } = await supabase
+      .from('campaign_teams')
+      .select('campaign_id, campaigns(id, name, status)')
+      .eq('team_id', team.id)
+    for (const row of ct || []) {
+      const c = (row as any).campaigns
+      if (c && c.status !== 'closed') {
+        campaignNames.set(c.id, c.name)
+        teamCampaignIds.push(c.id)
+      }
+    }
   }
-  const campaignGroups = groupCampaignIds.map((id) => ({ id, name: campaignsById.get(id) || 'Estudio', sessions: sessionsByCampaign.get(id) || [] }))
+  // Nombres de estudios que vienen de sesiones (incluye cerrados con sesiones)
+  const missingIds = sessionCampaignIds.filter((id) => !campaignNames.has(id))
+  if (isTeamPatient && missingIds.length > 0) {
+    const { data: camps } = await supabase.from('campaigns').select('id, name').in('id', missingIds)
+    for (const c of camps || []) campaignNames.set(c.id, c.name)
+  }
+  const blockIds = Array.from(new Set([...sessionCampaignIds, ...teamCampaignIds]))
+  const campaignGroups = blockIds.map((id) => ({ id, name: campaignNames.get(id) || 'Estudio', sessions: sessionsByCampaign.get(id) || [] }))
 
   // Render de un tramo de timeline (reutilizado por grupos e individual)
   const renderTimeline = (sessions: any[]) => (
@@ -232,7 +250,9 @@ export default async function PatientDetailPage({
                         </h3>
                         <StartSessionButton patientId={patient.id} campaignId={g.id} label="Nueva consulta" />
                       </div>
-                      {renderTimeline(g.sessions)}
+                      {g.sessions.length > 0 ? renderTimeline(g.sessions) : (
+                        <p className="text-xs text-gray-400 pl-1">Sin consultas en este estudio todavía.</p>
+                      )}
                     </div>
                   ))}
                   <div>

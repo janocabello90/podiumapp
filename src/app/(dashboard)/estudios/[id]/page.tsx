@@ -1,8 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Shield, Check, Sparkles, AlertTriangle } from 'lucide-react'
-import StartSessionButton from '@/components/sessions/StartSessionButton'
+import { ArrowLeft, Shield, Check, Sparkles, AlertTriangle, ChevronRight } from 'lucide-react'
 import CloseCampaignButton from '@/components/teams/CloseCampaignButton'
 import CampaignReportButton from '@/components/teams/CampaignReportButton'
 
@@ -179,8 +178,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                     {teamPlayers.map((p) => {
                       const count = sessionsByPatient.get(p.id) || 0
                       return (
-                        <div key={p.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                          <Link href={`/patients/${p.id}?ctx=equipo`} className="flex items-center gap-2.5 min-w-0 flex-1 group">
+                        <Link key={p.id} href={`/patients/${p.id}?ctx=equipo`} className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group">
+                          <div className="flex items-center gap-2.5 min-w-0">
                             <span className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700">{p.full_name}</span>
                             {count > 0 ? (
                               <span className="inline-flex items-center gap-1 text-xs text-green-600 flex-shrink-0">
@@ -192,13 +191,9 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                             {anamnesisByPatient.get(p.id) !== 'completed' && (
                               <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">Anamnesis pendiente</span>
                             )}
-                          </Link>
-                          {count === 0 ? (
-                            <StartSessionButton patientId={p.id} campaignId={campaign.id} label="Valorar" />
-                          ) : (
-                            <Link href={`/patients/${p.id}?ctx=equipo`} className="text-xs text-blue-600 font-medium hover:underline flex-shrink-0 whitespace-nowrap">Ver ficha →</Link>
-                          )}
-                        </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                        </Link>
                       )
                     })}
                   </div>
