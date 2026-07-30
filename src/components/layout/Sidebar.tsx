@@ -40,10 +40,9 @@ export default function Sidebar({ userName }: { userName: string }) {
       {/* Mobile top header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 z-50">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-clinical-primary rounded-lg flex items-center justify-center">
-            <span className="text-sm font-bold text-white">P</span>
-          </div>
-          <span className="font-bold text-gray-900">Podium</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/favicon.png" alt="SHERPA" className="w-8 h-8 rounded-lg" />
+          <span className="font-bold text-gray-900">SHERPA</span>
         </div>
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -128,12 +127,11 @@ export default function Sidebar({ userName }: { userName: string }) {
         {/* Brand */}
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-clinical-primary rounded-xl flex items-center justify-center">
-              <span className="text-lg font-bold text-white">P</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/favicon.png" alt="SHERPA" className="w-10 h-10 rounded-xl" />
             <div>
-              <h2 className="font-bold text-gray-900 tracking-tight">Podium</h2>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-clinical-gold">Método Podium™</p>
+              <h2 className="font-bold text-gray-900 tracking-tight">SHERPA</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Clínica Podium</p>
             </div>
           </div>
         </div>

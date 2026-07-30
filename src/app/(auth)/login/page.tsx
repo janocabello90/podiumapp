@@ -74,11 +74,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo / Brand */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-clinical-primary rounded-2xl mb-4">
-            <span className="text-2xl font-bold text-white">P</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Podium</h1>
-          <p className="text-gray-500 mt-1">Plataforma de gestión clínica</p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logoApilado.png" alt="SHERPA" className="h-28 sm:h-32 w-auto mx-auto mb-3" />
+          <p className="text-gray-500">Plataforma de gestión clínica</p>
         </div>
 
         {/* Login Form */}
