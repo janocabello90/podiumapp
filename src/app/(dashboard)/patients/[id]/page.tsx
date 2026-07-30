@@ -27,7 +27,7 @@ export default async function PatientDetailPage({
     .from('patients')
     .select(`
       *,
-      teams(id, name, category),
+      teams(id, name, category, group_id, groups(name)),
       anamnesis_forms(*),
       assessments(*),
       sessions(*),
@@ -87,6 +87,8 @@ export default async function PatientDetailPage({
   // Paciente de equipo → hub centrado en sesiones (anamnesis + consultas).
   // Paciente sin equipo → ficha clásica de 5 pasos (intacta).
   const isTeamPatient = !!(patient as any).team_id
+  const team = (patient as any).teams as any
+  const backHref = isTeamPatient && team ? `/teams/${team.id}` : '/patients'
 
   // Agrupar consultas por estudio (campaign_id) + individuales (sin estudio).
   const sessionsByCampaign = new Map<string, any[]>()
@@ -156,12 +158,26 @@ export default async function PatientDetailPage({
       <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
           <Link
-            href="/patients"
+            href={backHref}
             className="p-2 hover:bg-gray-100 rounded-xl transition-colors flex-shrink-0"
+            title={isTeamPatient && team ? `Volver a ${team.name}` : 'Volver a pacientes'}
           >
             <ArrowLeft className="w-5 h-5 text-gray-500" />
           </Link>
           <div className="min-w-0">
+            {isTeamPatient && team && (
+              <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-0.5 truncate">
+                <Link href="/groups" className="hover:text-blue-600">Equipos</Link>
+                {team.groups?.name && (
+                  <>
+                    <span>›</span>
+                    <Link href={`/groups/${team.group_id}`} className="hover:text-blue-600">{team.groups.name}</Link>
+                  </>
+                )}
+                <span>›</span>
+                <Link href={`/teams/${team.id}`} className="hover:text-blue-600 font-medium text-gray-500">{team.name}</Link>
+              </nav>
+            )}
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{patient.full_name}</h1>
             <p className="text-sm text-gray-500 mt-0.5 truncate">
               {[

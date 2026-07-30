@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 
@@ -28,7 +29,9 @@ export default async function DashboardLayout({
     <div className="min-h-screen bg-clinical-bg">
       <Sidebar userName={userName} />
       <div className="lg:ml-64">
-        <TopBar />
+        <Suspense fallback={<div className="hidden lg:block h-14 border-b border-gray-200" />}>
+          <TopBar />
+        </Suspense>
         {/* pt-16 for mobile header, pb-20 for mobile bottom nav */}
         <main className="pt-16 pb-20 px-4 lg:pt-6 lg:pb-8 lg:px-8">
           {children}

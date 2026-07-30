@@ -180,7 +180,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                       const count = sessionsByPatient.get(p.id) || 0
                       return (
                         <div key={p.id} className="flex items-center justify-between gap-2 px-4 py-3">
-                          <Link href={`/patients/${p.id}`} className="flex items-center gap-2.5 min-w-0 flex-1 group">
+                          <Link href={`/patients/${p.id}?ctx=equipo`} className="flex items-center gap-2.5 min-w-0 flex-1 group">
                             <span className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700">{p.full_name}</span>
                             {count > 0 ? (
                               <span className="inline-flex items-center gap-1 text-xs text-green-600 flex-shrink-0">

@@ -144,7 +144,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
               return (
                 <li key={p.id}>
                   <Link
-                    href={`/patients/${p.id}`}
+                    href={`/patients/${p.id}?ctx=equipo`}
                     className="flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">

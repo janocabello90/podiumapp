@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 const SECTION: Record<string, string> = {
   dashboard: 'Inicio',
@@ -15,8 +15,11 @@ const SECTION: Record<string, string> = {
 
 export default function TopBar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const seg = pathname.split('/').filter(Boolean)[0] || 'dashboard'
-  const section = SECTION[seg] || 'Inicio'
+  let section = SECTION[seg] || 'Inicio'
+  // Un paciente de equipo pertenece a "Equipos" (llega con ?ctx=equipo desde el estudio/equipo)
+  if (seg === 'patients' && searchParams.get('ctx') === 'equipo') section = 'Equipos'
 
   return (
     <header className="hidden lg:flex sticky top-0 z-30 h-14 items-center px-8 bg-clinical-bg/85 backdrop-blur border-b border-gray-200">
