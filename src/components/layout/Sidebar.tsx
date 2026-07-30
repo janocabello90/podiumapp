@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Users, FileText, Settings, LogOut, Activity, Menu, X, LayoutDashboard, Shield, Megaphone, Plus } from 'lucide-react'
+import { Users, FileText, Settings, LogOut, Activity, Menu, X, LayoutDashboard, Shield, Megaphone } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 
@@ -156,17 +156,6 @@ export default function Sidebar({ userName }: { userName: string }) {
             )
           })}
         </nav>
-
-        {/* CTA */}
-        <div className="px-3 pb-1">
-          <Link
-            href="/patients"
-            className="flex items-center justify-center gap-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-semibold rounded-xl py-2.5 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Nueva consulta
-          </Link>
-        </div>
 
         {/* User / Logout */}
         <div className="p-4 border-t border-gray-100">
