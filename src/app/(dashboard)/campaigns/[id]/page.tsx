@@ -33,7 +33,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const teams = (cts || []).map((ct: any) => ({ id: ct.team_id, name: ct.teams?.name ?? 'Equipo' }))
   const teamIds = teams.map((t) => t.id)
 
-  // Jugadores de esos equipos + sesiones de esta campaña
+  // Jugadores de esos equipos + sesiones de este estudio
   let players: any[] = []
   const sessionsByPatient = new Map<string, number>()
   if (teamIds.length > 0) {
@@ -48,7 +48,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const valued = players.filter((p) => (sessionsByPatient.get(p.id) || 0) > 0).length
   const groupName = (campaign.groups as any)?.name as string | undefined
 
-  // Último informe de campaña (si existe).
+  // Último informe de estudio (si existe).
   const { data: latestReport } = await supabase
     .from('reports')
     .select('id, status, created_at, report_data')
@@ -75,7 +75,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
           <div className="min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{campaign.name}</h1>
             <p className="text-sm text-gray-500 mt-0.5 truncate">
-              {[groupName, campaign.status === 'closed' ? 'Cerrada' : 'Activa'].filter(Boolean).join(' · ')}
+              {[groupName, campaign.status === 'closed' ? 'Cerrado' : 'Activo'].filter(Boolean).join(' · ')}
             </p>
           </div>
         </div>
@@ -102,12 +102,12 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         </div>
       </div>
 
-      {/* Informe de campaña (IA) */}
+      {/* Informe de estudio (IA) */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
         <div className="bg-gradient-to-r from-clinical-navy to-clinical-primary px-4 sm:px-5 py-3.5 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-white">
             <Sparkles className="w-4 h-4" />
-            <h2 className="text-sm font-semibold">Informe de campaña (IA)</h2>
+            <h2 className="text-sm font-semibold">Informe de estudio (IA)</h2>
           </div>
           {latestReport && (
             <span className="text-[11px] text-white/80 font-mono">
@@ -139,7 +139,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             </>
           ) : (
             <>
-              <p className="text-sm text-gray-500">Aún no se ha generado. Agrega las valoraciones de la campaña en un informe cualitativo: estado del colectivo, hallazgos por equipo y jugadores a vigilar. Revisable y exportable a PDF.</p>
+              <p className="text-sm text-gray-500">Aún no se ha generado. Agrega las valoraciones del estudio en un informe cualitativo: estado del colectivo, hallazgos por equipo y jugadores a vigilar. Revisable y exportable a PDF.</p>
               <div className="mt-3"><CampaignReportButton campaignId={campaign.id} valued={valued} total={players.length} /></div>
             </>
           )}
@@ -148,7 +148,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
 
       {/* Roster por equipo */}
       {teams.length === 0 ? (
-        <p className="text-sm text-gray-400">Esta campaña no tiene equipos.</p>
+        <p className="text-sm text-gray-400">Este estudio no tiene equipos.</p>
       ) : (
         <div className="space-y-6">
           {teams.map((team) => {

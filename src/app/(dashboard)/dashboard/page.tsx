@@ -66,7 +66,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   })
   const scopedPatients = mineOnly ? myPatients : allPatients
 
-  // ===== Estudios activos (campañas) + progreso =====
+  // ===== Estudios activos (estudios) + progreso =====
   const { data: campaigns } = await supabase
     .from('campaigns')
     .select('id, name, status, start_date, end_date_planned, groups(name)')

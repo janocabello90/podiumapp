@@ -91,7 +91,7 @@ export type SessionTest = Omit<T['session_tests']['Row'], 'created_at' | 'update
   updated_at: string
 }
 
-// Campañas (Fase E). `sessions.campaign_id` (nullable) llega solo a `Session`.
+// Estudios (Fase E). `sessions.campaign_id` (nullable) llega solo a `Session`.
 export type Campaign = Omit<T['campaigns']['Row'], 'created_at' | 'updated_at'> & {
   created_at: string
   updated_at: string

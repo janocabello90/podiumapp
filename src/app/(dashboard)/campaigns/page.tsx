@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Megaphone, ChevronRight, Shield, Users } from 'lucide-react'
+import { Megaphone, ChevronRight } from 'lucide-react'
+import CreateStudyForm from '@/components/teams/CreateStudyForm'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +14,19 @@ export default async function EstudiosPage() {
   if (!profile) return <div>Perfil no encontrado</div>
   const cid = profile.clinic_id
 
-  // Campañas de la clínica
+  // Grupos + equipos (para crear estudios eligiendo grupo/equipos aquí mismo)
+  const { data: rawGroups } = await supabase
+    .from('groups')
+    .select('id, name, teams(id, name)')
+    .eq('clinic_id', cid)
+    .order('name', { ascending: true })
+  const groupsForForm = (rawGroups || []).map((g: any) => ({
+    id: g.id,
+    name: g.name,
+    teams: (g.teams || []).map((t: any) => ({ id: t.id, name: t.name })),
+  }))
+
+  // Estudios de la clínica
   const { data: campaigns } = await supabase
     .from('campaigns')
     .select('id, name, status, start_date, end_date_planned, group_id, groups(name)')
@@ -23,7 +36,7 @@ export default async function EstudiosPage() {
   const campaignList = campaigns || []
   const campaignIds = campaignList.map((c) => c.id)
 
-  // Equipos por campaña
+  // Equipos por estudio
   const { data: cts } = await supabase
     .from('campaign_teams')
     .select('campaign_id, team_id, teams(name)')
@@ -38,7 +51,7 @@ export default async function EstudiosPage() {
     allTeamIds.add(ct.team_id)
   }
 
-  // Jugadores de esos equipos + sesiones de esas campañas (para progreso)
+  // Jugadores de esos equipos + sesiones de esas estudios (para progreso)
   const [{ data: players }, { data: sessions }] = await Promise.all([
     allTeamIds.size > 0
       ? supabase.from('patients').select('id, team_id').in('team_id', Array.from(allTeamIds)).eq('status', 'active').eq('clinic_id', cid)
@@ -54,7 +67,7 @@ export default async function EstudiosPage() {
     arr.push(p.id)
     playersByTeam.set(p.team_id, arr)
   }
-  // patient_ids valorados por campaña
+  // patient_ids valorados por estudio
   const valuedByCampaign = new Map<string, Set<string>>()
   for (const s of sessions || []) {
     if (!s.campaign_id) continue
@@ -93,7 +106,7 @@ export default async function EstudiosPage() {
           </div>
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${c.status === 'closed' ? 'bg-gray-100 text-gray-600' : 'bg-blue-50 text-blue-700'}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${c.status === 'closed' ? 'bg-gray-400' : 'bg-blue-600'}`}></span>
-            {c.status === 'closed' ? 'Cerrada' : 'Activa'}
+            {c.status === 'closed' ? 'Cerrado' : 'Activo'}
           </span>
         </div>
 
@@ -126,16 +139,14 @@ export default async function EstudiosPage() {
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex items-end justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
-        <div>
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Estudios</h1>
-          <p className="text-sm text-gray-500 mt-1">Campañas de valoración por grupo deportivo.</p>
-        </div>
-        <Link href="/groups" className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors">
-          <Megaphone className="w-4 h-4" />
-          <span className="hidden sm:inline">Nuevo estudio</span>
-          <span className="sm:hidden">Nuevo</span>
-        </Link>
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Estudios</h1>
+        <p className="text-sm text-gray-500 mt-1">Estudios de valoración por grupo deportivo.</p>
+      </div>
+
+      {/* Crear estudio (elige grupo + equipos aquí mismo) */}
+      <div className="mb-6 sm:mb-8">
+        <CreateStudyForm clinicId={cid} groups={groupsForForm} />
       </div>
 
       {campaignList.length === 0 ? (
@@ -144,7 +155,7 @@ export default async function EstudiosPage() {
             <Megaphone className="w-5 h-5 text-blue-600" />
           </div>
           <p className="text-sm text-gray-500 mb-1">Aún no hay estudios.</p>
-          <p className="text-xs text-gray-400">Los estudios (campañas) se crean desde un grupo. <Link href="/groups" className="text-blue-600 hover:underline">Ir a Equipos</Link>.</p>
+          <p className="text-xs text-gray-400">Crea el primero con «Nuevo estudio» eligiendo grupo y equipos.</p>
         </div>
       ) : (
         <div className="space-y-8">

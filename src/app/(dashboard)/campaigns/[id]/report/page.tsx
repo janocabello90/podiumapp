@@ -39,7 +39,7 @@ export default async function CampaignReportPage({ params }: { params: { id: str
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Informe de campaña</h1>
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Informe de estudio</h1>
           <p className="text-sm text-gray-500 mt-0.5 truncate">{campaign.name}</p>
         </div>
       </div>
@@ -47,8 +47,8 @@ export default async function CampaignReportPage({ params }: { params: { id: str
       {!report ? (
         <div className="bg-white rounded-2xl border border-gray-200 px-4 py-10 text-center">
           <p className="text-sm text-gray-500">
-            Esta campaña aún no tiene informe. Genéralo desde{' '}
-            <Link href={`/campaigns/${campaign.id}`} className="text-blue-600 hover:underline">la página de la campaña</Link>.
+            Este estudio aún no tiene informe. Genéralo desde{' '}
+            <Link href={`/campaigns/${campaign.id}`} className="text-blue-600 hover:underline">la página del estudio</Link>.
           </p>
         </div>
       ) : (

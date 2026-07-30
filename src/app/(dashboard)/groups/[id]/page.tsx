@@ -44,7 +44,7 @@ export default async function GroupDetailPage({ params }: { params: { id: string
     playerCount: t.patients?.[0]?.count ?? 0,
   }))
 
-  // Campañas del grupo
+  // Estudios del grupo
   const { data: campaigns } = await supabase
     .from('campaigns')
     .select('id, name, status, start_date')
@@ -114,10 +114,10 @@ export default async function GroupDetailPage({ params }: { params: { id: string
         </div>
       )}
 
-      {/* Campañas */}
+      {/* Estudios */}
       <div className="mt-8 space-y-3">
         <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-          <Megaphone className="w-4 h-4 text-blue-500" /> Campañas
+          <Megaphone className="w-4 h-4 text-blue-500" /> Estudios
         </h2>
         <CreateCampaignForm
           clinicId={profile.clinic_id}
@@ -126,7 +126,7 @@ export default async function GroupDetailPage({ params }: { params: { id: string
         />
         {(campaigns || []).length === 0 ? (
           <p className="text-sm text-gray-400 bg-white rounded-2xl border border-gray-200 px-4 py-6 text-center">
-            Sin campañas en este grupo.
+            Sin estudios en este grupo.
           </p>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">

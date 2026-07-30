@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (!report || report.scope !== 'campaign') {
-      return NextResponse.json({ error: 'Informe de campaña no encontrado' }, { status: 404 })
+      return NextResponse.json({ error: 'Informe de estudio no encontrado' }, { status: 404 })
     }
 
     const rd = (report.report_data || {}) as any
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(22)
     doc.setTextColor(20, 40, 80)
-    doc.text('Informe de Campaña', PAGE_WIDTH / 2, 60, { align: 'center' })
+    doc.text('Informe de Estudio', PAGE_WIDTH / 2, 60, { align: 'center' })
     doc.setDrawColor(218, 165, 32)
     doc.setLineWidth(0.8)
     doc.line(PAGE_WIDTH / 2 - 30, 66, PAGE_WIDTH / 2 + 30, 66)
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (rd.resumen_campana) {
-      y = writeSectionTitle(doc, 'Resumen de la campaña', y)
+      y = writeSectionTitle(doc, 'Resumen del estudio', y)
       y = writeParagraph(doc, String(rd.resumen_campana), y)
     }
 
@@ -185,12 +185,12 @@ export async function POST(request: NextRequest) {
     addFooter(doc)
 
     const pdfBytes = Buffer.from(doc.output('arraybuffer'))
-    const safeName = String(meta.campaign_name || 'campana').replace(/\s+/g, '_')
+    const safeName = String(meta.campaign_name || 'estudio').replace(/\s+/g, '_')
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Informe_Campana_${safeName}.pdf"`,
+        'Content-Disposition': `attachment; filename="Informe_Estudio_${safeName}.pdf"`,
       },
     })
   } catch (error: any) {

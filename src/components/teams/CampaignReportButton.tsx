@@ -29,7 +29,7 @@ export default function CampaignReportButton({ campaignId, valued, total }: Prop
         const err = await response.json()
         throw new Error(err.error || 'Error al generar')
       }
-      toast.success('Informe de campaña generado')
+      toast.success('Informe de estudio generado')
       router.push(`/campaigns/${campaignId}/report`)
     } catch (err: any) {
       toast.error(err.message || 'Error al generar el informe')
@@ -52,7 +52,7 @@ export default function CampaignReportButton({ campaignId, valued, total }: Prop
         ) : (
           <>
             <Sparkles className="w-4 h-4" />
-            Generar informe de campaña
+            Generar informe de estudio
           </>
         )}
       </button>

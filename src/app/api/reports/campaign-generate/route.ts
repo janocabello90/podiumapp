@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 
-// Cap de jugadores incluidos en el prompt v1 (evita desbordar tokens en campañas grandes).
+// Cap de jugadores incluidos en el prompt v1 (evita desbordar tokens en estudios grandes).
 const MAX_PLAYERS_IN_PROMPT = 40
 
 const SYSTEM_PROMPT = `Eres un fisioterapeuta clínico experto de Clínica PODIUM redactando un INFORME AGREGADO DE CAMPAÑA: una valoración de conjunto de uno o varios equipos de un grupo deportivo, a partir de las valoraciones individuales de sus jugadores. Escribes en español clínico profesional, riguroso y útil para el cuerpo técnico y médico.
@@ -11,11 +11,11 @@ IMPORTANTE — naturaleza cualitativa: dispones de NOTAS y de la interpretación
 
 ESTRUCTURA DEL INFORME (responde SOLO con un JSON válido con estas claves):
 
-1. "portada_intro": Texto introductorio. Menciona el grupo/campaña, los equipos incluidos, la ventana temporal si se aporta, el número de jugadores valorados sobre el total (cobertura), y la metodología PODIUM aplicada a un colectivo (entender qué limita la capacidad del conjunto, no solo listar lesiones). Deja claro que el informe agrega valoraciones individuales y no las sustituye.
+1. "portada_intro": Texto introductorio. Menciona el grupo/estudio, los equipos incluidos, la ventana temporal si se aporta, el número de jugadores valorados sobre el total (cobertura), y la metodología PODIUM aplicada a un colectivo (entender qué limita la capacidad del conjunto, no solo listar lesiones). Deja claro que el informe agrega valoraciones individuales y no las sustituye.
 
 2. "resumen_campana": 2-3 párrafos con el estado general del colectivo: cómo llega el grupo, temas transversales, impresión global.
 
-3. "hallazgos_por_equipo": Array de objetos { "equipo": string, "resumen": string, "hallazgos": string[] }. Un objeto por cada equipo incluido en la campaña, con un resumen y una lista de hallazgos relevantes de ese equipo. Si un equipo no tiene jugadores valorados, indícalo brevemente.
+3. "hallazgos_por_equipo": Array de objetos { "equipo": string, "resumen": string, "hallazgos": string[] }. Un objeto por cada equipo incluido en el estudio, con un resumen y una lista de hallazgos relevantes de ese equipo. Si un equipo no tiene jugadores valorados, indícalo brevemente.
 
 4. "patrones_y_riesgos": Párrafos que identifiquen patrones transversales y posibles riesgos (de carga, lesionales, regionales) del colectivo. SIEMPRE en lenguaje de hipótesis: "posible", "compatible con", "sugiere". Nunca diagnóstico definitivo.
 
@@ -25,7 +25,7 @@ ESTRUCTURA DEL INFORME (responde SOLO con un JSON válido con estas claves):
 
 7. "recomendaciones": Recomendaciones colectivas priorizadas (prevención, trabajo por grupos, seguimiento), adaptadas al Método Podium™.
 
-8. "descargo": Descargo estándar adaptado a informe colectivo: "El presente informe de campaña ha sido elaborado conforme al Método Podium™, agregando las valoraciones individuales de los jugadores incluidos. Su redacción ha sido asistida por un sistema de inteligencia artificial (Anthropic Claude, vía API) como herramienta de soporte, y ha sido íntegramente revisado, editado y aprobado por un fisioterapeuta colegiado antes de su emisión. El proveedor de IA no almacena ni reutiliza los datos. Este documento no constituye un diagnóstico médico, no sustituye la valoración individual de cada jugador ni la valoración de un facultativo médico, y no debe interpretarse como informe pericial ni prueba en procedimientos judiciales, administrativos, aseguradores o legales. Su finalidad es orientar el trabajo colectivo y el seguimiento del grupo en el ámbito asistencial para el que ha sido diseñado."
+8. "descargo": Descargo estándar adaptado a informe colectivo: "El presente informe de estudio ha sido elaborado conforme al Método Podium™, agregando las valoraciones individuales de los jugadores incluidos. Su redacción ha sido asistida por un sistema de inteligencia artificial (Anthropic Claude, vía API) como herramienta de soporte, y ha sido íntegramente revisado, editado y aprobado por un fisioterapeuta colegiado antes de su emisión. El proveedor de IA no almacena ni reutiliza los datos. Este documento no constituye un diagnóstico médico, no sustituye la valoración individual de cada jugador ni la valoración de un facultativo médico, y no debe interpretarse como informe pericial ni prueba en procedimientos judiciales, administrativos, aseguradores o legales. Su finalidad es orientar el trabajo colectivo y el seguimiento del grupo en el ámbito asistencial para el que ha sido diseñado."
 
 REGLAS:
 - Español clínico profesional, párrafos narrativos.
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'campaignId requerido' }, { status: 400 })
     }
 
-    // Campaña (scope de clínica).
+    // Estudio (scope de clínica).
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .select('id, name, start_date, end_date_planned, group_id, groups(name)')
@@ -71,10 +71,10 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (campaignError || !campaign) {
-      return NextResponse.json({ error: 'Campaña no encontrada' }, { status: 404 })
+      return NextResponse.json({ error: 'Estudio no encontrada' }, { status: 404 })
     }
 
-    // Equipos de la campaña.
+    // Equipos del estudio.
     const { data: cts } = await supabase
       .from('campaign_teams')
       .select('team_id, teams(id, name)')
@@ -85,10 +85,10 @@ export async function POST(request: NextRequest) {
     const teamNameById = new Map(teams.map((t) => [t.id, t.name]))
 
     if (teamIds.length === 0) {
-      return NextResponse.json({ error: 'La campaña no tiene equipos' }, { status: 400 })
+      return NextResponse.json({ error: 'La estudio no tiene equipos' }, { status: 400 })
     }
 
-    // Jugadores del roster + sesiones de la campaña.
+    // Jugadores del roster + sesiones del estudio.
     const [{ data: players }, { data: sessions }] = await Promise.all([
       supabase
         .from('patients')
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     const valuedPlayers = roster.filter((p: any) => sessionByPatient.has(p.id))
     if (valuedPlayers.length === 0) {
-      return NextResponse.json({ error: 'Ningún jugador de la campaña tiene valoración todavía' }, { status: 400 })
+      return NextResponse.json({ error: 'Ningún jugador del estudio tiene valoración todavía' }, { status: 400 })
     }
 
     // Construcción de contexto agregado y acotado (resumen cualitativo por jugador).
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Genera el informe agregado de campaña PODIUM. Responde SOLO con JSON válido.\n\n${context}`,
+          content: `Genera el informe agregado de estudio PODIUM. Responde SOLO con JSON válido.\n\n${context}`,
         },
       ],
     })
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
 
     if (reportError) {
       console.error('Campaign report save error:', reportError)
-      return NextResponse.json({ error: 'Error al guardar el informe de campaña' }, { status: 500 })
+      return NextResponse.json({ error: 'Error al guardar el informe de estudio' }, { status: 500 })
     }
 
     return NextResponse.json({ report })

@@ -12,11 +12,11 @@ export default function CloseCampaignButton({ campaignId, status }: { campaignId
   const [loading, setLoading] = useState(false)
 
   if (status === 'closed') {
-    return <span className="text-xs text-gray-400">Campaña cerrada</span>
+    return <span className="text-xs text-gray-400">Estudio cerrado</span>
   }
 
   async function close() {
-    if (!confirm('¿Cerrar la campaña? Podrás seguir consultándola pero se marcará como finalizada.')) return
+    if (!confirm('¿Cerrar el estudio? Podrás seguir consultándolo pero se marcará como finalizado.')) return
     setLoading(true)
     try {
       const { error } = await supabase
@@ -24,7 +24,7 @@ export default function CloseCampaignButton({ campaignId, status }: { campaignId
         .update({ status: 'closed', closed_at: new Date().toISOString() })
         .eq('id', campaignId)
       if (error) throw error
-      toast.success('Campaña cerrada')
+      toast.success('Estudio cerrado')
       router.refresh()
     } catch (err: any) {
       toast.error(err.message || 'Error al cerrar')
@@ -39,7 +39,7 @@ export default function CloseCampaignButton({ campaignId, status }: { campaignId
       className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg disabled:opacity-50"
     >
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-      Cerrar campaña
+      Cerrar estudio
     </button>
   )
 }

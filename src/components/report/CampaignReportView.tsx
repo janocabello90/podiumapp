@@ -35,7 +35,7 @@ interface Props {
 
 const TEXT_SECTIONS: { key: keyof CampaignReportData; label: string; small?: boolean }[] = [
   { key: 'portada_intro', label: 'Introducción' },
-  { key: 'resumen_campana', label: 'Resumen de la campaña' },
+  { key: 'resumen_campana', label: 'Resumen del estudio' },
   { key: 'patrones_y_riesgos', label: 'Patrones y riesgos' },
   { key: 'fortalezas', label: 'Fortalezas' },
   { key: 'recomendaciones', label: 'Recomendaciones' },
@@ -135,7 +135,7 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `Informe_Campana_${(data._meta?.campaign_name || 'campana').replace(/\s+/g, '_')}.pdf`
+      a.download = `Informe_Estudio_${(data._meta?.campaign_name || 'estudio').replace(/\s+/g, '_')}.pdf`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err: any) {
