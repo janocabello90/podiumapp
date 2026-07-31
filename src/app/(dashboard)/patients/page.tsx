@@ -1,10 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, Search, Shield } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import PatientList from '@/components/patients/PatientList'
 import PatientFilters from '@/components/patients/PatientFilters'
 import ClassifyBanner from '@/components/patients/ClassifyBanner'
-import TeamAnamnesisActions from '@/components/patients/TeamAnamnesisActions'
+import PatientsBrowser from '@/components/patients/PatientsBrowser'
 import { computeStage } from '@/lib/clinical/stage'
 
 export const dynamic = 'force-dynamic'
@@ -134,50 +134,11 @@ export default async function PatientsPage({
         <PatientFilters totalCount={patients.length} teams={teams || []} />
       </div>
 
-      {/* Lista agrupada: en equipo vs individuales */}
+      {/* Lista: pestañas En equipo / Individuales + paginación */}
       {teamGroups.length === 0 && individualPatients.length === 0 ? (
         <PatientList patients={[]} />
       ) : (
-        <div className="space-y-8">
-          {teamGroups.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                En equipo
-                <span className="text-xs text-gray-400 font-normal bg-gray-100 px-2 py-0.5 rounded-md tabular-nums">{teamPatients.length}</span>
-              </h2>
-              <div className="space-y-5">
-                {teamGroups.map((g) => (
-                  <div key={g.id}>
-                    <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                      <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                        <Shield className="w-4 h-4 text-blue-500" />
-                        <Link href={`/teams/${g.id}`} className="hover:text-blue-700">{g.name}</Link>
-                        <span className="text-xs text-gray-400 font-normal tabular-nums">· {g.list.length}</span>
-                      </h3>
-                      {clinicId && (
-                        <TeamAnamnesisActions
-                          clinicId={clinicId}
-                          players={g.list.map((p: any) => ({ id: p.id, hasAnamnesis: (p.anamnesis_forms || []).length > 0 }))}
-                        />
-                      )}
-                    </div>
-                    <PatientList patients={g.list} linkCtx="equipo" />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {individualPatients.length > 0 && (
-            <section>
-              <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-3">
-                Individuales
-                <span className="text-xs text-gray-400 font-normal bg-gray-100 px-2 py-0.5 rounded-md tabular-nums">{individualPatients.length}</span>
-              </h2>
-              <PatientList patients={individualPatients} />
-            </section>
-          )}
-        </div>
+        <PatientsBrowser teamGroups={teamGroups} individualPatients={individualPatients} clinicId={clinicId} />
       )}
     </div>
   )
