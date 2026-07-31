@@ -12,8 +12,9 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return <div>No autenticado</div>
-  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single()
   if (!profile) return <div>Perfil no encontrado</div>
+  const isAdmin = profile.role === 'admin'
 
   const { data: campaign } = await supabase
     .from('campaigns')
@@ -92,7 +93,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
             </p>
           </div>
         </div>
-        <CloseCampaignButton campaignId={campaign.id} status={campaign.status || 'active'} />
+        {isAdmin && <CloseCampaignButton campaignId={campaign.id} status={campaign.status || 'active'} />}
       </div>
 
       {/* Info + progreso */}

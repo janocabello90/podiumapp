@@ -15,11 +15,12 @@ export default async function GroupDetailPage({ params }: { params: { id: string
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return <div>Perfil no encontrado</div>
+  const isAdmin = profile.role === 'admin'
 
   // Grupo (defensa en profundidad: filtro clinic_id además de RLS)
   const { data: group } = await supabase
@@ -67,10 +68,12 @@ export default async function GroupDetailPage({ params }: { params: { id: string
         </div>
       </div>
 
-      {/* Crear equipo */}
-      <div className="mb-4 sm:mb-6">
-        <CreateTeamForm clinicId={profile.clinic_id} groupId={group.id} />
-      </div>
+      {/* Crear equipo (solo admin) */}
+      {isAdmin && (
+        <div className="mb-4 sm:mb-6">
+          <CreateTeamForm clinicId={profile.clinic_id} groupId={group.id} />
+        </div>
+      )}
 
       {/* Lista de equipos */}
       {teams.length === 0 ? (
@@ -78,7 +81,7 @@ export default async function GroupDetailPage({ params }: { params: { id: string
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 mb-2">
             <Shield className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-sm text-gray-500">Este grupo aún no tiene equipos. Crea el primero arriba.</p>
+          <p className="text-sm text-gray-500">{isAdmin ? 'Este grupo aún no tiene equipos. Crea el primero arriba.' : 'Este grupo aún no tiene equipos.'}</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -119,11 +122,13 @@ export default async function GroupDetailPage({ params }: { params: { id: string
         <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
           <Megaphone className="w-4 h-4 text-blue-500" /> Estudios
         </h2>
-        <CreateCampaignForm
-          clinicId={profile.clinic_id}
-          groupId={group.id}
-          teams={teams.map((t: any) => ({ id: t.id, name: t.name }))}
-        />
+        {isAdmin && (
+          <CreateCampaignForm
+            clinicId={profile.clinic_id}
+            groupId={group.id}
+            teams={teams.map((t: any) => ({ id: t.id, name: t.name }))}
+          />
+        )}
         {(campaigns || []).length === 0 ? (
           <p className="text-sm text-gray-400 bg-white rounded-2xl border border-gray-200 px-4 py-6 text-center">
             Sin estudios en este grupo.

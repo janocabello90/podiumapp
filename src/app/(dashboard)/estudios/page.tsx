@@ -10,9 +10,10 @@ export default async function EstudiosPage() {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return <div>No autenticado</div>
-  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single()
   if (!profile) return <div>Perfil no encontrado</div>
   const cid = profile.clinic_id
+  const isAdmin = profile.role === 'admin'
 
   // Grupos + equipos (para crear estudios eligiendo grupo/equipos aquí mismo)
   const { data: rawGroups } = await supabase
@@ -144,10 +145,12 @@ export default async function EstudiosPage() {
         <p className="text-sm text-gray-500 mt-1">Estudios de valoración por grupo deportivo.</p>
       </div>
 
-      {/* Crear estudio (elige grupo + equipos aquí mismo) */}
-      <div className="mb-6 sm:mb-8">
-        <CreateStudyForm clinicId={cid} groups={groupsForForm} />
-      </div>
+      {/* Crear estudio (solo admin) */}
+      {isAdmin && (
+        <div className="mb-6 sm:mb-8">
+          <CreateStudyForm clinicId={cid} groups={groupsForForm} />
+        </div>
+      )}
 
       {campaignList.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-200 px-6 py-12 text-center">
@@ -155,7 +158,7 @@ export default async function EstudiosPage() {
             <Megaphone className="w-5 h-5 text-blue-600" />
           </div>
           <p className="text-sm text-gray-500 mb-1">Aún no hay estudios.</p>
-          <p className="text-xs text-gray-400">Crea el primero con «Nuevo estudio» eligiendo grupo y equipos.</p>
+          {isAdmin && <p className="text-xs text-gray-400">Crea el primero con «Nuevo estudio» eligiendo grupo y equipos.</p>}
         </div>
       ) : (
         <div className="space-y-8">

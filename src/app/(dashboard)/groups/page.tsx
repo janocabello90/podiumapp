@@ -13,11 +13,12 @@ export default async function GroupsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return <div>Perfil no encontrado</div>
+  const isAdmin = profile.role === 'admin'
 
   // Grupos de la clínica + nº de equipos (defensa en profundidad: filtro clinic_id además de RLS)
   const { data: rawGroups } = await supabase
@@ -41,10 +42,12 @@ export default async function GroupsPage() {
         </p>
       </div>
 
-      {/* Crear grupo */}
-      <div className="mb-4 sm:mb-6">
-        <CreateGroupForm clinicId={profile.clinic_id} />
-      </div>
+      {/* Crear grupo (solo admin) */}
+      {isAdmin && (
+        <div className="mb-4 sm:mb-6">
+          <CreateGroupForm clinicId={profile.clinic_id} />
+        </div>
+      )}
 
       {/* Lista de grupos */}
       {groups.length === 0 ? (
@@ -52,7 +55,7 @@ export default async function GroupsPage() {
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-50 mb-2">
             <FolderKanban className="w-5 h-5 text-blue-600" />
           </div>
-          <p className="text-sm text-gray-500">Aún no hay grupos. Crea el primero arriba.</p>
+          <p className="text-sm text-gray-500">{isAdmin ? 'Aún no hay grupos. Crea el primero arriba.' : 'Aún no hay grupos.'}</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">

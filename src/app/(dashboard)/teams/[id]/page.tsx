@@ -18,11 +18,12 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return <div>Perfil no encontrado</div>
+  const isAdmin = profile.role === 'admin'
 
   // Equipo + su grupo (defensa en profundidad: filtro clinic_id además de RLS)
   const { data: team } = await supabase
@@ -90,7 +91,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <BulkImportPlayers teamId={team.id} clinicId={profile.clinic_id} existingEmails={existingEmails} />
+          {isAdmin && <BulkImportPlayers teamId={team.id} clinicId={profile.clinic_id} existingEmails={existingEmails} />}
           <Link
             href={`/patients/new?team_id=${team.id}`}
             className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors"
@@ -102,17 +103,24 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
         </div>
       </div>
 
-      {/* Deporte del equipo */}
+      {/* Deporte del equipo — asignarlo es estructura (solo admin). El fisio lo ve como texto. */}
       {(sports || []).length > 0 && (
-        <div className="mb-4 sm:mb-6 bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex items-center justify-between gap-3">
-          <SportSelect
-            table="teams"
-            rowId={team.id}
-            currentSportId={(team as any).sport_id ?? null}
-            sports={sports || []}
-            label="Deporte del equipo:"
-          />
-        </div>
+        isAdmin ? (
+          <div className="mb-4 sm:mb-6 bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex items-center justify-between gap-3">
+            <SportSelect
+              table="teams"
+              rowId={team.id}
+              currentSportId={(team as any).sport_id ?? null}
+              sports={sports || []}
+              label="Deporte del equipo:"
+            />
+          </div>
+        ) : (team as any).sport_id ? (
+          <div className="mb-4 sm:mb-6 bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex items-center gap-2 text-sm">
+            <span className="text-gray-500">Deporte del equipo:</span>
+            <span className="font-medium text-gray-900">{(sports || []).find((s: any) => s.id === (team as any).sport_id)?.name || '—'}</span>
+          </div>
+        ) : null
       )}
 
       {/* Roster */}
