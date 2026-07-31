@@ -34,7 +34,7 @@ function computeAge(dob?: string | null): number | null {
   return Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
 }
 
-export default function PatientList({ patients }: { patients: PatientWithStages[] }) {
+export default function PatientList({ patients, linkCtx }: { patients: PatientWithStages[]; linkCtx?: string }) {
   if (patients.length === 0) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center">
@@ -70,7 +70,7 @@ export default function PatientList({ patients }: { patients: PatientWithStages[
           return (
             <Link
               key={patient.id}
-              href={`/patients/${patient.id}`}
+              href={linkCtx ? `/patients/${patient.id}?ctx=${linkCtx}` : `/patients/${patient.id}`}
               className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-gray-50 transition-colors"
             >
               <div className="flex items-center gap-3 sm:gap-4 min-w-0">
