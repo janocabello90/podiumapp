@@ -18,6 +18,13 @@
 
 **Ya preparado hoy (sin email):** en la lista de Pacientes, la acción por equipo **"Generar anamnesis que faltan"** crea los enlaces de los jugadores sin anamnesis; se distribuyen manualmente (WhatsApp/copiar) hasta que el email esté activo.
 
+### Nota — remitente de los correos de AUTH (invitación/reset/confirmación)
+Son dos cosas distintas:
+- **Correos de Auth** (invitar usuario, reset, confirmar): los envía **Supabase (GoTrue)**. Con el correo por defecto el remitente es `noreply@mail.app.supabase.io` y **no se puede cambiar**. Para que ponga **SHERPA + dominio propio** hay que activar **Custom SMTP** en Supabase (Authentication → Emails → SMTP Settings). La vía fácil: **Resend SMTP** (sin código, solo pegar credenciales) → requiere **dominio verificado**. Plantilla branded ya lista en `email-templates/invitacion.html`.
+- **Correos de la app** (enviar anamnesis al paciente): los enviaría nuestro backend con el **SDK de Resend** (`/api/anamnesis/send-email`) — el punto de arriba.
+
+Ambos dependen de lo mismo: **cuenta Resend + dominio verificado**. Con eso se resuelven los dos de golpe.
+
 ---
 
 ## Otros pendientes conocidos (de docs previos)
