@@ -23,12 +23,15 @@ export default async function SettingsPage() {
     .eq('id', profile.clinic_id)
     .single()
 
-  // Fetch team members
-  const { data: teamMembers } = await supabase
-    .from('users')
-    .select('*')
-    .eq('clinic_id', profile.clinic_id)
-    .order('created_at', { ascending: true })
+  // Fetch team members — solo para admins (los fisios no ven a otros usuarios)
+  const isAdmin = profile.role === 'admin'
+  const { data: teamMembers } = isAdmin
+    ? await supabase
+        .from('users')
+        .select('*')
+        .eq('clinic_id', profile.clinic_id)
+        .order('created_at', { ascending: true })
+    : { data: [] as any[] }
 
   return (
     <SettingsClient

@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FileText, Clock, CheckCircle, AlertCircle, Users } from 'lucide-react'
 
@@ -11,11 +12,12 @@ export default async function ReportsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return null
+  if (profile.role !== 'admin') redirect('/dashboard')
 
   // Fetch all reports with patient and generator info
   const { data: reports } = await supabase

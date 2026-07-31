@@ -41,6 +41,13 @@ export default async function PatientDetailPage({
     notFound()
   }
 
+  // Rol del usuario actual (para acciones restringidas a admin, p. ej. borrar paciente)
+  const { data: { user: currentUser } } = await supabase.auth.getUser()
+  const { data: currentProfile } = currentUser
+    ? await supabase.from('users').select('role').eq('id', currentUser.id).single()
+    : { data: null as any }
+  const isAdmin = currentProfile?.role === 'admin'
+
   // Deportes activos de la clínica (para el override de deporte del paciente).
   // RLS limita a la clínica del usuario autenticado.
   const { data: sports } = await supabase
@@ -213,7 +220,7 @@ export default async function PatientDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <DeletePatientButton patientId={patient.id} patientName={patient.full_name} />
+          {isAdmin && <DeletePatientButton patientId={patient.id} patientName={patient.full_name} />}
           <RefreshButton />
         </div>
       </div>

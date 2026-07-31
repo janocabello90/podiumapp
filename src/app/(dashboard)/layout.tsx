@@ -24,10 +24,11 @@ export default async function DashboardLayout({
     .single()
 
   const userName = profile?.full_name || user.email || 'Usuario'
+  const isAdmin = profile?.role === 'admin'
 
   return (
     <div className="min-h-screen bg-clinical-bg">
-      <Sidebar userName={userName} />
+      <Sidebar userName={userName} isAdmin={isAdmin} />
       <div className="lg:ml-64">
         <Suspense fallback={<div className="hidden lg:block h-14 border-b border-gray-200" />}>
           <TopBar />

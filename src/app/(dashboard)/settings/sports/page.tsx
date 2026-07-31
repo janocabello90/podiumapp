@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, ChevronRight, Dumbbell } from 'lucide-react'
 import CreateSportForm from '@/components/settings/CreateSportForm'
@@ -13,11 +14,12 @@ export default async function SportsSettingsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return <div>Perfil no encontrado</div>
+  if (profile.role !== 'admin') redirect('/dashboard')
 
   const { data: rawSports } = await supabase
     .from('sports')

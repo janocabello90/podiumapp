@@ -20,14 +20,16 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
   const [activeTab, setActiveTab] = useState<Tab>('profile')
   const supabase = createClient()
 
+  const isAdmin = currentUser.role === 'admin'
+
   const tabs = [
     { id: 'profile' as Tab, label: 'Mi perfil', icon: User },
-    { id: 'clinic' as Tab, label: 'Clínica', icon: Building2 },
-    { id: 'team' as Tab, label: 'Personal', icon: Users },
-    { id: 'catalog' as Tab, label: 'Deportes y pruebas', icon: Dumbbell },
-    { id: 'consents' as Tab, label: 'Consentimientos', icon: ShieldCheck },
-    { id: 'report' as Tab, label: 'Informe', icon: FileText },
-  ]
+    { id: 'clinic' as Tab, label: 'Clínica', icon: Building2, adminOnly: true },
+    { id: 'team' as Tab, label: 'Personal', icon: Users, adminOnly: true },
+    { id: 'catalog' as Tab, label: 'Deportes y pruebas', icon: Dumbbell, adminOnly: true },
+    { id: 'consents' as Tab, label: 'Consentimientos', icon: ShieldCheck, adminOnly: true },
+    { id: 'report' as Tab, label: 'Informe', icon: FileText, adminOnly: true },
+  ].filter(tab => !tab.adminOnly || isAdmin)
 
   return (
     <div className="max-w-5xl mx-auto">

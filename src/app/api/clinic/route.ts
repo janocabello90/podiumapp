@@ -21,6 +21,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
+    if (profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Solo los administradores pueden editar la clínica' }, { status: 403 })
+    }
+
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!serviceRoleKey) {
       return NextResponse.json({ error: 'SUPABASE_SERVICE_ROLE_KEY no configurada' }, { status: 500 })

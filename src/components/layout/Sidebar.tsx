@@ -12,16 +12,18 @@ const navigation = [
   { name: 'Estudios', href: '/estudios', icon: Megaphone },
   { name: 'Pacientes', href: '/patients', icon: Users },
   { name: 'Equipos', href: '/groups', icon: Shield },
-  { name: 'Informes', href: '/reports', icon: FileText },
-  { name: 'Actividad', href: '/activity', icon: Activity },
+  { name: 'Informes', href: '/reports', icon: FileText, adminOnly: true },
+  { name: 'Actividad', href: '/activity', icon: Activity, adminOnly: true },
   { name: 'Ajustes', href: '/settings', icon: Settings },
 ]
 
-export default function Sidebar({ userName }: { userName: string }) {
+export default function Sidebar({ userName, isAdmin = false }: { userName: string; isAdmin?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
   const [mobileOpen, setMobileOpen] = useState(false)
+
+  const nav = navigation.filter((item) => !item.adminOnly || isAdmin)
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function Sidebar({ userName }: { userName: string }) {
           <div className="lg:hidden fixed inset-0 bg-black/30 z-40" onClick={() => setMobileOpen(false)} />
           <div className="lg:hidden fixed top-14 right-0 bottom-0 w-64 bg-white border-l border-gray-200 z-50 flex flex-col animate-in slide-in-from-right">
             <nav className="flex-1 px-3 py-4 space-y-1">
-              {navigation.map((item) => {
+              {nav.map((item) => {
                 const isActive = pathname.startsWith(item.href)
                 return (
                   <Link
@@ -102,7 +104,7 @@ export default function Sidebar({ userName }: { userName: string }) {
       {/* Mobile bottom navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 safe-area-bottom">
         <div className="flex items-center justify-around py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-          {navigation.slice(0, 4).map((item) => {
+          {nav.slice(0, 4).map((item) => {
             const isActive = pathname.startsWith(item.href)
             return (
               <Link
@@ -138,7 +140,7 @@ export default function Sidebar({ userName }: { userName: string }) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {navigation.map((item) => {
+          {nav.map((item) => {
             const isActive = pathname.startsWith(item.href)
             return (
               <Link

@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Users, FileText, ClipboardList, Activity, TrendingUp, UserCheck } from 'lucide-react'
 
 export default async function ActivityPage() {
@@ -9,11 +10,12 @@ export default async function ActivityPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return null
+  if (profile.role !== 'admin') redirect('/dashboard')
 
   const clinicId = profile.clinic_id
 

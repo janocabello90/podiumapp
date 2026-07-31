@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import SportTestsEditor from '@/components/settings/SportTestsEditor'
@@ -14,11 +14,12 @@ export default async function SportDetailPage({ params }: { params: { id: string
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return <div>Perfil no encontrado</div>
+  if (profile.role !== 'admin') redirect('/dashboard')
 
   const { data: sport } = await supabase
     .from('sports')

@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import TestsManager from '@/components/settings/TestsManager'
@@ -13,11 +14,12 @@ export default async function TestsSettingsPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('clinic_id')
+    .select('clinic_id, role')
     .eq('id', user.id)
     .single()
 
   if (!profile) return <div>Perfil no encontrado</div>
+  if (profile.role !== 'admin') redirect('/dashboard')
 
   const { data: tests } = await supabase
     .from('tests')

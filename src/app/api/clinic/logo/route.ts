@@ -22,6 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
+    if (profile.role !== 'admin') {
+      return NextResponse.json({ error: 'Solo los administradores pueden cambiar el logo' }, { status: 403 })
+    }
+
     const formData = await request.formData()
     const file = formData.get('logo') as File | null
 
