@@ -23,10 +23,10 @@ function inAgeRange(age: number | null, range: string): boolean {
 export default async function PatientsPage({
   searchParams,
 }: {
-  searchParams: { q?: string; region?: string; pathology?: string; activity?: string; age?: string; gender?: string; stage?: string; team?: string }
+  searchParams: { q?: string; region?: string; pathology?: string; activity?: string; age?: string; gender?: string; stage?: string; team?: string; anamnesis?: string }
 }) {
   const supabase = createServerSupabaseClient()
-  const { q, region, pathology, activity, age, gender, stage, team } = searchParams
+  const { q, region, pathology, activity, age, gender, stage, team, anamnesis } = searchParams
 
   const { data: { user } } = await supabase.auth.getUser()
   const { data: profile } = user ? await supabase.from('users').select('clinic_id').eq('id', user.id).single() : { data: null }
@@ -70,6 +70,15 @@ export default async function PatientsPage({
   }
   if (stage) {
     patients = patients.filter((p: any) => computeStage(p).key === stage)
+  }
+  if (anamnesis) {
+    patients = patients.filter((p: any) => {
+      const forms = (p.anamnesis_forms || []) as any[]
+      if (forms.length === 0) return anamnesis === 'none'
+      const latest = [...forms].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0]
+      const st = latest?.status === 'completed' ? 'completed' : 'pending'
+      return st === anamnesis
+    })
   }
 
   // Separar en equipo (agrupado por equipo) vs individuales
@@ -123,6 +132,7 @@ export default async function PatientsPage({
           {gender && <input type="hidden" name="gender" value={gender} />}
           {stage && <input type="hidden" name="stage" value={stage} />}
           {team && <input type="hidden" name="team" value={team} />}
+          {anamnesis && <input type="hidden" name="anamnesis" value={anamnesis} />}
         </form>
       </div>
 

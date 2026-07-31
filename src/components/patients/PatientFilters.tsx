@@ -23,6 +23,12 @@ const AGE_RANGES: { value: string; label: string }[] = [
   { value: '71-120', label: '>70' },
 ]
 
+const ANAMNESIS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'completed', label: 'Completada' },
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'none', label: 'Sin iniciar' },
+]
+
 export default function PatientFilters({
   totalCount,
   teams = [],
@@ -44,6 +50,7 @@ export default function PatientFilters({
     gender: searchParams.get('gender') || '',
     stage: searchParams.get('stage') || '',
     team: searchParams.get('team') || '',
+    anamnesis: searchParams.get('anamnesis') || '',
   }
 
   const teamLabel = (value: string) =>
@@ -74,6 +81,7 @@ export default function PatientFilters({
     current.gender,
     current.stage,
     current.team,
+    current.anamnesis,
   ].filter(Boolean).length
 
   const pathologiesForRegion = current.region
@@ -155,6 +163,22 @@ export default function PatientFilters({
               </select>
             </div>
           )}
+
+          {/* Anamnesis */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Anamnesis</label>
+            <select
+              value={current.anamnesis}
+              onChange={(e) => updateParam('anamnesis', e.target.value)}
+              className="w-full px-2.5 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isPending}
+            >
+              <option value="">Todas</option>
+              {ANAMNESIS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Body region */}
           <div>
@@ -246,6 +270,9 @@ export default function PatientFilters({
           )}
           {current.stage && (
             <Chip label={STAGE_OPTIONS.find((o) => o.value === current.stage)?.label || current.stage} onClear={() => updateParam('stage', '')} />
+          )}
+          {current.anamnesis && (
+            <Chip label={`Anamnesis: ${ANAMNESIS_OPTIONS.find((o) => o.value === current.anamnesis)?.label || current.anamnesis}`} onClear={() => updateParam('anamnesis', '')} />
           )}
           {current.region && (
             <Chip label={BODY_REGIONS.find((r) => r.slug === current.region)?.label || current.region} onClear={() => updateParam('region', '')} />
