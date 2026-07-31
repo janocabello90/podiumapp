@@ -29,6 +29,7 @@ function daysSince(iso?: string | null): number {
 }
 
 export default async function DashboardPage({ searchParams }: { searchParams: { scope?: string } }) {
+  // Por defecto el panel muestra "los míos"; se puede cambiar a toda la clínica con ?scope=clinic
   const supabase = createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -43,7 +44,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const me = profile?.id
   const cid = profile?.clinic_id
   const firstName = (profile?.full_name || 'Fisio').split(' ')[0]
-  const mineOnly = searchParams?.scope === 'mine'
+  const mineOnly = searchParams?.scope !== 'clinic'
 
   // ===== Pacientes (con relaciones) =====
   const { data: rawPatients } = await supabase
@@ -180,8 +181,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
           <p className="text-sm text-gray-500 mt-0.5">Panel de {scopeLabel.toLowerCase()} · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1">
-          <Link href="/dashboard" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Toda la clínica</Link>
-          <Link href="/dashboard?scope=mine" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Míos</Link>
+          <Link href="/dashboard" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Míos</Link>
+          <Link href="/dashboard?scope=clinic" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${!mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Toda la clínica</Link>
         </div>
       </div>
 
