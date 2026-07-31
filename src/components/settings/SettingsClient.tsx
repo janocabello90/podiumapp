@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
@@ -274,6 +274,8 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   const [resetShowPw, setResetShowPw] = useState(false)
   const [resetCopied, setResetCopied] = useState(false)
 
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   async function toggleActive(member: UserType) {
     const newStatus = !member.is_active
     const { error } = await supabase
@@ -286,6 +288,27 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
     } else {
       setMembers(prev => prev.map(m => m.id === member.id ? { ...m, is_active: newStatus } : m))
       toast.success(newStatus ? 'Usuario activado' : 'Usuario desactivado')
+    }
+  }
+
+  async function handleDelete(member: UserType) {
+    if (member.id === currentUserId) { toast.error('No puedes eliminarte a ti mismo'); return }
+    if (!confirm(`¿Eliminar a ${member.full_name}? Es irreversible. Si tiene datos clínicos asociados, no se podrá borrar (usa "Desactivar").`)) return
+    setDeletingId(member.id)
+    try {
+      const res = await fetch('/api/users/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: member.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar')
+      setMembers(prev => prev.filter(m => m.id !== member.id))
+      toast.success('Usuario eliminado')
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -591,6 +614,14 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
                     title={member.is_active ? 'Desactivar' : 'Activar'}
                   >
                     {member.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(member)}
+                    disabled={deletingId === member.id}
+                    className="p-2 rounded-lg transition-colors text-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    title="Eliminar usuario"
+                  >
+                    {deletingId === member.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                   </button>
                 </div>
               )}
