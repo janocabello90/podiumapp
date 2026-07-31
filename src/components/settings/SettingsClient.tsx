@@ -121,6 +121,13 @@ function ProfileSection({ currentUser, currentUserEmail, supabase }: { currentUs
   const [fullName, setFullName] = useState(currentUser.full_name)
   const [saving, setSaving] = useState(false)
 
+  // Cambio de contraseña
+  const [curPw, setCurPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [newPw2, setNewPw2] = useState('')
+  const [changing, setChanging] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+
   async function handleSave() {
     setSaving(true)
     const { error } = await supabase
@@ -136,49 +143,126 @@ function ProfileSection({ currentUser, currentUserEmail, supabase }: { currentUs
     setSaving(false)
   }
 
+  async function handleChangePassword() {
+    if (!curPw || !newPw || !newPw2) return toast.error('Rellena los tres campos')
+    if (newPw.length < 8) return toast.error('La nueva contraseña debe tener al menos 8 caracteres')
+    if (newPw !== newPw2) return toast.error('Las contraseñas nuevas no coinciden')
+    if (newPw === curPw) return toast.error('La nueva contraseña debe ser distinta de la actual')
+    setChanging(true)
+    try {
+      // Verificar la contraseña actual re-autenticando
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: currentUserEmail, password: curPw })
+      if (signInErr) throw new Error('La contraseña actual no es correcta')
+      // Cambiar a la nueva
+      const { error } = await supabase.auth.updateUser({ password: newPw })
+      if (error) throw new Error(error.message || 'No se pudo actualizar la contraseña')
+      toast.success('Contraseña actualizada')
+      setCurPw(''); setNewPw(''); setNewPw2('')
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setChanging(false)
+    }
+  }
+
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-5">
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-lg font-bold text-blue-700">
-            {fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
-          </span>
+    <div className="space-y-5">
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-5">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-lg font-bold text-blue-700">
+              {fullName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900">{fullName}</h3>
+            <p className="text-sm text-gray-500">{currentUser.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'}</p>
+          </div>
         </div>
+
         <div>
-          <h3 className="font-semibold text-gray-900">{fullName}</h3>
-          <p className="text-sm text-gray-500">{currentUser.role === 'admin' ? 'Administrador' : 'Fisioterapeuta'}</p>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre completo</label>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+          />
         </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+          <input
+            type="email"
+            value={currentUserEmail}
+            disabled
+            className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
+          />
+          <p className="text-xs text-gray-400 mt-1">El email no se puede cambiar desde aquí</p>
+        </div>
+
+        <button
+          onClick={handleSave}
+          disabled={saving || fullName === currentUser.full_name}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Guardar
+        </button>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre completo</label>
-        <input
-          type="text"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-        />
+      {/* Cambiar contraseña */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <KeyRound className="w-4 h-4 text-gray-500" />
+          <h3 className="font-semibold text-gray-900">Cambiar contraseña</h3>
+        </div>
+        <div className="space-y-3 max-w-md">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña actual</label>
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={curPw}
+              onChange={(e) => setCurPw(e.target.value)}
+              autoComplete="current-password"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nueva contraseña</label>
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={newPw}
+              onChange={(e) => setNewPw(e.target.value)}
+              autoComplete="new-password"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Repetir nueva contraseña</label>
+            <input
+              type={showPw ? 'text' : 'password'}
+              value={newPw2}
+              onChange={(e) => setNewPw2(e.target.value)}
+              autoComplete="new-password"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+            <input type="checkbox" checked={showPw} onChange={(e) => setShowPw(e.target.checked)} className="rounded border-gray-300" />
+            Mostrar contraseñas
+          </label>
+        </div>
+        <button
+          onClick={handleChangePassword}
+          disabled={changing}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+        >
+          {changing ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+          Cambiar contraseña
+        </button>
+        <p className="text-xs text-gray-400">Mínimo 8 caracteres. Se te pedirá tu contraseña actual para confirmar.</p>
       </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-        <input
-          type="email"
-          value={currentUserEmail}
-          disabled
-          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-gray-500"
-        />
-        <p className="text-xs text-gray-400 mt-1">El email no se puede cambiar desde aquí</p>
-      </div>
-
-      <button
-        onClick={handleSave}
-        disabled={saving || fullName === currentUser.full_name}
-        className="inline-flex items-center gap-1.5 px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
-      >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-        Guardar
-      </button>
     </div>
   )
 }
@@ -265,7 +349,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
   const [adding, setAdding] = useState(false)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [inviteEmailSent, setInviteEmailSent] = useState(false)
-  const [sendInviteEmail, setSendInviteEmail] = useState(true)
+  const [sendInviteEmail, setSendInviteEmail] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   // Reset password state
