@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2 } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2, X } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
@@ -622,36 +622,42 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
           </div>
         )}
 
-        {/* Reset password result banner */}
+        {/* Reset password result — modal */}
         {resetResult && (
-          <div className="px-4 sm:px-6 py-3 border-b border-gray-100 bg-amber-50">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1.5 flex-1">
-                <p className="text-sm font-medium text-amber-800">
-                  Nueva contraseña para {resetResult.name}
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setResetResult(null)}>
+            <div className="bg-white rounded-2xl w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <KeyRound className="w-5 h-5 text-amber-500" />
+                  <h3 className="text-base font-semibold text-gray-900">Nueva contraseña</h3>
+                </div>
+                <button onClick={() => setResetResult(null)} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5 text-gray-500" /></button>
+              </div>
+              <div className="p-5 space-y-3">
+                <p className="text-sm text-gray-600">
+                  Contraseña reseteada para <strong className="text-gray-900">{resetResult.name}</strong>. Cópiala y pásasela; el usuario podrá cambiarla luego en su perfil.
                 </p>
-                <div className="bg-white rounded-lg p-2.5 flex items-center justify-between gap-2">
-                  <div className="space-y-0.5 min-w-0">
-                    <p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{resetResult.email}</span></p>
-                    <p className="text-xs text-gray-500">Contraseña:
-                      <code className="ml-1 text-sm font-mono font-medium text-gray-900 bg-gray-50 px-1.5 py-0.5 rounded">
-                        {resetShowPw ? resetResult.password : '••••••••••'}
-                      </code>
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => setResetShowPw(!resetShowPw)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title={resetShowPw ? 'Ocultar' : 'Mostrar'}>
-                      {resetShowPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                    <button onClick={copyResetPassword} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title="Copiar">
-                      {resetCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    </button>
+                <div className="bg-gray-50 rounded-xl p-3.5 space-y-2 border border-gray-100">
+                  <p className="text-xs text-gray-500">Email: <span className="font-medium text-gray-700">{resetResult.email}</span></p>
+                  <div className="flex items-center justify-between gap-2">
+                    <code className="text-lg font-mono font-semibold text-gray-900 tracking-wide">{resetShowPw ? resetResult.password : '••••••••••'}</code>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => setResetShowPw(!resetShowPw)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title={resetShowPw ? 'Ocultar' : 'Mostrar'}>
+                        {resetShowPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                      <button onClick={copyResetPassword} className="p-1.5 text-gray-400 hover:text-gray-600 rounded" title="Copiar">
+                        {resetCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-              <button onClick={() => setResetResult(null)} className="text-amber-400 hover:text-amber-600 text-xs mt-0.5">
-                Cerrar
-              </button>
+              <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
+                <button onClick={copyResetPassword} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg">
+                  {resetCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />} Copiar
+                </button>
+                <button onClick={() => setResetResult(null)} className="px-4 py-2 bg-clinical-primary hover:bg-clinical-navy text-white text-sm font-medium rounded-lg">Hecho</button>
+              </div>
             </div>
           </div>
         )}
