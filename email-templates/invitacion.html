@@ -1,0 +1,55 @@
+<!--
+  Plantilla de email — Invitación de usuario (SHERPA)
+  Dónde pegarla: Supabase Dashboard → Authentication → Emails → Templates → "Invite user"
+  Variables GoTrue disponibles: {{ .ConfirmationURL }} {{ .SiteURL }} {{ .Email }}
+  (El asunto se pone en el campo "Subject": p. ej. "Te han invitado a SHERPA")
+  Nota: el logo se sirve desde el deploy (público). Si cambias de dominio, actualiza la URL.
+-->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf8ff;padding:32px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <tr>
+    <td align="center">
+      <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#ffffff;border:1px solid #e1e2eb;border-radius:16px;overflow:hidden;">
+        <!-- Cabecera con logo -->
+        <tr>
+          <td align="center" style="padding:32px 32px 8px;">
+            <img src="https://podiumapp-two.vercel.app/brand/logoPrincipal.png" alt="SHERPA" width="200" style="display:block;width:200px;max-width:60%;height:auto;margin:0 auto;" />
+          </td>
+        </tr>
+        <!-- Cuerpo -->
+        <tr>
+          <td style="padding:8px 36px 4px;">
+            <h1 style="margin:16px 0 6px;font-size:20px;font-weight:700;color:#17324a;text-align:center;">Te han invitado a SHERPA</h1>
+            <p style="margin:0 0 20px;font-size:15px;line-height:1.6;color:#434653;text-align:center;">
+              Se ha creado una cuenta para ti en la plataforma clínica de <strong>Clínica Podium</strong>.
+              Pulsa el botón para aceptar la invitación y establecer tu contraseña.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td align="center" style="padding:6px 0 22px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#2d6f73;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:13px 30px;border-radius:12px;">
+                    Aceptar invitación
+                  </a>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:0 0 4px;font-size:12px;line-height:1.5;color:#8a8f9c;text-align:center;">
+              Si el botón no funciona, copia y pega este enlace en tu navegador:
+            </p>
+            <p style="margin:0 0 8px;font-size:12px;line-height:1.5;color:#2d6f73;text-align:center;word-break:break-all;">
+              {{ .ConfirmationURL }}
+            </p>
+          </td>
+        </tr>
+        <!-- Pie -->
+        <tr>
+          <td style="padding:16px 36px 28px;border-top:1px solid #eef2f4;">
+            <p style="margin:0;font-size:11px;line-height:1.5;color:#a0a6b0;text-align:center;">
+              SHERPA · Systematic Health Evaluation Roadmap Patient Assistant<br>
+              Si no esperabas este correo, puedes ignorarlo.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
