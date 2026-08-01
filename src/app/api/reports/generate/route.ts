@@ -157,9 +157,12 @@ export async function POST(request: NextRequest) {
 
     if (clinicalData && Object.keys(clinicalData).length > 0) {
       const assessmentEntries = Object.entries(clinicalData)
+        .filter(([key]) => !key.startsWith('_')) // descartar meta (_regions, _region)
         .map(([key, value]) => `  ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
         .join('\n')
-      patientContext += `\n\nDATOS DE LA EXPLORACIÓN FÍSICA / VALORACIÓN:\n${assessmentEntries}`
+      if (assessmentEntries) {
+        patientContext += `\n\nDATOS DE LA EXPLORACIÓN FÍSICA / VALORACIÓN:\n${assessmentEntries}`
+      }
     }
 
     // Anotaciones generales del fisioterapeuta (sessions.notes) — se incluyen SIEMPRE que

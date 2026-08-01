@@ -9,12 +9,15 @@ import toast from 'react-hot-toast'
 import {
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Check,
   Loader2,
   MessageSquare,
   Mic,
   CheckCircle2,
   Save,
+  Plus,
+  Trash2,
 } from 'lucide-react'
 
 interface Props {
@@ -28,6 +31,25 @@ interface Props {
   dataColumn?: string
 }
 
+const REGION_IDS = BODY_REGIONS.map((r) => r.id)
+
+// Deriva las regiones ya presentes en una valoración. Prioriza `_regions` (nuevo, multi-región);
+// si no, cae a `_region` (dato antiguo de una sola región) y a inferirlas de las claves guardadas
+// (formato `${regionId}_${sectionId}_...`). Así los datos previos siguen apareciendo.
+function inferInitialRegions(data: Record<string, any>): string[] {
+  if (Array.isArray(data._regions) && data._regions.length) {
+    return data._regions.filter((id: string) => REGION_IDS.includes(id))
+  }
+  const set = new Set<string>()
+  if (typeof data._region === 'string' && data._region) set.add(data._region)
+  for (const key of Object.keys(data)) {
+    if (key.startsWith('_')) continue
+    const r = BODY_REGIONS.find((reg) => key.startsWith(reg.id + '_'))
+    if (r) set.add(r.id)
+  }
+  return Array.from(set)
+}
+
 export default function AssessmentForm({
   assessmentId,
   patientId,
@@ -36,8 +58,10 @@ export default function AssessmentForm({
   table = 'assessments',
   dataColumn = 'assessment_data',
 }: Props) {
-  const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>(initialData)
+  const [activeRegions, setActiveRegions] = useState<string[]>(() => inferInitialRegions(initialData))
+  const [selectedRegion, setSelectedRegion] = useState<string | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState(initialStatus)
@@ -67,9 +91,15 @@ export default function AssessmentForm({
     saveTimeout.current = setTimeout(() => saveToSupabase(data), 1500)
   }
 
+  // Guardado inmediato (cambios estructurales: añadir/quitar región)
+  function saveNow(data: Record<string, any>) {
+    if (saveTimeout.current) clearTimeout(saveTimeout.current)
+    saveToSupabase(data)
+  }
+
   function updateField(sectionId: string, key: string, value: any) {
     const fullKey = `${selectedRegion}_${sectionId}_${key}`
-    const updated = { ...formData, [fullKey]: value, _region: selectedRegion }
+    const updated = { ...formData, [fullKey]: value }
     setFormData(updated)
     debouncedSave(updated)
   }
@@ -97,6 +127,56 @@ export default function AssessmentForm({
     })
   }
 
+  function openRegion(id: string) {
+    setSelectedRegion(id)
+    const reg = getRegionById(id)
+    if (reg && reg.sections.length > 0) setExpandedSections(new Set([reg.sections[0].id]))
+  }
+
+  function addRegion(id: string) {
+    const nextRegions = activeRegions.includes(id) ? activeRegions : [...activeRegions, id]
+    const updated = { ...formData, _regions: nextRegions }
+    setActiveRegions(nextRegions)
+    setFormData(updated)
+    saveNow(updated)
+    setPickerOpen(false)
+    openRegion(id)
+  }
+
+  function removeRegion(id: string) {
+    if (typeof window !== 'undefined' && !window.confirm('¿Quitar esta región y sus datos de la exploración?')) return
+    const nextRegions = activeRegions.filter((r) => r !== id)
+    const updated: Record<string, any> = { _regions: nextRegions }
+    for (const [k, v] of Object.entries(formData)) {
+      if (k === '_regions' || k === '_region') continue
+      if (k.startsWith(id + '_')) continue // descartar los datos de esta región
+      updated[k] = v
+    }
+    setActiveRegions(nextRegions)
+    setFormData(updated)
+    saveNow(updated)
+    if (selectedRegion === id) setSelectedRegion(null)
+  }
+
+  function regionProgress(id: string) {
+    const reg = getRegionById(id)
+    if (!reg) return { filled: 0, total: 0 }
+    let filled = 0
+    let total = 0
+    for (const s of reg.sections) {
+      for (const f of s.fields) {
+        total++
+        const val = formData[`${id}_${s.id}_${f.key}`]
+        if (val !== undefined && val !== '' && val !== null && !(Array.isArray(val) && val.length === 0)) filled++
+      }
+      for (const t of s.tests || []) {
+        total++
+        if (formData[`${id}_${s.id}_test_${t.key}`] !== undefined) filled++
+      }
+    }
+    return { filled, total }
+  }
+
   async function completeAssessment() {
     setSaving(true)
     try {
@@ -122,55 +202,111 @@ export default function AssessmentForm({
     }
   }
 
-  // Region selection screen
+  // ===== Pantalla de resumen (varias regiones) / selección =====
   if (!selectedRegion) {
+    const remaining = BODY_REGIONS.filter((r) => !activeRegions.includes(r.id))
+    const showPicker = pickerOpen || activeRegions.length === 0
+
     return (
-      <div className="space-y-6">
-        {/* Saved region indicator */}
-        {formData._region && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p className="text-sm text-blue-700">
-              Tienes una valoración en curso de <strong>{BODY_REGIONS.find(r => r.id === formData._region)?.label}</strong>.
-            </p>
-            <button
-              onClick={() => setSelectedRegion(formData._region)}
-              className="mt-2 text-sm font-medium text-blue-600 hover:text-blue-800"
-            >
-              Continuar valoración →
-            </button>
+      <div className="space-y-4">
+        {/* Regiones ya añadidas */}
+        {activeRegions.length > 0 && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-base font-semibold text-gray-900">Regiones a valorar</h2>
+              {status === 'completed' ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
+                  <Check className="w-3 h-3" /> Completada
+                </span>
+              ) : (
+                <button
+                  onClick={completeAssessment}
+                  disabled={saving}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Completar valoración
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {activeRegions.map((id) => {
+                const reg = getRegionById(id)
+                if (!reg) return null
+                const { filled, total } = regionProgress(id)
+                return (
+                  <div key={id} className="flex items-center gap-2 p-3 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors">
+                    <button onClick={() => openRegion(id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                      <span className="text-2xl">{reg.icon}</span>
+                      <span className="min-w-0">
+                        <span className="block font-medium text-gray-900 truncate">{reg.label}</span>
+                        <span className="block text-xs text-gray-400 tabular-nums">{filled}/{total} campos</span>
+                      </span>
+                    </button>
+                    {status !== 'completed' && (
+                      <button onClick={() => removeRegion(id)} title="Quitar región" className="p-1.5 text-gray-300 hover:text-red-500 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={() => openRegion(id)} title="Abrir" className="p-1.5 text-gray-300 hover:text-blue-500 rounded-lg transition-colors">
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            {!showPicker && remaining.length > 0 && status !== 'completed' && (
+              <button
+                onClick={() => setPickerOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 border border-dashed border-gray-300 text-gray-600 hover:border-blue-300 hover:text-blue-600 text-sm font-medium rounded-xl transition-colors"
+              >
+                <Plus className="w-4 h-4" /> Añadir otra región
+              </button>
+            )}
           </div>
         )}
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Selecciona la región a valorar</h2>
-          <p className="text-sm text-gray-500 mb-6">Elige la estructura corporal del paciente</p>
+        {/* Selector de región */}
+        {showPicker && (
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">
+              {activeRegions.length > 0 ? 'Añadir región' : 'Selecciona la región a valorar'}
+            </h2>
+            <p className="text-sm text-gray-500 mb-6">Elige la estructura corporal del paciente. Puedes valorar varias zonas.</p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {BODY_REGIONS.map((r) => (
-              <button
-                key={r.id}
-                onClick={() => {
-                  setSelectedRegion(r.id)
-                  // Auto-expand first section
-                  if (r.sections.length > 0) {
-                    setExpandedSections(new Set([r.sections[0].id]))
-                  }
-                }}
-                className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
-              >
-                <span className="text-2xl">{r.icon}</span>
-                <span className="font-medium text-gray-900">{r.label}</span>
+            {remaining.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {remaining.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => addRegion(r.id)}
+                    className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                  >
+                    <span className="text-2xl">{r.icon}</span>
+                    <span className="font-medium text-gray-900">{r.label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Ya has añadido todas las regiones disponibles.</p>
+            )}
+
+            {activeRegions.length > 0 && (
+              <button onClick={() => setPickerOpen(false)} className="mt-4 text-sm text-gray-500 hover:text-gray-700">
+                Cancelar
               </button>
-            ))}
+            )}
           </div>
-        </div>
+        )}
       </div>
     )
   }
 
   if (!region) return null
 
-  // Assessment form
+  // ===== Editor de una región =====
   return (
     <div className="space-y-4">
       {/* Region header */}
@@ -180,7 +316,7 @@ export default function AssessmentForm({
             onClick={() => setSelectedRegion(null)}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
-            ← Cambiar región
+            ← Volver a regiones
           </button>
           <span className="text-2xl">{region.icon}</span>
           <h2 className="text-lg font-semibold text-gray-900">{region.label}</h2>
@@ -191,16 +327,6 @@ export default function AssessmentForm({
             </span>
           )}
         </div>
-        {status !== 'completed' && (
-          <button
-            onClick={completeAssessment}
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Completar valoración
-          </button>
-        )}
         {status === 'completed' && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
             <Check className="w-3 h-3" />
@@ -224,19 +350,16 @@ export default function AssessmentForm({
         />
       ))}
 
-      {/* Complete button at bottom */}
-      {status !== 'completed' && (
-        <div className="flex justify-end pt-4">
-          <button
-            onClick={completeAssessment}
-            disabled={saving}
-            className="inline-flex items-center gap-1.5 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-colors disabled:opacity-50"
-          >
-            <CheckCircle2 className="w-5 h-5" />
-            Completar valoración
-          </button>
-        </div>
-      )}
+      {/* Volver al resumen (los datos se autoguardan) */}
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={() => setSelectedRegion(null)}
+          className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
+        >
+          <Check className="w-4 h-4" />
+          Hecho — volver a regiones
+        </button>
+      </div>
     </div>
   )
 }
