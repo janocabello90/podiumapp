@@ -162,18 +162,20 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </section>
 
-      {/* Imágenes clínicas de la sesión */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Ecografías / fotografías</h2>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
-          <ImageGallerySection
-            patientId={params.id}
-            clinicId={profile.clinic_id}
-            sessionId={session.id}
-            initialImages={imageDocs}
-          />
-        </div>
-      </section>
+      {/* Imágenes clínicas de la sesión — solo pacientes individuales */}
+      {!isTeamPatient && (
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Ecografías / fotografías</h2>
+          <div className="bg-white rounded-2xl border border-gray-200 p-4">
+            <ImageGallerySection
+              patientId={params.id}
+              clinicId={profile.clinic_id}
+              sessionId={session.id}
+              initialImages={imageDocs}
+            />
+          </div>
+        </section>
+      )}
 
       {/* Anotaciones generales del fisioterapeuta (ambos tipos) */}
       <section>
