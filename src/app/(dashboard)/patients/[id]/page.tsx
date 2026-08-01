@@ -8,6 +8,7 @@ import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
 import { consentLabel } from '@/lib/clinical/consents'
 import { isAnamnesisExpired } from '@/lib/clinical/anamnesis'
+import { getAnamnesisTemplateBlocks } from '@/lib/anamnesis/template'
 import StartSessionButton from '@/components/sessions/StartSessionButton'
 import DeleteSessionButton from '@/components/sessions/DeleteSessionButton'
 
@@ -88,6 +89,8 @@ export default async function PatientDetailPage({
   // Paciente sin equipo → ficha clásica de 5 pasos (intacta).
   const isTeamPatient = !!(patient as any).team_id
   const team = (patient as any).teams as any
+  // Plantilla de anamnesis según el tipo de paciente (para etiquetar el visor de respuestas)
+  const anamnesisBlocks = await getAnamnesisTemplateBlocks(supabase, patient.clinic_id, isTeamPatient ? 'team' : 'individual')
   const backHref = isTeamPatient && team ? `/teams/${team.id}` : '/patients'
   // Deporte efectivo: override del paciente → deporte del equipo.
   const patientSportId = (patient as any).sport_id ?? null
@@ -238,7 +241,7 @@ export default async function PatientDetailPage({
             ) : latestAnamnesis?.status !== 'completed' && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-1">Cada paciente debe tener su anamnesis rellena. Envíasela para que la complete (recomendado antes de valorar).</p>
             )}
-            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} expired={anamnesisExpired} />
+            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} expired={anamnesisExpired} blocks={anamnesisBlocks} />
           </div>
 
           {/* Historial de consultas (timeline) — común a equipo e individual */}

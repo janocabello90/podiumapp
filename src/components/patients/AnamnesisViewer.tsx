@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { X, ChevronDown, ChevronUp, Check, Pencil, Save, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react'
-import { ANAMNESIS_BLOCKS } from '@/components/anamnesis/anamnesisFields'
+import { ANAMNESIS_BLOCKS, type AnamnesisBlock } from '@/components/anamnesis/anamnesisFields'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 
@@ -11,6 +11,8 @@ interface Props {
   patientName: string
   completedAt: string | null
   anamnesisId: string
+  // Plantilla usada (según tipo de paciente). Si no llega, la del código.
+  blocks?: AnamnesisBlock[]
 }
 
 function formatValue(value: any): string {
@@ -22,7 +24,8 @@ function formatValue(value: any): string {
   return String(value)
 }
 
-export default function AnamnesisViewer({ formData: initialFormData, patientName, completedAt, anamnesisId }: Props) {
+export default function AnamnesisViewer({ formData: initialFormData, patientName, completedAt, anamnesisId, blocks }: Props) {
+  const BLOCKS = blocks && blocks.length ? blocks : ANAMNESIS_BLOCKS
   const [isOpen, setIsOpen] = useState(false)
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set(['consultation']))
   const [formData, setFormData] = useState<Record<string, any>>(initialFormData)
@@ -31,7 +34,7 @@ export default function AnamnesisViewer({ formData: initialFormData, patientName
   const [blockNotes, setBlockNotes] = useState<Record<string, string>>(() => {
     // Load existing notes from formData
     const notes: Record<string, string> = {}
-    ANAMNESIS_BLOCKS.forEach(block => {
+    BLOCKS.forEach(block => {
       const key = `_notes_${block.id}`
       if (formData[key]) notes[block.id] = formData[key]
     })
@@ -126,10 +129,10 @@ export default function AnamnesisViewer({ formData: initialFormData, patientName
   }
 
   // Count verified fields
-  const totalAnswered = ANAMNESIS_BLOCKS.reduce((acc, block) => {
+  const totalAnswered = BLOCKS.reduce((acc, block) => {
     return acc + block.fields.filter(f => formData[f.key] !== undefined && formData[f.key] !== '' && formData[f.key] !== null).length
   }, 0)
-  const totalVerified = ANAMNESIS_BLOCKS.reduce((acc, block) => {
+  const totalVerified = BLOCKS.reduce((acc, block) => {
     return acc + block.fields.filter(f => formData[`_verified_${f.key}`]).length
   }, 0)
 
@@ -181,7 +184,7 @@ export default function AnamnesisViewer({ formData: initialFormData, patientName
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
-          {ANAMNESIS_BLOCKS.map((block) => {
+          {BLOCKS.map((block) => {
             const isExpanded = expandedBlocks.has(block.id)
             const answeredFields = block.fields.filter(
               (f) => formData[f.key] !== undefined && formData[f.key] !== '' && formData[f.key] !== null

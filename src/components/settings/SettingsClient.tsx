@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2, X } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2, X, ClipboardEdit } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
 
-type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'consents' | 'report'
+type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'anamnesis' | 'consents' | 'report'
 
 interface Props {
   currentUser: UserType
@@ -27,6 +27,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
     { id: 'clinic' as Tab, label: 'Clínica', icon: Building2, adminOnly: true },
     { id: 'team' as Tab, label: 'Personal', icon: Users, adminOnly: true },
     { id: 'catalog' as Tab, label: 'Deportes y pruebas', icon: Dumbbell, adminOnly: true },
+    { id: 'anamnesis' as Tab, label: 'Anamnesis', icon: ClipboardEdit, adminOnly: true },
     { id: 'consents' as Tab, label: 'Consentimientos', icon: ShieldCheck, adminOnly: true },
     { id: 'report' as Tab, label: 'Informe', icon: FileText, adminOnly: true },
   ].filter(tab => !tab.adminOnly || isAdmin)
@@ -96,6 +97,18 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
             <ChevronRight className="w-4 h-4 text-gray-300" />
           </Link>
         </div>
+      )}
+      {activeTab === 'anamnesis' && (
+        <Link href="/settings/anamnesis" className="bg-white rounded-2xl border border-gray-200 p-5 hover:bg-gray-50 transition-colors flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <ClipboardEdit className="w-5 h-5 text-blue-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Formularios de anamnesis</p>
+            <p className="text-xs text-gray-500">Edita las preguntas de la anamnesis · individuales y equipos</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300" />
+        </Link>
       )}
       {activeTab === 'consents' && (
         <Link href="/settings/consents" className="bg-white rounded-2xl border border-gray-200 p-5 hover:bg-gray-50 transition-colors flex items-center gap-3">

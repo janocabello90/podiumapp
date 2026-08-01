@@ -1,4 +1,6 @@
 import { createAdminSupabaseClient } from '@/lib/supabase/admin'
+import { getAnamnesisTemplateBlocks } from '@/lib/anamnesis/template'
+import type { AnamnesisBlock } from '@/components/anamnesis/anamnesisFields'
 
 // Lectura pública de una anamnesis por token, SIN depender de RLS.
 // El paciente no tiene sesión; su única credencial es el token (UUID).
@@ -21,6 +23,7 @@ export type PublicAnamnesis = {
   consent_ai_analysis: boolean
   patientName: string
   consentTexts: ConsentTexts
+  blocks: AnamnesisBlock[]
 }
 
 export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesis | null> {
@@ -33,7 +36,7 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
 
   const { data, error } = await admin
     .from('anamnesis_forms')
-    .select('id, status, expires_at, form_data, consent_data_processing, consent_ai_analysis, clinic_id, patients(full_name)')
+    .select('id, status, expires_at, form_data, consent_data_processing, consent_ai_analysis, clinic_id, patients(full_name, team_id)')
     .eq('token', token)
     .single()
 
@@ -54,6 +57,12 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
     }
   }
 
+  // Plantilla según el tipo de paciente: con equipo → 'team'; suelto → 'individual'.
+  const audience = (data.patients as any)?.team_id ? 'team' : 'individual'
+  const blocks = data.clinic_id
+    ? await getAnamnesisTemplateBlocks(admin, data.clinic_id, audience)
+    : []
+
   return {
     id: data.id,
     status: data.status,
@@ -63,5 +72,6 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
     consent_ai_analysis: !!data.consent_ai_analysis,
     patientName: (data.patients as any)?.full_name || '',
     consentTexts,
+    blocks,
   }
 }

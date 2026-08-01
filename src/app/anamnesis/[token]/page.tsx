@@ -63,6 +63,7 @@ export default async function AnamnesisPage({
         ai: anamnesis.consent_ai_analysis,
       }}
       consentTexts={anamnesis.consentTexts}
+      blocks={anamnesis.blocks}
     />
   )
 }

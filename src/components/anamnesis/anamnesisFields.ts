@@ -4,15 +4,23 @@
 // 6 bloques · 30 preguntas · <5 min para el paciente
 // ============================================
 
+// Tipos de campo soportados por el formulario de anamnesis.
+export const ANAMNESIS_FIELD_TYPES = ['text', 'textarea', 'email', 'tel', 'number', 'select', 'multiselect', 'scale', 'boolean', 'date'] as const
+export type AnamnesisFieldType = (typeof ANAMNESIS_FIELD_TYPES)[number]
+
+// Condición serializable (para poder guardarla en JSON en las plantillas editables).
+// El campo se muestra si la respuesta de `field` cumple `in`/`notIn`.
+export type AnamnesisCondition = { field: string; in?: string[]; notIn?: string[] }
+
 export interface AnamnesisField {
   key: string
   label: string
-  type: 'text' | 'textarea' | 'email' | 'tel' | 'number' | 'select' | 'multiselect' | 'scale' | 'boolean' | 'date'
+  type: AnamnesisFieldType
   placeholder?: string
   description?: string
   options?: string[]
   required?: boolean
-  condition?: (data: Record<string, any>) => boolean
+  condition?: AnamnesisCondition
   scaleLabels?: { min: string; max: string }
 }
 
@@ -23,6 +31,18 @@ export interface AnamnesisBlock {
   icon?: string
   fields: AnamnesisField[]
   internalNotes?: string[]
+}
+
+// ¿El campo es visible dada la respuesta actual? Evalúa la condición serializable.
+// Soporta respuestas escalares y de opción múltiple (arrays).
+export function isFieldVisible(field: AnamnesisField, data: Record<string, any>): boolean {
+  const c = field.condition
+  if (!c) return true
+  const raw = data?.[c.field]
+  const vals: any[] = Array.isArray(raw) ? raw : raw == null || raw === '' ? [] : [raw]
+  if (c.in && !c.in.some((x) => vals.includes(x))) return false
+  if (c.notIn && c.notIn.some((x) => vals.includes(x))) return false
+  return true
 }
 
 export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
@@ -78,7 +98,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
         label: 'Si sí, ¿cuál y con qué frecuencia?',
         type: 'text',
         placeholder: 'Ej: Pádel 2 veces/semana, gym 3 días...',
-        condition: (data) => data.physical_activity === 'Sí, con regularidad' || data.physical_activity === 'Ocasionalmente',
+        condition: { field: 'physical_activity', in: ['Sí, con regularidad', 'Ocasionalmente'] },
       },
     ],
   },
@@ -121,7 +141,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
         key: 'onset_detail',
         label: 'Describe brevemente qué ocurrió',
         type: 'textarea',
-        condition: (data) => data.onset === 'De repente (golpe / accidente)',
+        condition: { field: 'onset', in: ['De repente (golpe / accidente)'] },
       },
       {
         key: 'pain_location',
@@ -141,7 +161,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
         label: '¿Hacia dónde se irradia?',
         type: 'text',
         placeholder: "P. ej. 'baja por la pierna hasta el pie'",
-        condition: (data) => data.pain_radiation === 'Se extiende (irradia) hacia otra zona',
+        condition: { field: 'pain_radiation', in: ['Se extiende (irradia) hacia otra zona'] },
       },
       {
         key: 'pain_sensation',
@@ -215,7 +235,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
         label: '¿Mejora al cambiar de postura o al levantarte?',
         type: 'select',
         options: ['Sí, mejora al moverme / levantarme', 'No, sigue igual independientemente'],
-        condition: (data) => data.night_pain === 'Sí, frecuentemente' || data.night_pain === 'A veces',
+        condition: { field: 'night_pain', in: ['Sí, frecuentemente', 'A veces'] },
       },
       {
         key: 'morning_stiffness',
@@ -317,7 +337,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
           'Reposo',
           'Nada todavía',
         ],
-        condition: (data) => data.previous_treatment_status !== 'No, es la primera vez',
+        condition: { field: 'previous_treatment_status', notIn: ['No, es la primera vez'] },
       },
       {
         key: 'imaging_tests',
@@ -330,7 +350,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
         label: 'Indica los hallazgos',
         type: 'textarea',
         placeholder: 'Ej: Hernia discal L5-S1, rotura parcial del supraespinoso...',
-        condition: (data) => data.imaging_tests === 'Sí, con hallazgos',
+        condition: { field: 'imaging_tests', in: ['Sí, con hallazgos'] },
       },
     ],
   },
@@ -399,7 +419,7 @@ export const ANAMNESIS_BLOCKS: AnamnesisBlock[] = [
         key: 'barriers_other',
         label: 'Especifica',
         type: 'text',
-        condition: (data) => data.barriers?.includes('Otro'),
+        condition: { field: 'barriers', in: ['Otro'] },
       },
     ],
   },

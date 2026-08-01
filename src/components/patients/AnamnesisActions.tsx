@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Send, Copy, Check, ExternalLink, RefreshCw, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { AnamnesisForm } from '@/types/database'
+import type { AnamnesisBlock } from '@/components/anamnesis/anamnesisFields'
 import AnamnesisViewer from './AnamnesisViewer'
 
 interface Props {
@@ -15,9 +16,11 @@ interface Props {
   currentAnamnesis: AnamnesisForm | null | undefined
   /** El enlace actual está caducado (calculado por fecha en el servidor). */
   expired?: boolean
+  /** Plantilla usada (según tipo de paciente) para etiquetar respuestas en el visor. */
+  blocks?: AnamnesisBlock[]
 }
 
-export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis, expired = false }: Props) {
+export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis, expired = false, blocks }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -89,6 +92,7 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
           patientName={patientName}
           completedAt={currentAnamnesis.completed_at}
           anamnesisId={currentAnamnesis.id}
+          blocks={blocks}
         />
       </div>
     )

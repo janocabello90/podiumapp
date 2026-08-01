@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronRight, ChevronLeft, Check, Mic, MicOff, Loader2 } from 'lucide-react'
-import { ANAMNESIS_BLOCKS, type AnamnesisField } from './anamnesisFields'
+import { ANAMNESIS_BLOCKS, isFieldVisible, type AnamnesisField, type AnamnesisBlock } from './anamnesisFields'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -12,9 +12,12 @@ interface Props {
   existingData: Record<string, any>
   existingConsents?: { dataProcessing: boolean; ai: boolean }
   consentTexts?: { data_processing?: string | null; info_treatment?: string | null; ai_analysis?: string | null }
+  // Plantilla (según el tipo de paciente). Si no llega, se usa la del código.
+  blocks?: AnamnesisBlock[]
 }
 
-export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts }: Props) {
+export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts, blocks }: Props) {
+  const BLOCKS = blocks && blocks.length ? blocks : ANAMNESIS_BLOCKS
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>(existingData)
   const [saving, setSaving] = useState(false)
@@ -29,12 +32,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   const [consentAI, setConsentAI] = useState(existingConsents?.ai ?? false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  const totalBlocks = ANAMNESIS_BLOCKS.length
-  const block = ANAMNESIS_BLOCKS[currentBlock]
-  const fields = block?.fields.filter((f) => {
-    if (!f.condition) return true
-    return f.condition(formData)
-  }) || []
+  const totalBlocks = BLOCKS.length
+  const block = BLOCKS[currentBlock]
+  const fields = block?.fields.filter((f) => isFieldVisible(f, formData)) || []
 
   const progressPercent = Math.round(((currentBlock) / totalBlocks) * 100)
 
