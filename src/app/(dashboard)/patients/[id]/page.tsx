@@ -1,10 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Send, FileText, Upload, Mic, Check, Camera, Shield, Megaphone } from 'lucide-react'
+import { ArrowLeft, FileText, Shield, Megaphone } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
-import DocumentSection from '@/components/documents/DocumentSection'
-import ImageGallerySection from '@/components/documents/ImageGallerySection'
 import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
@@ -76,13 +74,6 @@ export default async function PatientDetailPage({
   const allSessions = ((patient.sessions as any[]) || []).sort(
     (a: any, b: any) => (b.session_number || 0) - (a.session_number || 0)
   )
-  const latestSession = allSessions[0]
-  const allDocuments = patient.documents || []
-  const patientDocuments = allDocuments.filter((d: any) => d.doc_type !== 'medical_image')
-  const patientImages = allDocuments.filter((d: any) => d.doc_type === 'medical_image')
-  const hasDocuments = patientDocuments.length > 0
-  const hasImages = patientImages.length > 0
-  const latestReport = patient.reports?.[0]
   // Informe por sesión (para el historial de consultas)
   const reportBySession = new Map<string, any>()
   for (const r of (patient.reports || []) as any[]) {
@@ -228,32 +219,29 @@ export default async function PatientDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Main content - left column */}
         <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-          {/* Anamnesis (pacientes de equipo — obligatoria, aviso no bloqueante) */}
-          {isTeamPatient && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Anamnesis</h2>
-                {latestAnamnesis?.status === 'completed' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Completada</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pendiente</span>
-                )}
-              </div>
-              {latestAnamnesis?.status !== 'completed' && (
-                <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-1">Cada paciente debe tener su anamnesis rellena. Envíasela para que la complete (recomendado antes de valorar).</p>
+          {/* Anamnesis — obligatoria (aviso no bloqueante). Hub común a equipo e individual. */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Anamnesis</h2>
+              {latestAnamnesis?.status === 'completed' ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Completada</span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pendiente</span>
               )}
-              <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} />
             </div>
-          )}
+            {latestAnamnesis?.status !== 'completed' && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-1">Cada paciente debe tener su anamnesis rellena. Envíasela para que la complete (recomendado antes de valorar).</p>
+            )}
+            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} />
+          </div>
 
-          {/* Historial de consultas (timeline) */}
-          {(isTeamPatient || allSessions.length > 0) && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Historial de consultas</h2>
-                {!isTeamPatient && <StartSessionButton patientId={patient.id} label="Nueva consulta" />}
-              </div>
-              {isTeamPatient ? (
+          {/* Historial de consultas (timeline) — común a equipo e individual */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Historial de consultas</h2>
+              {!isTeamPatient && <StartSessionButton patientId={patient.id} label="Nueva consulta" />}
+            </div>
+            {isTeamPatient ? (
                 <div className="space-y-6">
                   {campaignGroups.map((g) => (
                     <div key={g.id}>
@@ -279,194 +267,11 @@ export default async function PatientDetailPage({
                   </div>
                 </div>
               ) : (
-                renderTimeline(allSessions)
+                allSessions.length > 0 ? renderTimeline(allSessions) : (
+                  <p className="text-sm text-gray-400">Aún no hay consultas. Crea la primera con «Nueva consulta».</p>
+                )
               )}
             </div>
-          )}
-
-          {/* Proceso del paciente (solo pacientes SIN equipo) */}
-          {!isTeamPatient && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Proceso del paciente</h2>
-
-            <div className="space-y-3 sm:space-y-4">
-              {/* Step 1: Anamnesis */}
-              <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  latestAnamnesis?.status === 'completed'
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-blue-100 text-blue-600'
-                }`}>
-                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">1. Anamnesis</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {latestAnamnesis?.status === 'completed'
-                      ? 'Completada por el paciente'
-                      : latestAnamnesis?.status === 'pending' || latestAnamnesis?.status === 'in_progress'
-                      ? 'Enlace enviado, esperando respuesta — pulsa Actualizar para comprobar'
-                      : 'Envía el formulario al paciente'}
-                  </p>
-                  <AnamnesisActions
-                    patientId={patient.id}
-                    clinicId={patient.clinic_id}
-                    patientName={patient.full_name}
-                    currentAnamnesis={latestAnamnesis}
-                  />
-                </div>
-              </div>
-
-              {/* Step 2: Assessment */}
-              <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  latestSession?.status === 'completed'
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-blue-100 text-blue-600'
-                }`}>
-                  <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">2. Valoración del fisio</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {latestSession?.status === 'completed'
-                      ? 'Última valoración completada'
-                      : latestSession
-                      ? 'Valoración en curso'
-                      : 'Exploración física + pruebas + dictado por voz'}
-                  </p>
-                  <div className="mt-2 sm:mt-3 flex items-center gap-2 flex-wrap">
-                    {latestSession ? (
-                      <>
-                        <Link
-                          href={`/patients/${patient.id}/sessions/${latestSession.id}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-                        >
-                          <Mic className="w-3 h-3" />
-                          {latestSession.status === 'completed' ? 'Ver / editar' : 'Continuar'}
-                        </Link>
-                        <StartSessionButton patientId={patient.id} label="Nueva valoración" />
-                      </>
-                    ) : (
-                      <StartSessionButton patientId={patient.id} label="Iniciar valoración" />
-                    )}
-                  </div>
-                  {allSessions.length > 1 && (
-                    <p className="text-[11px] text-gray-400 mt-1.5">{allSessions.length} sesiones</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Step 3: VALD */}
-              <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  hasDocuments
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-blue-100 text-blue-600'
-                }`}>
-                  <Upload className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">3. Informes VALD</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {hasDocuments
-                      ? `${patientDocuments.length} informe${patientDocuments.length > 1 ? 's' : ''} subido${patientDocuments.length > 1 ? 's' : ''}`
-                      : 'Sube los PDF de valoración funcional'}
-                  </p>
-                  <div className="mt-2 sm:mt-3">
-                    <DocumentSection
-                      patientId={patient.id}
-                      clinicId={patient.clinic_id}
-                      initialDocuments={patientDocuments}
-                      initialInterpretation={patient.vald_interpretation || ''}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 4: Images (Ultrasound / Photos) */}
-              <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  hasImages
-                    ? 'bg-green-100 text-green-600'
-                    : 'bg-purple-100 text-purple-600'
-                }`}>
-                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">4. Ecografías y fotografías</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {hasImages
-                      ? `${patientImages.length} imagen${patientImages.length > 1 ? 'es' : ''} subida${patientImages.length > 1 ? 's' : ''}`
-                      : 'Sube ecografías, fotos de lesión o imágenes clínicas'}
-                  </p>
-                  <div className="mt-2 sm:mt-3">
-                    <ImageGallerySection
-                      patientId={patient.id}
-                      clinicId={patient.clinic_id}
-                      initialImages={patientImages}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 5: Report */}
-              <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 bg-gray-50">
-                <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  latestReport?.status === 'approved'
-                    ? 'bg-green-100 text-green-600'
-                    : latestReport
-                    ? 'bg-yellow-100 text-yellow-600'
-                    : 'bg-blue-100 text-blue-600'
-                }`}>
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm sm:text-base">5. Informe final</h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {latestReport?.status === 'approved'
-                      ? 'Informe aprobado'
-                      : latestReport
-                      ? 'Borrador generado — pendiente de revisión'
-                      : 'Generación automática con IA'}
-                  </p>
-                  <div className="mt-2 sm:mt-3">
-                    {latestReport?.status === 'approved' ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
-                          <Check className="w-3 h-3" />
-                          Aprobado
-                        </span>
-                        <Link
-                          href={`/patients/${patient.id}/report`}
-                          className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                          Ver / editar / PDF
-                        </Link>
-                      </div>
-                    ) : latestReport ? (
-                      <Link
-                        href={`/patients/${patient.id}/report`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-xs font-medium rounded-lg transition-colors"
-                      >
-                        <FileText className="w-3 h-3" />
-                        Revisar borrador
-                      </Link>
-                    ) : (
-                      <Link
-                        href={`/patients/${patient.id}/report`}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors"
-                      >
-                        <FileText className="w-3 h-3" />
-                        Generar informe
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          )}
         </div>
 
         {/* Sidebar - right column */}
