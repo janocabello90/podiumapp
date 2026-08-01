@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Send, Copy, Check, ExternalLink } from 'lucide-react'
+import { Send, Copy, Check, ExternalLink, RefreshCw, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { AnamnesisForm } from '@/types/database'
 import AnamnesisViewer from './AnamnesisViewer'
@@ -12,11 +13,16 @@ interface Props {
   clinicId: string
   patientName: string
   currentAnamnesis: AnamnesisForm | null | undefined
+  /** El enlace actual está caducado (calculado por fecha en el servidor). */
+  expired?: boolean
 }
 
-export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis }: Props) {
+export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis, expired = false }: Props) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  // Al renovar generamos un enlace nuevo (fresco): dejamos de tratar la anamnesis como caducada.
+  const [renewed, setRenewed] = useState(false)
   const [anamnesisLink, setAnamnesisLink] = useState<string | null>(
     currentAnamnesis?.token
       ? `${typeof window !== 'undefined' ? window.location.origin : ''}/anamnesis/${currentAnamnesis.token}`
@@ -40,7 +46,9 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
 
       const link = `${window.location.origin}/anamnesis/${data.token}`
       setAnamnesisLink(link)
-      toast.success('Enlace de anamnesis creado')
+      setRenewed(true)
+      toast.success('Nuevo enlace de anamnesis creado')
+      router.refresh()
     } catch (error: any) {
       toast.error(error.message || 'Error al crear anamnesis')
     } finally {
@@ -82,6 +90,26 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
           completedAt={currentAnamnesis.completed_at}
           anamnesisId={currentAnamnesis.id}
         />
+      </div>
+    )
+  }
+
+  // Expired link → offer to regenerate (creates a fresh form, +14 days)
+  if (expired && !renewed) {
+    return (
+      <div className="mt-3 space-y-2">
+        <div className="flex items-start gap-2 p-2.5 bg-red-50 rounded-lg border border-red-100">
+          <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">El enlace caducó y ya no se puede rellenar. Genera uno nuevo para reenviárselo.</p>
+        </div>
+        <button
+          onClick={createAnamnesis}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Generando enlace...' : 'Renovar y reenviar enlace'}
+        </button>
       </div>
     )
   }

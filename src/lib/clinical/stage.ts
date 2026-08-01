@@ -8,8 +8,9 @@ import {
   CheckCircle2,
   Circle,
 } from 'lucide-react'
+import { isAnamnesisExpired } from './anamnesis'
 
-type Row = { id: string; status: string | null; created_at?: string }
+type Row = { id: string; status: string | null; created_at?: string; expires_at?: string | null }
 type DocRow = { id: string; doc_type?: string | null; created_at?: string }
 
 export type PatientStageInput = {
@@ -67,13 +68,14 @@ export function computeStage(patient: PatientStageInput): Stage {
     return { key: 'anamnesis_done', label: 'Anamnesis completada', shortLabel: 'Completada',
              bg: 'bg-emerald-50', text: 'text-emerald-700', icon: FileCheck }
   }
+  // Expirada por fecha tiene prioridad sobre pendiente/en progreso (es lo accionable: reenviar).
+  if (isAnamnesisExpired(latestAnamnesis)) {
+    return { key: 'anamnesis_expired', label: 'Anamnesis expirada', shortLabel: 'Expirada',
+             bg: 'bg-red-50', text: 'text-red-700', icon: AlertCircle }
+  }
   if (latestAnamnesis?.status === 'in_progress') {
     return { key: 'anamnesis_progress', label: 'Anamnesis en progreso', shortLabel: 'En progreso',
              bg: 'bg-yellow-50', text: 'text-yellow-700', icon: Clock }
-  }
-  if (latestAnamnesis?.status === 'expired') {
-    return { key: 'anamnesis_expired', label: 'Anamnesis expirada', shortLabel: 'Expirada',
-             bg: 'bg-red-50', text: 'text-red-700', icon: AlertCircle }
   }
   if (latestAnamnesis?.status === 'pending') {
     return { key: 'anamnesis_pending', label: 'Pendiente anamnesis', shortLabel: 'Pendiente',

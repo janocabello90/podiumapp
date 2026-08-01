@@ -34,7 +34,7 @@ export default async function PatientsPage({
 
   let patientsQuery = supabase
     .from('patients')
-    .select('*, teams(name), anamnesis_forms(id, status, created_at), assessments(id, status, created_at), sessions(id, status, created_at), documents(id, doc_type, created_at), reports(id, status, created_at)')
+    .select('*, teams(name), anamnesis_forms(id, status, created_at, expires_at), assessments(id, status, created_at), sessions(id, status, created_at), documents(id, doc_type, created_at), reports(id, status, created_at)')
     .eq('status', 'active')
     .order('created_at', { ascending: false })
 

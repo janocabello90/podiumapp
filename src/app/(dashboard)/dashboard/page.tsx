@@ -15,6 +15,7 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { computeStage } from '@/lib/clinical/stage'
+import { isAnamnesisExpired } from '@/lib/clinical/anamnesis'
 import { getRegionLabel, getPathologyLabel } from '@/lib/clinical/taxonomy'
 
 export const dynamic = 'force-dynamic'
@@ -144,7 +145,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
   const alerts: Alert[] = []
   for (const p of scopedPatients as any[]) {
     const lastAnamnesis = (p.anamnesis_forms || []).sort((a: Row, b: Row) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime())[0]
-    if (lastAnamnesis?.status === 'expired') {
+    if (isAnamnesisExpired(lastAnamnesis)) {
       alerts.push({ id: `${p.id}-exp`, patientId: p.id, patientName: p.full_name, kind: 'expired_anamnesis', message: 'Anamnesis expirada', days: daysSince(lastAnamnesis.expires_at) })
     }
     for (const a of (p.assessments || []).filter((a: Row) => a.status === 'in_progress' && (!mineOnly || a.physio_id === me)) as Row[]) {

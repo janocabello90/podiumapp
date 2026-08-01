@@ -7,6 +7,7 @@ import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
 import { consentLabel } from '@/lib/clinical/consents'
+import { isAnamnesisExpired } from '@/lib/clinical/anamnesis'
 import StartSessionButton from '@/components/sessions/StartSessionButton'
 import DeleteSessionButton from '@/components/sessions/DeleteSessionButton'
 
@@ -71,6 +72,7 @@ export default async function PatientDetailPage({
     (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )
   const latestAnamnesis = sortedAnamnesis[0]
+  const anamnesisExpired = isAnamnesisExpired(latestAnamnesis)
   const allSessions = ((patient.sessions as any[]) || []).sort(
     (a: any, b: any) => (b.session_number || 0) - (a.session_number || 0)
   )
@@ -225,14 +227,18 @@ export default async function PatientDetailPage({
               <h2 className="text-base sm:text-lg font-semibold text-gray-900">Anamnesis</h2>
               {latestAnamnesis?.status === 'completed' ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>Completada</span>
+              ) : anamnesisExpired ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>Expirada</span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700"><span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Pendiente</span>
               )}
             </div>
-            {latestAnamnesis?.status !== 'completed' && (
+            {anamnesisExpired ? (
+              <p className="text-xs text-red-700 bg-red-50 rounded-xl px-3 py-2 mb-1">El enlace ha caducado (14 días). Genera uno nuevo para reenviárselo al paciente.</p>
+            ) : latestAnamnesis?.status !== 'completed' && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-1">Cada paciente debe tener su anamnesis rellena. Envíasela para que la complete (recomendado antes de valorar).</p>
             )}
-            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} />
+            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} expired={anamnesisExpired} />
           </div>
 
           {/* Historial de consultas (timeline) — común a equipo e individual */}
