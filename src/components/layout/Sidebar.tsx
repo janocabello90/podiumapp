@@ -171,7 +171,10 @@ export default function Sidebar({ userName, isAdmin = false }: { userName: strin
                   {userName.split(' ').map(n => n[0]).join('').slice(0, 2)}
                 </span>
               </div>
-              <span className="text-sm text-gray-700 truncate max-w-[130px]">{userName}</span>
+              <span className="min-w-0">
+                <span className="block text-sm text-gray-700 truncate max-w-[130px] leading-tight">{userName}</span>
+                <span className="block text-[11px] text-gray-400 leading-tight">{isAdmin ? 'Administrador' : 'Fisioterapeuta'}</span>
+              </span>
             </div>
             <button
               onClick={handleLogout}
