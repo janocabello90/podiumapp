@@ -472,3 +472,16 @@ Matiz: como la DB **ya tiene estado** pero **sin historial**, no basta con "acti
 - **Decisiones v1:** formatos **CSV + XLSX**; **duplicado por email dentro del equipo** (y dentro del fichero), excluido por defecto; **todos los campos del alta**, solo `full_name` obligatorio; importador **en la página del equipo**.
 - **Modelo (importante):** `patients.team_id` es **un único equipo por ficha** → una persona en dos equipos = **dos fichas** (una por equipo); por eso el duplicado se comprueba **por email dentro del equipo** (el mismo email en otro equipo es otra ficha, no duplicado). El multi-equipo real (una persona compartida, tabla N:M) **no** está implementado; sería un rediseño futuro.
 - **Cierra el flujo de equipos A–H.** El caso individual permanece intacto en todas las fases.
+
+---
+
+## 18. Refinamiento post-equipos (roles, UI y anamnesis editable) — 2026-07/08. Doc: `POST-EQUIPOS-REFINAMIENTO.md`
+
+**[C]** Cambios transversales hechos **después** de cerrar el flujo de equipos (§17). Resumen (detalle en el doc):
+
+- **Roles admin/fisio** reales (UI + backend + RLS): helper SQL `is_clinic_admin()`; escritura solo-admin en catálogos, estructura organizativa y `anamnesis_templates`; `users` SELECT = self-or-admin; sidebar y Ajustes recortados para fisios; crear grupos/equipos/estudios e importación = admin (el fisio conserva "añadir jugador" y valorar).
+- **UI**: Inicio por defecto "los míos"; renombrado **Campaña → Estudio** (URL `/campaigns` → `/estudios`; tabla BD sigue `campaigns`); ficha individual convertida en **hub** (anamnesis + consultas), sin el bloque de 5 pasos.
+- **Anamnesis**: caducidad 7→14 días; "Expirada" derivada por fecha (`isAnamnesisExpired`) + botón renovar.
+- **Consulta según tipo de paciente** (`isTeamPatient`): individual con **exploración multi-región** y **pruebas del catálogo** (checklist), sin deporte; equipo sin exploración/ecografías, pruebas por deporte, con contexto Estudio·Grupo·Equipo. **Anotaciones generales del fisio** (`sessions.notes`) en ambas → al informe.
+- **Anamnesis editable por plantillas**: tabla **`anamnesis_templates`** (audiencia individual/equipo, `blocks` JSONB; sin fila ⇒ default del código). Condiciones **serializables** + render data-driven. Editor en **Ajustes → Anamnesis** (`/settings/anamnesis`, admin). v1 sin editar condicionales; equipo parte como copia de la individual.
+- **Migraciones**: `20260731160019`, `20260731161750`, `20260801073948`, `20260801090300`.
