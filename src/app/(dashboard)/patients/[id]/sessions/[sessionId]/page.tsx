@@ -1,9 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, FileText } from 'lucide-react'
+import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield } from 'lucide-react'
 import AssessmentForm from '@/components/assessment/AssessmentForm'
 import SessionTestsPanel from '@/components/sessions/SessionTestsPanel'
+import SessionNotes from '@/components/sessions/SessionNotes'
 import SportSelect from '@/components/sports/SportSelect'
 import DocumentSection from '@/components/documents/DocumentSection'
 import ImageGallerySection from '@/components/documents/ImageGallerySection'
@@ -23,23 +24,34 @@ export default async function SessionPage({ params }: { params: { id: string; se
 
   const { data: session } = await supabase
     .from('sessions')
-    .select('*, patients(full_name, vald_interpretation)')
+    .select('*, patients(full_name, vald_interpretation, team_id, teams(id, name, group_id, groups(name)))')
     .eq('id', params.sessionId)
     .eq('patient_id', params.id)
     .eq('clinic_id', profile.clinic_id)
     .single()
   if (!session) notFound()
 
-  const [{ data: sessionTests }, { data: sports }, { data: anamnesis }, { data: consents }, { data: sessionDocs }] = await Promise.all([
+  const [{ data: sessionTests }, { data: sports }, { data: anamnesis }, { data: consents }, { data: sessionDocs }, { data: campaign }] = await Promise.all([
     supabase.from('session_tests').select('id, test_name, status, notes, display_order, is_required').eq('session_id', session.id),
     supabase.from('sports').select('id, name').eq('clinic_id', profile.clinic_id).eq('is_active', true).order('name'),
     supabase.from('anamnesis_forms').select('status').eq('patient_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('consents').select('type, granted, granted_at').eq('patient_id', params.id).order('granted_at', { ascending: false }),
     supabase.from('documents').select('*').eq('session_id', session.id).order('created_at', { ascending: false }),
+    (session as any).campaign_id
+      ? supabase.from('campaigns').select('name').eq('id', (session as any).campaign_id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ])
 
-  const patientName = (session.patients as any)?.full_name || ''
-  const valdInterpretation = (session.patients as any)?.vald_interpretation || ''
+  const patient = (session.patients as any) || {}
+  const patientName = patient.full_name || ''
+  const valdInterpretation = patient.vald_interpretation || ''
+  const isTeamPatient = !!patient.team_id
+  const team = isTeamPatient ? patient.teams : null
+  const groupName = team?.groups?.name as string | undefined
+  const campaignName = (campaign as any)?.name as string | undefined
+  // Numeración dinámica de secciones (la exploración solo aparece en individuales).
+  let step = 0
+  const n = () => ++step
   const docs = (sessionDocs || []) as Document[]
   const valdDocs = docs.filter((d) => d.doc_type !== 'medical_image')
   const imageDocs = docs.filter((d) => d.doc_type === 'medical_image')
@@ -61,6 +73,30 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </div>
 
+      {/* Contexto de equipo (solo jugadores de equipo): estudio · grupo · equipo */}
+      {isTeamPatient && team && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+            {campaignName && (
+              <span className="inline-flex items-center gap-1.5 text-gray-700">
+                <Megaphone className="w-4 h-4 text-blue-500" />
+                <span className="text-gray-400">Estudio:</span> <strong className="font-medium">{campaignName}</strong>
+              </span>
+            )}
+            {groupName && (
+              <Link href={`/groups/${team.group_id}`} className="inline-flex items-center gap-1.5 text-gray-700 hover:text-blue-600">
+                <FolderKanban className="w-4 h-4 text-blue-500" />
+                <span className="text-gray-400">Grupo:</span> <strong className="font-medium">{groupName}</strong>
+              </Link>
+            )}
+            <Link href={`/teams/${team.id}`} className="inline-flex items-center gap-1.5 text-gray-700 hover:text-blue-600">
+              <Shield className="w-4 h-4 text-blue-500" />
+              <span className="text-gray-400">Equipo:</span> <strong className="font-medium">{team.name}</strong>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Deporte de la sesión */}
       {(sports || []).length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4">
@@ -68,9 +104,9 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       )}
 
-      {/* 1. Anamnesis + consentimientos */}
+      {/* Anamnesis + consentimientos */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">1. Anamnesis y consentimientos</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Anamnesis y consentimientos</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-2 text-sm">
           <p className="text-gray-700">
             Anamnesis: <strong>{anamnesis?.status === 'completed' ? 'completada' : (anamnesis?.status || 'sin iniciar')}</strong>
@@ -86,22 +122,24 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </section>
 
-      {/* 2. Exploración */}
-      <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">2. Exploración</h2>
-        <AssessmentForm
-          assessmentId={session.id}
-          patientId={params.id}
-          initialData={(session.clinical_data as Record<string, any>) || {}}
-          initialStatus={session.status || 'in_progress'}
-          table="sessions"
-          dataColumn="clinical_data"
-        />
-      </section>
+      {/* Exploración — solo pacientes individuales (los de equipo no la usan) */}
+      {!isTeamPatient && (
+        <section>
+          <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Exploración</h2>
+          <AssessmentForm
+            assessmentId={session.id}
+            patientId={params.id}
+            initialData={(session.clinical_data as Record<string, any>) || {}}
+            initialStatus={session.status || 'in_progress'}
+            table="sessions"
+            dataColumn="clinical_data"
+          />
+        </section>
+      )}
 
-      {/* 3. Pruebas */}
+      {/* Pruebas */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">3. Pruebas físicas</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Pruebas físicas</h2>
         <SessionTestsPanel
           sessionId={session.id}
           clinicId={profile.clinic_id}
@@ -110,9 +148,9 @@ export default async function SessionPage({ params }: { params: { id: string; se
         />
       </section>
 
-      {/* 4. Informes VALD de la sesión */}
+      {/* Informes VALD de la sesión */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">4. Informes VALD</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Informes VALD</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <DocumentSection
             patientId={params.id}
@@ -124,9 +162,9 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </section>
 
-      {/* 5. Imágenes clínicas de la sesión */}
+      {/* Imágenes clínicas de la sesión */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">5. Ecografías / fotografías</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Ecografías / fotografías</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-4">
           <ImageGallerySection
             patientId={params.id}
@@ -137,12 +175,18 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </section>
 
-      {/* 6. Informe individual sobre la sesión */}
+      {/* Anotaciones generales del fisioterapeuta (ambos tipos) */}
       <section>
-        <h2 className="text-sm font-semibold text-gray-900 mb-2">6. Informe</h2>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Anotaciones generales del fisioterapeuta</h2>
+        <SessionNotes sessionId={session.id} initialNotes={(session as any).notes || ''} />
+      </section>
+
+      {/* Informe individual sobre la sesión */}
+      <section>
+        <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Informe</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-600">
-            Genera el informe IA con el contexto de <strong>esta sesión</strong> (anamnesis, exploración, pruebas y VALD). Tras generarlo, se revisa y aprueba en la ficha.
+            Genera el informe IA con el contexto de <strong>esta sesión</strong> ({isTeamPatient ? 'anamnesis, pruebas, VALD y anotaciones' : 'anamnesis, exploración, pruebas, VALD y anotaciones'}). Tras generarlo, se revisa y aprueba en la ficha.
           </p>
           <div className="flex items-center gap-3 flex-shrink-0">
             <ReportGenerateButton patientId={params.id} sessionId={session.id} />

@@ -160,10 +160,12 @@ export async function POST(request: NextRequest) {
         .map(([key, value]) => `  ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
         .join('\n')
       patientContext += `\n\nDATOS DE LA EXPLORACIÓN FÍSICA / VALORACIÓN:\n${assessmentEntries}`
+    }
 
-      if (clinicalNotes) {
-        patientContext += `\n\nNOTAS GENERALES DE LA VALORACIÓN:\n${clinicalNotes}`
-      }
+    // Anotaciones generales del fisioterapeuta (sessions.notes) — se incluyen SIEMPRE que
+    // existan, aunque no haya exploración (p. ej. sesiones de equipo, sin exploración).
+    if (clinicalNotes && String(clinicalNotes).trim()) {
+      patientContext += `\n\nANOTACIONES GENERALES DEL FISIOTERAPEUTA:\n${clinicalNotes}`
     }
 
     // Fase F: pruebas de la sesión — notas por prueba + guía de interpretación VALD por prueba.
