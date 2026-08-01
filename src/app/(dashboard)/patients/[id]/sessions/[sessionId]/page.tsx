@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield } from 'lucide-react'
 import AssessmentForm from '@/components/assessment/AssessmentForm'
 import SessionTestsPanel from '@/components/sessions/SessionTestsPanel'
+import SessionTestPicker from '@/components/sessions/SessionTestPicker'
 import SessionNotes from '@/components/sessions/SessionNotes'
 import SportSelect from '@/components/sports/SportSelect'
 import DocumentSection from '@/components/documents/DocumentSection'
@@ -31,9 +32,10 @@ export default async function SessionPage({ params }: { params: { id: string; se
     .single()
   if (!session) notFound()
 
-  const [{ data: sessionTests }, { data: sports }, { data: anamnesis }, { data: consents }, { data: sessionDocs }, { data: campaign }] = await Promise.all([
-    supabase.from('session_tests').select('id, test_name, status, notes, display_order, is_required').eq('session_id', session.id),
+  const [{ data: sessionTests }, { data: sports }, { data: testsCatalog }, { data: anamnesis }, { data: consents }, { data: sessionDocs }, { data: campaign }] = await Promise.all([
+    supabase.from('session_tests').select('id, test_id, test_name, status, notes, display_order, is_required').eq('session_id', session.id),
     supabase.from('sports').select('id, name').eq('clinic_id', profile.clinic_id).eq('is_active', true).order('name'),
+    supabase.from('tests').select('id, name').eq('clinic_id', profile.clinic_id).eq('is_active', true).order('name'),
     supabase.from('anamnesis_forms').select('status').eq('patient_id', params.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('consents').select('type, granted, granted_at').eq('patient_id', params.id).order('granted_at', { ascending: false }),
     supabase.from('documents').select('*').eq('session_id', session.id).order('created_at', { ascending: false }),
@@ -97,8 +99,9 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       )}
 
-      {/* Deporte de la sesión */}
-      {(sports || []).length > 0 && (
+      {/* Deporte de la sesión — solo pacientes de equipo (dirige las pruebas del deporte).
+          Los individuales no llevan deporte: eligen las pruebas manualmente. */}
+      {isTeamPatient && (sports || []).length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4">
           <SportSelect table="sessions" rowId={session.id} currentSportId={(session as any).sport_id ?? null} sports={sports || []} label="Deporte de la sesión:" />
         </div>
@@ -137,15 +140,24 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </section>
       )}
 
-      {/* Pruebas */}
+      {/* Pruebas — equipo: dirigidas por el deporte; individual: elegidas del catálogo */}
       <section>
         <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Pruebas físicas</h2>
-        <SessionTestsPanel
-          sessionId={session.id}
-          clinicId={profile.clinic_id}
-          sportId={(session as any).sport_id ?? null}
-          initialTests={sessionTests || []}
-        />
+        {isTeamPatient ? (
+          <SessionTestsPanel
+            sessionId={session.id}
+            clinicId={profile.clinic_id}
+            sportId={(session as any).sport_id ?? null}
+            initialTests={sessionTests || []}
+          />
+        ) : (
+          <SessionTestPicker
+            sessionId={session.id}
+            clinicId={profile.clinic_id}
+            catalog={testsCatalog || []}
+            initialSelected={sessionTests || []}
+          />
+        )}
       </section>
 
       {/* Informes VALD de la sesión */}
