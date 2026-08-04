@@ -12,6 +12,7 @@ export type ConsentTexts = {
   data_processing?: string | null
   info_treatment?: string | null
   ai_analysis?: string | null
+  image_rights?: string | null
 }
 
 export type PublicAnamnesis = {
@@ -24,6 +25,7 @@ export type PublicAnamnesis = {
   patientName: string
   consentTexts: ConsentTexts
   blocks: AnamnesisBlock[]
+  audience: 'individual' | 'team'
 }
 
 export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesis | null> {
@@ -58,7 +60,7 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
   }
 
   // Plantilla según el tipo de paciente: con equipo → 'team'; suelto → 'individual'.
-  const audience = (data.patients as any)?.team_id ? 'team' : 'individual'
+  const audience: 'individual' | 'team' = (data.patients as any)?.team_id ? 'team' : 'individual'
   const blocks = data.clinic_id
     ? await getAnamnesisTemplateBlocks(admin, data.clinic_id, audience)
     : []
@@ -73,5 +75,6 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
     patientName: (data.patients as any)?.full_name || '',
     consentTexts,
     blocks,
+    audience,
   }
 }

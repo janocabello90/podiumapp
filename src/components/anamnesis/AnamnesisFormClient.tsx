@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { ChevronRight, ChevronLeft, Check, Mic, MicOff, Loader2 } from 'lucide-react'
 import { ANAMNESIS_BLOCKS, isFieldVisible, type AnamnesisField, type AnamnesisBlock } from './anamnesisFields'
+import { IMAGE_CHANNELS } from '@/lib/clinical/consents'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -11,12 +12,14 @@ interface Props {
   patientName: string
   existingData: Record<string, any>
   existingConsents?: { dataProcessing: boolean; ai: boolean }
-  consentTexts?: { data_processing?: string | null; info_treatment?: string | null; ai_analysis?: string | null }
+  consentTexts?: { data_processing?: string | null; info_treatment?: string | null; ai_analysis?: string | null; image_rights?: string | null }
   // Plantilla (según el tipo de paciente). Si no llega, se usa la del código.
   blocks?: AnamnesisBlock[]
+  // Audiencia: los de equipo (deportistas) ven además el consentimiento de imagen (opcional).
+  audience?: 'individual' | 'team'
 }
 
-export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts, blocks }: Props) {
+export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts, blocks, audience = 'individual' }: Props) {
   const BLOCKS = blocks && blocks.length ? blocks : ANAMNESIS_BLOCKS
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>(existingData)
@@ -30,6 +33,10 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   // (si ya se consintieron datos+IA, se aceptaron los 3 juntos en la misma pantalla).
   const [consentInfoTreatment, setConsentInfoTreatment] = useState(preConsented)
   const [consentAI, setConsentAI] = useState(existingConsents?.ai ?? false)
+  // Derechos de imagen (solo equipos): OPCIONAL, no bloquea. + canales autorizados.
+  const showImageConsent = audience === 'team'
+  const [consentImageRights, setConsentImageRights] = useState(false)
+  const [imageChannels, setImageChannels] = useState<string[]>([])
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const totalBlocks = BLOCKS.length
@@ -92,6 +99,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           consent_data_processing: consentDataProcessing,
           consent_info_treatment: consentInfoTreatment,
           consent_ai_analysis: consentAI,
+          ...(showImageConsent ? { consent_image_rights: consentImageRights, image_channels: imageChannels } : {}),
         }),
       })
       if (!res.ok) {
@@ -210,6 +218,44 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                 </span>
               </label>
             </div>
+
+            {/* Derechos de imagen (solo deportistas de equipo) — OPCIONAL, no bloquea */}
+            {showImageConsent && (
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <h3 className="font-medium text-gray-900 text-sm">Derechos de imagen <span className="text-xs font-normal text-gray-400">· opcional</span></h3>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentImageRights}
+                    onChange={(e) => { setConsentImageRights(e.target.checked); if (!e.target.checked) setImageChannels([]) }}
+                    className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                  />
+                  <span className="text-xs text-gray-600 leading-relaxed">
+                    {consentTexts?.image_rights || 'Autorizo a la clínica a captar, reproducir y difundir mi imagen y/o voz (fotografía, vídeo, testimonio) con fines divulgativos y promocionales. Puedo revocar esta autorización en cualquier momento, con efectos hacia el futuro.'}
+                  </span>
+                </label>
+                {consentImageRights && (
+                  <div className="pl-7">
+                    <p className="text-xs text-gray-500 mb-2">¿En qué soportes autorizas su difusión?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {IMAGE_CHANNELS.map((ch) => {
+                        const on = imageChannels.includes(ch)
+                        return (
+                          <button
+                            key={ch}
+                            type="button"
+                            onClick={() => setImageChannels((prev) => on ? prev.filter((c) => c !== ch) : [...prev, ch])}
+                            className={`px-3 py-1 text-xs rounded-lg border transition-colors ${on ? 'bg-blue-50 border-blue-300 text-blue-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                          >
+                            {ch}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <button
               onClick={async () => {

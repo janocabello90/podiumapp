@@ -72,7 +72,7 @@ export type ConsentVersion = Omit<T['consent_versions']['Row'], 'created_at' | '
   updated_at: string
 }
 
-export type ConsentType = 'data_processing' | 'info_treatment' | 'ai_analysis'
+export type ConsentType = 'data_processing' | 'info_treatment' | 'ai_analysis' | 'image_rights'
 
 export type Consent = Omit<T['consents']['Row'], 'created_at' | 'granted_at'> & {
   created_at: string

@@ -59,7 +59,7 @@ export default async function PatientDetailPage({
   // Consentimientos registrados (trazabilidad) — último por tipo
   const { data: rawConsents } = await supabase
     .from('consents')
-    .select('type, granted, granted_at, version_label')
+    .select('type, granted, granted_at, version_label, metadata')
     .eq('patient_id', params.id)
     .order('granted_at', { ascending: false })
   const consentsByType = new Map<string, any>()
@@ -345,18 +345,23 @@ export default async function PatientDetailPage({
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Consentimientos</h3>
               <ul className="space-y-2">
                 {consents.map((c: any) => (
-                  <li key={c.type} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="text-gray-600 truncate">{consentLabel(c.type)}</span>
-                    <span className="flex items-center gap-2 flex-shrink-0">
-                      <span className={c.granted ? 'text-green-600' : 'text-red-500'}>
-                        {c.granted ? 'Aceptado' : 'Rechazado'}
-                      </span>
-                      {c.granted_at && (
-                        <span className="text-xs text-gray-400">
-                          {new Date(c.granted_at).toLocaleDateString('es-ES')}
+                  <li key={c.type} className="text-sm">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-gray-600 truncate">{consentLabel(c.type)}</span>
+                      <span className="flex items-center gap-2 flex-shrink-0">
+                        <span className={c.granted ? 'text-green-600' : 'text-red-500'}>
+                          {c.granted ? 'Aceptado' : 'Rechazado'}
                         </span>
-                      )}
-                    </span>
+                        {c.granted_at && (
+                          <span className="text-xs text-gray-400">
+                            {new Date(c.granted_at).toLocaleDateString('es-ES')}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    {c.type === 'image_rights' && c.granted && Array.isArray(c.metadata?.channels) && c.metadata.channels.length > 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">Soportes: {c.metadata.channels.join(', ')}</p>
+                    )}
                   </li>
                 ))}
               </ul>

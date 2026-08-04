@@ -43,7 +43,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis } = body
+    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, image_channels } = body
 
     const updatePayload: Record<string, any> = {}
 
@@ -104,7 +104,7 @@ export async function PATCH(
           info_treatment: !!consent_info_treatment,
           ai_analysis: !!consent_ai_analysis,
         }
-        const rows = (['data_processing', 'info_treatment', 'ai_analysis'] as const).map((type) => ({
+        const rows: any[] = (['data_processing', 'info_treatment', 'ai_analysis'] as const).map((type) => ({
           clinic_id: existing.clinic_id,
           patient_id: existing.patient_id,
           anamnesis_id: existing.id,
@@ -114,6 +114,22 @@ export async function PATCH(
           version_body: vmap.get(type)?.body ?? null,
           granted_at: new Date().toISOString(),
         }))
+        // Derechos de imagen (solo llega en anamnesis de equipo). Registra los canales aceptados.
+        if (consent_image_rights !== undefined) {
+          rows.push({
+            clinic_id: existing.clinic_id,
+            patient_id: existing.patient_id,
+            anamnesis_id: existing.id,
+            type: 'image_rights',
+            granted: !!consent_image_rights,
+            version_label: vmap.get('image_rights')?.version_label ?? null,
+            version_body: vmap.get('image_rights')?.body ?? null,
+            granted_at: new Date().toISOString(),
+            metadata: consent_image_rights && Array.isArray(image_channels) && image_channels.length
+              ? { channels: image_channels }
+              : null,
+          })
+        }
         // Idempotente: borrar los de esta anamnesis antes de reinsertar.
         await adminSupabase.from('consents').delete().eq('anamnesis_id', existing.id)
         const { error: consentErr } = await adminSupabase.from('consents').insert(rows)
