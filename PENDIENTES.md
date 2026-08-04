@@ -27,6 +27,14 @@ Ambos dependen de lo mismo: **cuenta Resend + dominio verificado**. Con eso se r
 
 ---
 
+## 📝 Consentimientos — pendiente de revisar (2026-08)
+Contexto: se digitalizó el documento unificado de la clínica (imagen + protección de datos + consentimiento informado + ficha del deportista). Estado y pendientes:
+
+- **Textos legales exactos**: los textos de **Protección de datos** y **Tratamiento de la información** siguen con el texto por defecto de la app. Hay que **pegar la redacción legal exacta del documento** (apartado A + B.1 y el consentimiento informado págs 6–8) en **Ajustes → Consentimientos**. El PDF está marcado *"borrador para revisión jurídica"*, así que debe revisarlo el equipo/asesoría antes de publicarlo. Incluir el **responsable real** (Fisio Zaragoza SL, B99562729, Calle Almagro 16, rgpd@fisiozaragoza.com).
+- **Derechos de imagen**: ✅ implementado (tipo `image_rights` con canales, solo equipos). Texto base sembrado del documento — **revisar redacción legal**.
+- **Menores / representante legal**: **NO implementado** (decisión inicial: en papel). En discusión — ver abajo, es abordable con el modelo digital actual.
+- **Firma manuscrita / electrónica**: **no implementada** a propósito. El registro digital es **check + fecha/hora + copia del texto versionado** (`consents` + `version_body`), suficiente como prueba de consentimiento RGPD. Si en el futuro se requiere firma real (trazo en pantalla o e-firma), es un desarrollo aparte.
+
 ## Otros pendientes conocidos (de docs previos)
 - **Multi-equipo real** (una persona compartida en varios equipos, tabla N:M). Hoy: una ficha por (persona, equipo). Ver `FLUJO-EQUIPOS-CIERRE.md`.
 - **Resultados de prueba estructurados** (`session_tests.result_data`) → habilitaría estadística numérica en el informe de estudio (hoy cualitativo).
