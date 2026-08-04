@@ -5,6 +5,17 @@
 > **Cómo usarlo:** recorre las suites en orden; marca cada caso en la columna **Estado** (⬜ pendiente · ✅ ok · ❌ falla · ⚠️ con matices). Anota incidencias al final (§Registro).
 > **Naturaleza:** QA **manual** (no hay framework de tests). La automatización (Playwright/CI) queda como mejora futura (§Automatización).
 
+> ### ⚠️ Actualización 2026-08 (leer antes de recorrer)
+> Tras el trabajo de **refinamiento post-equipos** (ver `POST-EQUIPOS-REFINAMIENTO.md`), varias suites de abajo quedaron **desfasadas**. Cambios que afectan al recorrido:
+> - **`/campaigns` → `/estudios`** (renombrado de URL; donde ponga `/campaigns`, es `/estudios`).
+> - **Top bar**: ahora es **solo migas de pan** (se quitaron buscador, campana y chip de usuario) → §2.2 obsoleto.
+> - **CTA "Nueva consulta"** del pie del sidebar: **eliminado** → §2.3 obsoleto.
+> - **Ajustes**: el rail incluye ahora **Anamnesis** (§6.1); Consentimientos tiene **4 tipos** (se añadió Derechos de imagen).
+> - **Anamnesis de equipo**: hasta **4 consentimientos** (los 3 + imagen) y flujo de **menor** → §10 ampliado en §18.
+> - **Caducidad de anamnesis**: **14 días** (no 7) → §10.6.
+> - **Roles admin/fisio** reales → nueva **§16**. **Consulta distinta por tipo de paciente** → nueva **§19**.
+> **Suites nuevas: §16 Roles · §17 Anamnesis/plantillas/exploración · §18 Consentimientos (imagen + menores) · §19 Consulta por tipo.**
+
 ---
 
 ## 0. Prerrequisitos y entorno (hacer ANTES de empezar)
@@ -162,7 +173,8 @@
 | 10.3 | Rellenar + autoguardado | Guarda progreso (necesita SERVICE_ROLE) | ⬜ |
 | 10.4 | **Enviar** | Estado "completada"; registra 3 filas en `consents` | ⬜ |
 | 10.5 | Trazabilidad en ficha | Card "Consentimientos" muestra tipo/aceptado/fecha | ⬜ |
-| 10.6 | Enlace **expirado** (>7 días) | Rechaza el envío | ⬜ |
+| 10.6 | Enlace **expirado** (>14 días) | Rechaza el envío; ficha muestra "Expirada" (por fecha) + botón renovar | ⬜ |
+| 10.7 | Anamnesis **de equipo** vs individual | Cada tipo carga su plantilla (ver §17.4); equipo muestra además consentimiento de imagen y flujo de menor (§18) | ⬜ |
 
 ---
 
@@ -220,6 +232,69 @@
 - [ ] Informe individual (generar/editar/aprobar/PDF) independiente del de campaña.
 - [ ] Documentos a nivel paciente siguen funcionando además de los de sesión.
 - [ ] Deportes/pruebas/consentimientos configurables sin afectar al caso suelto.
+
+---
+
+## 16. Roles (admin vs fisioterapeuta) — NUEVO
+> Probar con **dos cuentas**: un admin y un fisio (p. ej. `sergiociria2@gmail.com` es fisio).
+
+| ID | Caso / pasos | Resultado esperado | Estado |
+|---|---|---|---|
+| 16.1 | **Sidebar del fisio** | Solo Inicio·Estudios·Pacientes·Equipos·Ajustes (sin Informes ni Actividad) | ⬜ |
+| 16.2 | Fisio entra por URL a `/reports` o `/activity` | Redirige a `/dashboard` | ⬜ |
+| 16.3 | Fisio en **Ajustes** | Solo pestaña "Mi perfil"; URLs `/settings/{tests,sports,consents,anamnesis}` redirigen a `/dashboard` | ⬜ |
+| 16.4 | Fisio en ficha de paciente | **No** ve "Eliminar paciente"; si forzara la API → 403 | ⬜ |
+| 16.5 | Fisio en `/groups`, `/groups/[id]`, `/estudios`, `/teams/[id]` | **No** ve crear grupo/equipo/estudio ni importar; RLS bloquea la escritura directa | ⬜ |
+| 16.6 | Fisio: **Añadir jugador** y **Valorar** | **Sí** puede (no bloqueado) | ⬜ |
+| 16.7 | Fisio: visibilidad de usuarios | No ve a otros usuarios (Personal oculto; RLS `users` = self-or-admin) | ⬜ |
+| 16.8 | **Admin**: ve todo | Informes, Actividad, todas las pestañas de Ajustes; puede crear estructura, config y usuarios | ⬜ |
+| 16.9 | **Rol bajo el nombre** (sidebar, escritorio y móvil) | "Administrador" / "Fisioterapeuta" | ⬜ |
+| 16.10 | **Inicio por defecto** | Abre en scope **Míos** (no toda la clínica); toggle a `?scope=clinic` | ⬜ |
+
+---
+
+## 17. Anamnesis: plantillas editables + tipos + exploración — NUEVO
+
+| ID | Caso / pasos | Resultado esperado | Estado |
+|---|---|---|---|
+| 17.1 | **Ajustes → Anamnesis** (admin) → `/settings/anamnesis` | Editor con dos pestañas: **Individuales** / **Equipos** | ⬜ |
+| 17.2 | Editar/añadir/reordenar/eliminar **bloques y preguntas** (tipos, opciones, obligatoria) → Guardar → recargar | Persiste; el punto ámbar marca cambios sin guardar | ⬜ |
+| 17.3 | **Restablecer por defecto** | Vuelve a la plantilla del código | ⬜ |
+| 17.4 | **Render por audiencia**: abrir enlace de anamnesis de un **jugador de equipo** vs **individual** | Cada uno carga su plantilla; la de equipo = "Ficha del deportista" (datos, antropometría, lesiones, estado) | ⬜ |
+| 17.5 | **Caducidad 14 días** + "Expirada" por fecha (ficha, alerta de Inicio, etapa en lista) + **Renovar** | Estado real reflejado; renovar genera enlace nuevo | ⬜ |
+| 17.6 | **Ficha individual = hub** | Tarjeta Anamnesis + Historial de consultas; **sin** bloque "Proceso del paciente" de 5 pasos | ⬜ |
+| 17.7 | **Exploración multi-región** (sesión individual) | Añadir varias zonas, progreso por región, quitar; datos previos de una zona se infieren y aparecen | ⬜ |
+
+---
+
+## 18. Consentimientos ampliados: imagen + menores — NUEVO
+> Todo el flujo de **anamnesis de equipo** (jugador con `team_id`). El individual NO ve imagen ni, salvo declaración, menor.
+
+| ID | Caso / pasos | Resultado esperado | Estado |
+|---|---|---|---|
+| 18.1 | Anamnesis de **equipo** → pantalla de consentimientos | Aparece 4º bloque **"Derechos de imagen · opcional"** además de los 3 | ⬜ |
+| 18.2 | Marcar imagen → elegir **canales** (Web, RRSS, material, eventos) → enviar | Traza en `consents` (type `image_rights`, granted, `metadata.channels`) | ⬜ |
+| 18.3 | Imagen **no bloquea** | Se puede enviar sin marcarla (solo los 3 son obligatorios) | ⬜ |
+| 18.4 | Anamnesis **individual** | **No** muestra el consentimiento de imagen | ⬜ |
+| 18.5 | **Menor automático**: jugador con fecha nac. <18 | La casilla "menor de edad" aparece **marcada** por defecto | ⬜ |
+| 18.6 | **Menor auto-declarado**: marcar la casilla manualmente | Se despliegan los campos del representante | ⬜ |
+| 18.7 | Campos del **representante** (nombre*, DNI, relación*) | No deja continuar sin nombre + relación; título pasa a "otorgado por el representante legal" | ⬜ |
+| 18.8 | Enviar como menor | `consents.metadata.representative`; ficha muestra "Menor · otorgados por su representante legal: … (relación) · DNI" | ⬜ |
+| 18.9 | **Persistencia**: rellenar representante, recargar el formulario | Los datos siguen ahí (autoguardado en `form_data`) | ⬜ |
+| 18.10 | **Ajustes → Consentimientos** | 4 textos editables (incl. Derechos de imagen, ya con texto base) | ⬜ |
+
+---
+
+## 19. Consulta (sesión) distinta por tipo de paciente — NUEVO
+
+| ID | Caso / pasos | Resultado esperado | Estado |
+|---|---|---|---|
+| 19.1 | Sesión de **equipo** | **Sin** Exploración, **sin** Ecografías/fotos, **sin** selector de Deporte; **con** contexto Estudio·Grupo·Equipo arriba | ⬜ |
+| 19.2 | Sesión de equipo · Pruebas | Dirigidas por el **deporte** (SessionTestsPanel); notas por prueba | ⬜ |
+| 19.3 | Sesión **individual** | **Con** Exploración (multi-región), **con** Ecografías/fotos, **sin** deporte | ⬜ |
+| 19.4 | Individual · Pruebas del **catálogo** | Checklist de todas las pruebas; marcar crea `session_test` + notas; desmarcar la elimina | ⬜ |
+| 19.5 | **Anotaciones generales del fisio** (ambos tipos) | Se guardan en `sessions.notes` y llegan al contexto del informe | ⬜ |
+| 19.6 | **Numeración** de secciones | Sin huecos según el tipo (equipo 5 secciones, individual 7) | ⬜ |
 
 ---
 
