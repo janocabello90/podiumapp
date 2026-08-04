@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
       const fd = anamnesis.form_data
       // Filter out verification metadata keys
       const anamnesisData = Object.entries(fd)
-        .filter(([key]) => !key.startsWith('_verified_') && !key.startsWith('_edited_') && !key.startsWith('_original_') && !key.startsWith('_notes_'))
+        .filter(([key]) => !key.startsWith('_')) // metadatos internos (_verified_, _notes_, _rep_, _is_minor…)
         .map(([key, value]) => `  ${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
         .join('\n')
 

@@ -67,6 +67,7 @@ export default async function PatientDetailPage({
     if (!consentsByType.has(c.type)) consentsByType.set(c.type, c)
   }
   const consents = Array.from(consentsByType.values())
+  const consentRepresentative = (consents.find((c: any) => c.metadata?.representative)?.metadata?.representative) as { name?: string; dni?: string; relation?: string } | undefined
 
   // Sort anamnesis by creation date to get latest
   const sortedAnamnesis = (patient.anamnesis_forms || []).sort(
@@ -343,6 +344,14 @@ export default async function PatientDetailPage({
           {consents.length > 0 && (
             <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Consentimientos</h3>
+              {consentRepresentative && (
+                <div className="mb-3 text-xs bg-amber-50 text-amber-800 rounded-lg px-3 py-2">
+                  Menor de edad · otorgados por su representante legal
+                  {consentRepresentative.name ? `: ${consentRepresentative.name}` : ''}
+                  {consentRepresentative.relation ? ` (${consentRepresentative.relation})` : ''}
+                  {consentRepresentative.dni ? ` · DNI ${consentRepresentative.dni}` : ''}
+                </div>
+              )}
               <ul className="space-y-2">
                 {consents.map((c: any) => (
                   <li key={c.type} className="text-sm">

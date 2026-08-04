@@ -26,6 +26,19 @@ export type PublicAnamnesis = {
   consentTexts: ConsentTexts
   blocks: AnamnesisBlock[]
   audience: 'individual' | 'team'
+  // true si por la fecha de nacimiento del paciente es menor de edad (detección automática).
+  minorByDob: boolean
+}
+
+function isMinorFromDob(dob: string | null | undefined): boolean {
+  if (!dob) return false
+  const d = new Date(dob)
+  if (isNaN(d.getTime())) return false
+  const now = new Date()
+  let age = now.getFullYear() - d.getFullYear()
+  const m = now.getMonth() - d.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--
+  return age < 18
 }
 
 export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesis | null> {
@@ -38,7 +51,7 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
 
   const { data, error } = await admin
     .from('anamnesis_forms')
-    .select('id, status, expires_at, form_data, consent_data_processing, consent_ai_analysis, clinic_id, patients(full_name, team_id)')
+    .select('id, status, expires_at, form_data, consent_data_processing, consent_ai_analysis, clinic_id, patients(full_name, team_id, date_of_birth)')
     .eq('token', token)
     .single()
 
@@ -76,5 +89,6 @@ export async function getAnamnesisByToken(token: string): Promise<PublicAnamnesi
     consentTexts,
     blocks,
     audience,
+    minorByDob: isMinorFromDob((data.patients as any)?.date_of_birth),
   }
 }

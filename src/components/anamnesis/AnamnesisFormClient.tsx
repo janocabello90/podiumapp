@@ -17,9 +17,11 @@ interface Props {
   blocks?: AnamnesisBlock[]
   // Audiencia: los de equipo (deportistas) ven además el consentimiento de imagen (opcional).
   audience?: 'individual' | 'team'
+  // Detección automática de menor por fecha de nacimiento del paciente (Opción C).
+  defaultMinor?: boolean
 }
 
-export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts, blocks, audience = 'individual' }: Props) {
+export default function AnamnesisFormClient({ anamnesisId, token, patientName, existingData, existingConsents, consentTexts, blocks, audience = 'individual', defaultMinor = false }: Props) {
   const BLOCKS = blocks && blocks.length ? blocks : ANAMNESIS_BLOCKS
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>(existingData)
@@ -37,6 +39,21 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   const showImageConsent = audience === 'team'
   const [consentImageRights, setConsentImageRights] = useState(false)
   const [imageChannels, setImageChannels] = useState<string[]>([])
+  // Menor de edad (Opción C): auto por fecha de nac. o auto-declarado. Datos del representante
+  // legal en formData (con claves `_`, se autoguardan y sobreviven a recargas).
+  const [isMinor, setIsMinor] = useState<boolean>(
+    existingData?._is_minor !== undefined ? !!existingData._is_minor : defaultMinor
+  )
+  const repName = String(formData._rep_name || '')
+  const repDni = String(formData._rep_dni || '')
+  const repRelation = String(formData._rep_relation || '')
+  function setRep(key: '_rep_name' | '_rep_dni' | '_rep_relation', value: string) {
+    setFormData((prev) => ({ ...prev, [key]: value }))
+  }
+  function toggleMinor(next: boolean) {
+    setIsMinor(next)
+    setFormData((prev) => ({ ...prev, _is_minor: next }))
+  }
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const totalBlocks = BLOCKS.length
@@ -100,6 +117,8 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           consent_info_treatment: consentInfoTreatment,
           consent_ai_analysis: consentAI,
           ...(showImageConsent ? { consent_image_rights: consentImageRights, image_channels: imageChannels } : {}),
+          is_minor: isMinor,
+          representative: isMinor ? { name: repName, dni: repDni, relation: repRelation } : null,
         }),
       })
       if (!res.ok) {
@@ -136,7 +155,8 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
 
   // Consent screen
   if (!consentGiven && currentBlock === 0) {
-    const canProceed = consentDataProcessing && consentInfoTreatment && consentAI
+    const minorOk = !isMinor || (repName.trim().length > 0 && repRelation.trim().length > 0)
+    const canProceed = consentDataProcessing && consentInfoTreatment && consentAI && minorOk
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
@@ -176,8 +196,47 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
               </ul>
             </div>
 
+            {/* Menor de edad (Opción C): auto-detectado o auto-declarado */}
             <div className="border-t border-gray-100 pt-4 space-y-3">
-              <h3 className="font-medium text-gray-900 text-sm">Consentimiento informado</h3>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isMinor}
+                  onChange={(e) => toggleMinor(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                />
+                <span className="text-sm text-gray-700">El deportista es <strong>menor de edad</strong> — este formulario lo rellena y firma su representante legal.</span>
+              </label>
+              {isMinor && (
+                <div className="pl-7 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    value={repName}
+                    onChange={(e) => setRep('_rep_name', e.target.value)}
+                    placeholder="Nombre del representante legal *"
+                    className="sm:col-span-2 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                  />
+                  <input
+                    value={repDni}
+                    onChange={(e) => setRep('_rep_dni', e.target.value)}
+                    placeholder="DNI del representante"
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                  />
+                  <select
+                    value={repRelation}
+                    onChange={(e) => setRep('_rep_relation', e.target.value)}
+                    className="text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                  >
+                    <option value="">Relación *</option>
+                    <option value="Padre">Padre</option>
+                    <option value="Madre">Madre</option>
+                    <option value="Tutor/a legal">Tutor/a legal</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 space-y-3">
+              <h3 className="font-medium text-gray-900 text-sm">Consentimiento informado{isMinor ? ' (otorgado por el representante legal)' : ''}</h3>
 
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
@@ -270,6 +329,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                       consent_data_processing: consentDataProcessing,
                       consent_info_treatment: consentInfoTreatment,
                       consent_ai_analysis: consentAI,
+                      form_data: formData,
                     }),
                   })
                 } catch (e) {
@@ -285,7 +345,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
 
             {!canProceed && (
               <p className="text-xs text-gray-400 text-center">
-                Debes aceptar los consentimientos para continuar
+                {isMinor && !minorOk
+                  ? 'Completa los datos del representante legal (nombre y relación) para continuar'
+                  : 'Debes aceptar los consentimientos para continuar'}
               </p>
             )}
           </div>

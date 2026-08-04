@@ -43,7 +43,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, image_channels } = body
+    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, image_channels, is_minor, representative } = body
 
     const updatePayload: Record<string, any> = {}
 
@@ -52,6 +52,10 @@ export async function PATCH(
       updatePayload.consent_data_processing = !!consent_data_processing
       updatePayload.consent_ai_analysis = !!consent_ai_analysis
       updatePayload.consent_timestamp = new Date().toISOString()
+      // Persistir datos ya escritos (p. ej. representante legal del menor) para que sobrevivan a recargas.
+      if (form_data && typeof form_data === 'object') {
+        updatePayload.form_data = form_data
+      }
     } else if (action === 'autosave') {
       if (form_data && typeof form_data === 'object') {
         updatePayload.form_data = form_data
@@ -104,6 +108,11 @@ export async function PATCH(
           info_treatment: !!consent_info_treatment,
           ai_analysis: !!consent_ai_analysis,
         }
+        // Si es menor, el consentimiento lo otorga el representante legal → se estampa en la traza.
+        const repMeta = is_minor && representative && (representative.name || representative.relation)
+          ? { representative: { name: representative.name || null, dni: representative.dni || null, relation: representative.relation || null } }
+          : null
+
         const rows: any[] = (['data_processing', 'info_treatment', 'ai_analysis'] as const).map((type) => ({
           clinic_id: existing.clinic_id,
           patient_id: existing.patient_id,
@@ -113,6 +122,7 @@ export async function PATCH(
           version_label: vmap.get(type)?.version_label ?? null,
           version_body: vmap.get(type)?.body ?? null,
           granted_at: new Date().toISOString(),
+          metadata: repMeta,
         }))
         // Derechos de imagen (solo llega en anamnesis de equipo). Registra los canales aceptados.
         if (consent_image_rights !== undefined) {
@@ -125,9 +135,11 @@ export async function PATCH(
             version_label: vmap.get('image_rights')?.version_label ?? null,
             version_body: vmap.get('image_rights')?.body ?? null,
             granted_at: new Date().toISOString(),
-            metadata: consent_image_rights && Array.isArray(image_channels) && image_channels.length
-              ? { channels: image_channels }
-              : null,
+            metadata: (() => {
+              const m: any = { ...(repMeta || {}) }
+              if (consent_image_rights && Array.isArray(image_channels) && image_channels.length) m.channels = image_channels
+              return Object.keys(m).length ? m : null
+            })(),
           })
         }
         // Idempotente: borrar los de esta anamnesis antes de reinsertar.

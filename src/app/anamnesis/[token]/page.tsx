@@ -65,6 +65,7 @@ export default async function AnamnesisPage({
       consentTexts={anamnesis.consentTexts}
       blocks={anamnesis.blocks}
       audience={anamnesis.audience}
+      defaultMinor={anamnesis.minorByDob}
     />
   )
 }
