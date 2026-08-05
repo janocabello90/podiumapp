@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 
 const SYSTEM_PROMPT = `Eres un fisioterapeuta clínico experto redactando informes de valoración integral para Clínica PODIUM. Escribes en español clínico profesional, dirigiéndote al paciente con cercanía pero rigor.
@@ -42,6 +43,7 @@ REGLAS:
 - Si no hay datos de alguna sección de exploración, indica que no se han registrado hallazgos en esa área.
 - Las hipótesis diagnósticas siempre con "posible", "compatible con" o "sugiere".
 - El tono es cercano pero riguroso, como un profesional que explica al paciente su situación.
+- Si se adjuntan documentos a este mensaje (informes/gráficas de VALD, ecografías, imágenes clínicas), LÉELOS e interpreta sus RESULTADOS OBJETIVOS: valores por lado (izq/der), asimetrías (%), potencia/fuerza, percentiles y hallazgos de imagen. Integra esos datos y su interpretación (cruzándolos con las notas del fisio y la guía de interpretación de cada prueba) en "exploracion_fisica.fuerza"/"hallazgos" y, sobre todo, en "conclusiones". No te limites a mencionar que existen: interpreta lo que muestran.
 - Responde SOLO con el JSON válido, sin texto adicional.`
 
 export async function POST(request: NextRequest) {
@@ -232,6 +234,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Adjuntar a Claude los documentos de la sesión (PDF de VALD + imágenes clínicas) para que
+    // LEA e interprete los resultados objetivos. Requiere service_role para descargar del bucket
+    // privado. Si falta la key o falla la descarga, se cae a solo-texto (comportamiento anterior).
+    const docBlocks: any[] = []
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey && (documents as any[]).length > 0) {
+      const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      // Priorizar informes VALD (PDF) e imágenes; cap de 6 adjuntos para acotar coste/tamaño.
+      const toSend = (documents as any[]).filter((d) => d.storage_path).slice(0, 6)
+      for (const d of toSend) {
+        try {
+          const { data: blob, error } = await admin.storage.from('documents').download(d.storage_path)
+          if (error || !blob) continue
+          const buf = Buffer.from(await blob.arrayBuffer())
+          if (buf.length > 20 * 1024 * 1024) continue // saltar > 20MB
+          const b64 = buf.toString('base64')
+          const name = String(d.file_name || '').toLowerCase()
+          if (name.endsWith('.pdf')) {
+            docBlocks.push({ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 }, title: d.file_name || 'documento' })
+          } else if (/\.(png|jpe?g|webp|gif)$/.test(name)) {
+            const media = name.endsWith('.png') ? 'image/png' : name.endsWith('.webp') ? 'image/webp' : name.endsWith('.gif') ? 'image/gif' : 'image/jpeg'
+            docBlocks.push({ type: 'image', source: { type: 'base64', media_type: media, data: b64 } })
+          }
+        } catch (e) {
+          // no fatal: seguimos sin ese adjunto
+        }
+      }
+    }
+
+    const userText = docBlocks.length > 0
+      ? `Genera el informe de Valoración Integral Avanzada PODIUM para este paciente. Se adjuntan ${docBlocks.length} documento(s) (informes/gráficas de VALD y/o imágenes clínicas): LÉELOS e interpreta sus resultados objetivos según las reglas. Responde SOLO con JSON válido.\n\n${patientContext}`
+      : `Genera el informe de Valoración Integral Avanzada PODIUM para este paciente. Responde SOLO con JSON válido.\n\n${patientContext}`
+
     // Call Claude
     const anthropic = new Anthropic({ apiKey })
 
@@ -242,7 +279,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Genera el informe de Valoración Integral Avanzada PODIUM para este paciente. Responde SOLO con JSON válido.\n\n${patientContext}`
+          content: [...docBlocks, { type: 'text', text: userText }] as any,
         }
       ],
     })
