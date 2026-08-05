@@ -31,12 +31,19 @@ export async function POST(request: NextRequest) {
       .single()
     if (!patient) return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
 
-    let teamSportId: string | null = null
-    if (patient.team_id) {
-      const { data: team } = await supabase.from('teams').select('sport_id').eq('id', patient.team_id).single()
-      teamSportId = (team as any)?.sport_id ?? null
+    // El deporte (y las pruebas del deporte) solo aplican a consultas DE ESTUDIO (patrón de equipo).
+    // Las consultas individuales —aunque el paciente esté en un equipo— usan el patrón individual:
+    // sin deporte y con pruebas elegidas del catálogo por el fisio.
+    const isStudy = !!campaignId
+    let sportId: string | null = null
+    if (isStudy) {
+      let teamSportId: string | null = null
+      if (patient.team_id) {
+        const { data: team } = await supabase.from('teams').select('sport_id').eq('id', patient.team_id).single()
+        teamSportId = (team as any)?.sport_id ?? null
+      }
+      sportId = resolveSport({ patientSportId: patient.sport_id, teamSportId })
     }
-    const sportId = resolveSport({ patientSportId: patient.sport_id, teamSportId })
 
     // session_number = siguiente
     const { data: last } = await supabase

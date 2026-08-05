@@ -289,9 +289,10 @@
 
 | ID | Caso / pasos | Resultado esperado | Estado |
 |---|---|---|---|
-| 19.1 | Sesión de **equipo** | **Sin** Exploración, **sin** Ecografías/fotos, **sin** selector de Deporte; **con** contexto Estudio·Grupo·Equipo arriba | ⬜ |
-| 19.2 | Sesión de equipo · Pruebas | Dirigidas por el **deporte** (SessionTestsPanel); notas por prueba | ⬜ |
-| 19.3 | Sesión **individual** | **Con** Exploración (multi-región), **con** Ecografías/fotos, **sin** deporte | ⬜ |
+| 19.1 | Consulta **de estudio** (creada desde el bloque del estudio) | **Sin** Exploración, **sin** Ecografías/fotos, **sin** selector de Deporte; **con** contexto Estudio·Grupo·Equipo arriba | ⬜ |
+| 19.2 | Consulta de estudio · Pruebas | Dirigidas por el **deporte** (SessionTestsPanel); notas por prueba | ⬜ |
+| 19.3 | Consulta **individual** (incluso de un jugador de equipo, desde "Consultas individuales") | **Con** Exploración (multi-región), **con** Ecografías/fotos, **sin** deporte, pruebas del **catálogo** — igual que un paciente sin equipo | ⬜ |
+| 19.7 | El patrón lo decide `campaign_id` de la consulta, **no** el `team_id` del paciente | Un jugador de equipo puede tener consultas de estudio (patrón equipo) e individuales (patrón individual) a la vez | ⬜ |
 | 19.4 | Individual · Pruebas del **catálogo** | Checklist de todas las pruebas; marcar crea `session_test` + notas; desmarcar la elimina | ⬜ |
 | 19.5 | **Anotaciones generales del fisio** (ambos tipos) | Se guardan en `sessions.notes` y llegan al contexto del informe | ⬜ |
 | 19.6 | **Numeración** de secciones | Sin huecos según el tipo (equipo 5 secciones, individual 7) | ⬜ |

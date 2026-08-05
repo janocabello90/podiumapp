@@ -41,7 +41,7 @@ El paciente individual pasa a mostrar el **mismo hub** que un jugador de equipo:
 
 ## 6. Contenido de la consulta: distinto por tipo de paciente **[C]**
 
-El tipo se determina por `isTeamPatient = !!patient.team_id` **en el render** (no se guarda por sesión). Secciones:
+El patrón se determina por si la consulta pertenece a un **estudio**: `isStudySession = !!session.campaign_id` (actualizado 2026-08; antes era por `patient.team_id`). Así, una **consulta individual de un jugador de equipo** (sin estudio) usa el **patrón individual** (exploración, ecografías, pruebas del catálogo), igual que un paciente sin equipo; solo las **consultas de estudio** usan el patrón de equipo. Al crear una consulta individual **no** se auto-generan las pruebas del deporte (el fisio las elige del catálogo). Secciones:
 
 | Sección | Individual | Equipo |
 |---|:---:|:---:|

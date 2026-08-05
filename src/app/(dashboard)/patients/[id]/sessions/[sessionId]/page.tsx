@@ -47,8 +47,12 @@ export default async function SessionPage({ params }: { params: { id: string; se
   const patient = (session.patients as any) || {}
   const patientName = patient.full_name || ''
   const valdInterpretation = patient.vald_interpretation || ''
-  const isTeamPatient = !!patient.team_id
-  const team = isTeamPatient ? patient.teams : null
+  // El PATRÓN de la consulta lo decide si pertenece a un estudio (campaign_id), NO el team_id.
+  // Consulta de estudio → patrón de equipo (deporte + pruebas del deporte, contexto del estudio).
+  // Consulta individual (aunque el paciente esté en un equipo) → patrón individual
+  // (exploración multi-región, ecografías, pruebas del catálogo, sin deporte).
+  const isStudySession = !!(session as any).campaign_id
+  const team = patient.teams || null
   const groupName = team?.groups?.name as string | undefined
   const campaignName = (campaign as any)?.name as string | undefined
   // Numeración dinámica de secciones (la exploración solo aparece en individuales).
@@ -75,8 +79,8 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </div>
 
-      {/* Contexto de equipo (solo jugadores de equipo): estudio · grupo · equipo */}
-      {isTeamPatient && team && (
+      {/* Contexto del estudio (solo consultas de estudio): estudio · grupo · equipo */}
+      {isStudySession && team && (
         <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
             {campaignName && (
@@ -101,7 +105,7 @@ export default async function SessionPage({ params }: { params: { id: string; se
 
       {/* Deporte de la sesión — solo pacientes de equipo (dirige las pruebas del deporte).
           Los individuales no llevan deporte: eligen las pruebas manualmente. */}
-      {isTeamPatient && (sports || []).length > 0 && (
+      {isStudySession && (sports || []).length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4">
           <SportSelect table="sessions" rowId={session.id} currentSportId={(session as any).sport_id ?? null} sports={sports || []} label="Deporte de la sesión:" />
         </div>
@@ -125,8 +129,8 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </section>
 
-      {/* Exploración — solo pacientes individuales (los de equipo no la usan) */}
-      {!isTeamPatient && (
+      {/* Exploración — solo consultas individuales (las de estudio no la usan) */}
+      {!isStudySession && (
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Exploración</h2>
           <AssessmentForm
@@ -143,7 +147,7 @@ export default async function SessionPage({ params }: { params: { id: string; se
       {/* Pruebas — equipo: dirigidas por el deporte; individual: elegidas del catálogo */}
       <section>
         <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Pruebas físicas</h2>
-        {isTeamPatient ? (
+        {isStudySession ? (
           <SessionTestsPanel
             sessionId={session.id}
             clinicId={profile.clinic_id}
@@ -174,8 +178,8 @@ export default async function SessionPage({ params }: { params: { id: string; se
         </div>
       </section>
 
-      {/* Imágenes clínicas de la sesión — solo pacientes individuales */}
-      {!isTeamPatient && (
+      {/* Imágenes clínicas — solo consultas individuales */}
+      {!isStudySession && (
         <section>
           <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Ecografías / fotografías</h2>
           <div className="bg-white rounded-2xl border border-gray-200 p-4">
@@ -200,7 +204,7 @@ export default async function SessionPage({ params }: { params: { id: string; se
         <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Informe</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-600">
-            Genera el informe IA con el contexto de <strong>esta sesión</strong> ({isTeamPatient ? 'anamnesis, pruebas, VALD y anotaciones' : 'anamnesis, exploración, pruebas, VALD y anotaciones'}). Tras generarlo, se revisa y aprueba en la ficha.
+            Genera el informe IA con el contexto de <strong>esta sesión</strong> ({isStudySession ? 'anamnesis, pruebas, VALD y anotaciones' : 'anamnesis, exploración, pruebas, VALD y anotaciones'}). Tras generarlo, se revisa y aprueba en la ficha.
           </p>
           <div className="flex items-center gap-3 flex-shrink-0">
             <ReportGenerateButton patientId={params.id} sessionId={session.id} />
