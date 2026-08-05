@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, ClipboardList } from 'lucide-react'
+import VoiceDictation from '@/components/assessment/VoiceDictation'
 import toast from 'react-hot-toast'
 
 type SessionTest = {
@@ -132,8 +133,16 @@ export default function SessionTestsPanel({
                     ))}
                   </select>
                 </div>
+                <div className="flex justify-end">
+                  <VoiceDictation
+                    currentText={t.notes ?? ''}
+                    onTranscription={(text) => { setLocal(t.id, { notes: text }); saveNotes(t.id, text) }}
+                    placeholder="Dictar notas de la prueba"
+                  />
+                </div>
                 <textarea
-                  defaultValue={t.notes ?? ''}
+                  value={t.notes ?? ''}
+                  onChange={(e) => setLocal(t.id, { notes: e.target.value })}
                   onBlur={(e) => saveNotes(t.id, e.target.value)}
                   placeholder="Notas de interpretación de esta prueba…"
                   rows={2}

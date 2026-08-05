@@ -2,6 +2,8 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import VoiceDictation from '@/components/assessment/VoiceDictation'
+import { MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Props {
@@ -37,6 +39,12 @@ export default function SessionNotes({ sessionId, initialNotes }: Props) {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-medium text-gray-500 inline-flex items-center gap-1.5">
+          <MessageSquare className="w-3.5 h-3.5" /> Anotaciones
+        </span>
+        <VoiceDictation currentText={value} onTranscription={(t) => setValue(t)} placeholder="Dictar anotaciones" />
+      </div>
       <textarea
         value={value}
         onChange={(e) => setValue(e.target.value)}

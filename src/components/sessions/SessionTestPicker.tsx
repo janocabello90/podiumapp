@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ClipboardList } from 'lucide-react'
+import VoiceDictation from '@/components/assessment/VoiceDictation'
 import toast from 'react-hot-toast'
 
 type CatalogTest = { id: string; name: string }
@@ -67,6 +68,10 @@ export default function SessionTestPicker({
     }
   }
 
+  function setNotesLocal(testId: string, notes: string) {
+    setSelected((prev) => (prev[testId] ? { ...prev, [testId]: { ...prev[testId], notes } } : prev))
+  }
+
   async function saveNotes(testId: string, notes: string) {
     const cur = selected[testId]
     if (!cur) return
@@ -112,13 +117,23 @@ export default function SessionTestPicker({
                 <span className="text-sm font-medium text-gray-900">{t.name}</span>
               </label>
               {sel && (
-                <textarea
-                  defaultValue={sel.notes}
-                  onBlur={(e) => saveNotes(t.id, e.target.value)}
-                  placeholder="Notas / interpretación de esta prueba…"
-                  rows={2}
-                  className="mt-2 ml-7 w-[calc(100%-1.75rem)] px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
-                />
+                <div className="mt-2 ml-7 w-[calc(100%-1.75rem)]">
+                  <div className="flex justify-end mb-1">
+                    <VoiceDictation
+                      currentText={sel.notes}
+                      onTranscription={(text) => saveNotes(t.id, text)}
+                      placeholder="Dictar notas de la prueba"
+                    />
+                  </div>
+                  <textarea
+                    value={sel.notes}
+                    onChange={(e) => setNotesLocal(t.id, e.target.value)}
+                    onBlur={(e) => saveNotes(t.id, e.target.value)}
+                    placeholder="Notas / interpretación de esta prueba…"
+                    rows={2}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+                  />
+                </div>
               )}
             </div>
           )
