@@ -265,21 +265,25 @@ export async function POST(request: NextRequest) {
     // Anotaciones generales del fisioterapeuta (sessions.notes) — se incluyen SIEMPRE que
     // existan, aunque no haya exploración (p. ej. sesiones de equipo, sin exploración).
     if (clinicalNotes && String(clinicalNotes).trim()) {
-      patientContext += `\n\nANOTACIONES GENERALES DEL FISIOTERAPEUTA:\n${clinicalNotes}`
+      patientContext += `\n\n===== ANOTACIONES GENERALES DEL FISIOTERAPEUTA SOBRE LA SESIÓN =====\n(Impresión global, contexto y matices que el profesional considera relevantes.)\n${clinicalNotes}`
     }
 
-    // Fase F: pruebas de la sesión — notas por prueba + guía de interpretación VALD por prueba.
+    // Pruebas de la sesión — para CADA prueba: guía de interpretación (cómo leerla) + observaciones
+    // del fisio. Los valores numéricos de estas pruebas están en las gráficas de VALD adjuntas.
     if (sessionTests.length > 0) {
       const testsBlock = sessionTests
-        .map((t: any) => {
-          const parts: string[] = [`- ${t.test_name}${t.status ? ` (${t.status})` : ''}`]
-          if (t.notes && String(t.notes).trim()) parts.push(`    Notas del fisio: ${t.notes}`)
+        .map((t: any, i: number) => {
+          const parts: string[] = [`${i + 1}) PRUEBA: ${t.test_name}${t.status ? ` — estado: ${t.status}` : ''}`]
           const prompt = t.tests?.vald_interpretation_prompt
-          if (prompt && String(prompt).trim()) parts.push(`    Guía de interpretación VALD: ${prompt}`)
+          parts.push(`   · Cómo interpretarla (guía de la clínica): ${prompt && String(prompt).trim() ? String(prompt).trim() : '(sin guía específica)'}`)
+          parts.push(`   · Observaciones del fisioterapeuta: ${t.notes && String(t.notes).trim() ? String(t.notes).trim() : '(sin observaciones)'}`)
           return parts.join('\n')
         })
-        .join('\n')
-      patientContext += `\n\nPRUEBAS FÍSICAS DE LA SESIÓN (con notas del fisio y guía de interpretación por prueba):\n${testsBlock}`
+        .join('\n\n')
+      patientContext += `\n\n===== PRUEBAS REALIZADAS EN LA SESIÓN =====
+Los RESULTADOS NUMÉRICOS de estas pruebas están en las GRÁFICAS DE VALD adjuntas a este mensaje (léelas). Para cada prueba tienes su guía de interpretación y las observaciones del fisioterapeuta. Interpreta SIEMPRE cruzando tres fuentes: (1) los valores de la gráfica VALD, (2) la guía de interpretación y (3) las observaciones del fisio.
+
+${testsBlock}`
     }
 
     // VALD interpretation from patient record
@@ -379,9 +383,18 @@ export async function POST(request: NextRequest) {
     }
 
     const informeNombre = isTeamReport ? 'Informe de Rendimiento y Prevención (Metodología Podium®)' : 'Valoración Integral Avanzada PODIUM'
-    const userText = docBlocks.length > 0
-      ? `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}. Se adjuntan ${docBlocks.length} documento(s) (informes/gráficas de VALD y/o imágenes clínicas): LÉELOS e interpreta sus resultados objetivos según las reglas. Responde SOLO con JSON válido.\n\n${patientContext}`
-      : `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}. Responde SOLO con JSON válido.\n\n${patientContext}`
+    const guia = `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}.
+
+CÓMO USAR EL CONTEXTO (viene ordenado a continuación):
+- DATOS y ANAMNESIS: quién es y su relato/contexto.${isTeamReport ? '' : '\n- EXPLORACIÓN FÍSICA / VALORACIÓN: hallazgos de la exploración del fisio.'}
+- PRUEBAS REALIZADAS: cada prueba trae su GUÍA de interpretación y las OBSERVACIONES del fisio. Sus valores numéricos están en las GRÁFICAS DE VALD ADJUNTAS a este mensaje.
+- ANOTACIONES GENERALES DEL FISIO: impresión global y matices; tenlos muy en cuenta.
+${docBlocks.length > 0 ? `- DOCUMENTOS ADJUNTOS (${docBlocks.length}): informes/gráficas de VALD y/o imágenes. LÉELOS e interpreta sus resultados objetivos.` : '- (No se han adjuntado documentos; interpreta con las notas y guías disponibles.)'}
+
+Integra y CRUZA todas estas fuentes; no te limites a listarlas. Responde SOLO con JSON válido.
+
+${patientContext}`
+    const userText = guia
 
     // Rol/instrucciones editables por la clínica (Ajustes → Informes) + estructura fija.
     const reportInstructions = await getReportInstructions(supabase, patient.clinic_id, isTeamReport ? 'team' : 'individual')
