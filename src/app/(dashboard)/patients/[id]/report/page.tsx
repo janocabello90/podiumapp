@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import ReportEditor from '@/components/report/ReportEditor'
+import TeamReportEditor from '@/components/report/TeamReportEditor'
 import ReportGenerateButton from '@/components/report/ReportGenerateButton'
 
 export default async function ReportPage({
@@ -71,16 +72,25 @@ export default async function ReportPage({
       </div>
 
       {latestReport ? (
-        <ReportEditor
-          reportId={latestReport.id}
-          patientName={patient.full_name}
-          patientDob={patient.date_of_birth}
-          patientGender={patient.gender}
-          initialData={latestReport.report_data}
-          initialStatus={latestReport.status}
-          documents={documents}
-          clinicLogoUrl={clinicLogoUrl}
-        />
+        (latestReport.report_data as any)?._template === 'team_performance' ? (
+          <TeamReportEditor
+            reportId={latestReport.id}
+            patientName={patient.full_name}
+            initialData={latestReport.report_data}
+            initialStatus={latestReport.status}
+          />
+        ) : (
+          <ReportEditor
+            reportId={latestReport.id}
+            patientName={patient.full_name}
+            patientDob={patient.date_of_birth}
+            patientGender={patient.gender}
+            initialData={latestReport.report_data}
+            initialStatus={latestReport.status}
+            documents={documents}
+            clinicLogoUrl={clinicLogoUrl}
+          />
+        )
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center">
           <div className="max-w-md mx-auto space-y-4">

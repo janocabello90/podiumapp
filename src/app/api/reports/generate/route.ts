@@ -46,6 +46,67 @@ REGLAS:
 - Si se adjuntan documentos a este mensaje (informes/gráficas de VALD, ecografías, imágenes clínicas), LÉELOS e interpreta sus RESULTADOS OBJETIVOS: valores por lado (izq/der), asimetrías (%), potencia/fuerza, percentiles y hallazgos de imagen. Integra esos datos y su interpretación (cruzándolos con las notas del fisio y la guía de interpretación de cada prueba) en "exploracion_fisica.fuerza"/"hallazgos" y, sobre todo, en "conclusiones". No te limites a mencionar que existen: interpreta lo que muestran.
 - Responde SOLO con el JSON válido, sin texto adicional.`
 
+// Informe de EQUIPO / deportista — "Informe de Rendimiento y Prevención" (Metodología Podium®).
+// Estructura distinta del individual: sin exploración física ni pruebas de imagen; foco en
+// valoración funcional (VALD), semáforo, conclusiones, recomendaciones y resumen ejecutivo.
+const TEAM_SYSTEM_PROMPT = `Eres un fisioterapeuta del deporte experto redactando el "Informe de Rendimiento y Prevención" (Metodología Podium®) para un deportista. Escribes en español clínico-deportivo, profesional y claro. El informe se basa en la VALORACIÓN FUNCIONAL (batería de pruebas, muchas medidas con tecnología VALD) — NO hay exploración física manual ni pruebas de imagen.
+
+Se te adjuntan (si existen) los informes/gráficas de VALD en PDF y/o imágenes: LÉELOS e interpreta sus resultados objetivos (valores por lado izq/der, asimetrías %, potencia W/kg, fuerza N, percentiles, control postural). Cruza esos datos con las notas del fisio por prueba y su guía de interpretación.
+
+Genera SOLO un JSON válido con esta estructura:
+
+{
+  "objetivo_intro": "Texto introductorio (2 párrafos) explicando el objetivo del informe: recoge los resultados de la Valoración Funcional (Metodología Podium®), un protocolo para analizar de forma objetiva el estado funcional del deportista e identificar factores que influyen en su rendimiento, tolerancia a la carga y riesgo de lesión. Menciona que la Metodología integra valoración clínica, análisis del movimiento y medición objetiva de movilidad, fuerza, potencia, control motor y capacidad neuromuscular, para convertir la información en decisiones útiles de rendimiento y prevención.",
+  "resumen_anamnesis": "Resumen narrativo (1-2 párrafos) de la anamnesis deportiva: historial de lesiones, molestias actuales, carga de entrenamiento/competición, sueño/recuperación/fatiga, objetivos de temporada y factores que puedan condicionar el rendimiento. Usa solo los datos disponibles.",
+  "valoracion_funcional": {
+    "introduccion": "Párrafo introductorio: se ha aplicado una batería de pruebas adaptada a las demandas del deporte; el análisis del movimiento, movilidad, fuerza, potencia, capacidad reactiva y asimetrías ofrece una radiografía funcional del deportista.",
+    "calidad_movimiento": "Interpretación del patrón de movimiento y control motor (a partir de datos y notas).",
+    "movilidad": "Interpretación de la movilidad relevante para el deporte.",
+    "fuerza": "Interpretación de la producción de fuerza, simetrías y ratios (con valores concretos si están en las gráficas).",
+    "potencia": "Interpretación de la producción de potencia y rendimiento en salto (con valores/percentiles si están).",
+    "capacidad_reactiva": "Interpretación de la eficiencia del ciclo estiramiento-acortamiento y capacidad reactiva."
+  },
+  "hallazgos": "Resumen de los déficits y fortalezas con mayor impacto sobre el rendimiento y la prevención (2 párrafos).",
+  "semaforo": {
+    "movilidad": "adecuado|mejorable|prioritario",
+    "fuerza": "adecuado|mejorable|prioritario",
+    "potencia": "adecuado|mejorable|prioritario",
+    "control_motor": "adecuado|mejorable|prioritario",
+    "capacidad_reactiva": "adecuado|mejorable|prioritario",
+    "simetria": "adecuado|mejorable|prioritario"
+  },
+  "conclusiones": "Interpretación conjunta (2-3 párrafos) de todas las pruebas: cómo se mueve el deportista, cómo produce fuerza, cómo absorbe y genera carga, y qué factores pueden influir en su rendimiento y disponibilidad durante la temporada.",
+  "recomendaciones": {
+    "capacidades_prioritarias": "Capacidades prioritarias a desarrollar.",
+    "aspectos_monitorizar": "Aspectos a monitorizar.",
+    "cuerpo_tecnico": "Recomendaciones para el cuerpo técnico.",
+    "siguiente_valoracion": "Momento recomendado para la siguiente valoración funcional."
+  },
+  "resumen_ejecutivo": {
+    "fortalezas": "Principales fortalezas (breve).",
+    "aspectos_mejorar": "Aspectos a mejorar (breve).",
+    "riesgo_funcional": "Nivel/áreas de riesgo funcional (breve).",
+    "objetivo_principal": "Objetivo principal de trabajo (una frase)."
+  },
+  "descargo": "El presente informe ha sido elaborado conforme a la Metodología Podium®, un sistema de valoración funcional orientado al rendimiento y la prevención de lesiones en el deporte. La redacción ha sido asistida por un sistema de inteligencia artificial (Anthropic Claude, vía API) y ha sido revisada y aprobada por un fisioterapeuta colegiado antes de su emisión. No constituye un diagnóstico médico ni sustituye la valoración de otros profesionales sanitarios. Los resultados representan una fotografía del momento actual y deben interpretarse junto con la evolución del entrenamiento."
+}
+
+REGLAS:
+- Español profesional; párrafos narrativos (salvo el semáforo, que son valores).
+- El "semaforo": cada área SOLO puede valer "adecuado", "mejorable" o "prioritario" (en minúscula), según los datos. Si no hay datos suficientes de un área, usa "mejorable" y decláralo en el texto.
+- NO inventes valores: usa los que leas de las gráficas de VALD o las notas; si no hay, interpreta cualitativamente sin cifras.
+- Refiere al deportista por su nombre de pila.
+- Responde SOLO con el JSON válido, sin texto adicional.`
+
+function ageFromDob(dob: string | null | undefined): number | null {
+  if (!dob) return null
+  const d = new Date(dob); if (isNaN(d.getTime())) return null
+  const now = new Date(); let age = now.getFullYear() - d.getFullYear()
+  const m = now.getMonth() - d.getMonth()
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age--
+  return age
+}
+
 export async function POST(request: NextRequest) {
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
@@ -128,6 +189,41 @@ export async function POST(request: NextRequest) {
       ])
       sessionTests = st || []
       if ((sessionDocs || []).length > 0) documents = sessionDocs as any[]
+    }
+
+    // ¿Informe de EQUIPO (Rendimiento y Prevención)? Se decide por si la sesión pertenece a un
+    // estudio (campaign_id), igual que el patrón de la consulta. Si no, informe individual clásico.
+    const isTeamReport = !!(session && (session as any).campaign_id)
+    let teamPerfil: any = null
+    if (isTeamReport) {
+      const fd = (anamnesis?.form_data as any) || {}
+      let teamName: string | null = null
+      let teamCategory: string | null = null
+      if ((patient as any).team_id) {
+        const { data: tm } = await supabase.from('teams').select('name, category').eq('id', (patient as any).team_id).single()
+        teamName = (tm as any)?.name ?? null
+        teamCategory = (tm as any)?.category ?? null
+      }
+      let sportName: string | null = null
+      const sportId = (session as any)?.sport_id ?? (patient as any).sport_id
+      if (sportId) {
+        const { data: sp } = await supabase.from('sports').select('name').eq('id', sportId).single()
+        sportName = (sp as any)?.name ?? null
+      }
+      const lateralidad = [fd.dominant_leg ? `Pierna ${fd.dominant_leg}` : null, fd.dominant_arm ? `Brazo ${fd.dominant_arm}` : null].filter(Boolean).join(' · ') || null
+      teamPerfil = {
+        nombre: patient.full_name,
+        edad: ageFromDob(patient.date_of_birth),
+        sexo: patient.gender === 'male' ? 'Hombre' : patient.gender === 'female' ? 'Mujer' : (fd.sex || null),
+        deporte: sportName,
+        posicion: fd.position || null,
+        categoria: teamCategory,
+        altura_cm: fd.height_cm ?? null,
+        peso_kg: fd.weight_kg ?? null,
+        lateralidad,
+        horas_entreno_semana: fd.training_hours_week ?? null,
+        equipo: teamName,
+      }
     }
 
     let patientContext = `DATOS DEL PACIENTE:
@@ -265,9 +361,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Contexto de perfil para el informe de equipo (datos ya estructurados).
+    if (isTeamReport && teamPerfil) {
+      const p = teamPerfil
+      const perfilLines = [
+        `- Nombre: ${p.nombre}`,
+        p.edad != null ? `- Edad: ${p.edad}` : null,
+        p.sexo ? `- Sexo: ${p.sexo}` : null,
+        p.deporte ? `- Deporte: ${p.deporte}` : null,
+        p.posicion ? `- Posición: ${p.posicion}` : null,
+        p.categoria ? `- Categoría: ${p.categoria}` : null,
+        p.equipo ? `- Equipo: ${p.equipo}` : null,
+        (p.altura_cm || p.peso_kg) ? `- Altura/Peso: ${p.altura_cm ?? '—'} cm / ${p.peso_kg ?? '—'} kg` : null,
+        p.lateralidad ? `- Lateralidad: ${p.lateralidad}` : null,
+        p.horas_entreno_semana != null ? `- Horas de entrenamiento semanales: ${p.horas_entreno_semana}` : null,
+      ].filter(Boolean).join('\n')
+      patientContext = `PERFIL DEL DEPORTISTA:\n${perfilLines}\n\n${patientContext}`
+    }
+
+    const informeNombre = isTeamReport ? 'Informe de Rendimiento y Prevención (Metodología Podium®)' : 'Valoración Integral Avanzada PODIUM'
     const userText = docBlocks.length > 0
-      ? `Genera el informe de Valoración Integral Avanzada PODIUM para este paciente. Se adjuntan ${docBlocks.length} documento(s) (informes/gráficas de VALD y/o imágenes clínicas): LÉELOS e interpreta sus resultados objetivos según las reglas. Responde SOLO con JSON válido.\n\n${patientContext}`
-      : `Genera el informe de Valoración Integral Avanzada PODIUM para este paciente. Responde SOLO con JSON válido.\n\n${patientContext}`
+      ? `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}. Se adjuntan ${docBlocks.length} documento(s) (informes/gráficas de VALD y/o imágenes clínicas): LÉELOS e interpreta sus resultados objetivos según las reglas. Responde SOLO con JSON válido.\n\n${patientContext}`
+      : `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}. Responde SOLO con JSON válido.\n\n${patientContext}`
 
     // Call Claude
     const anthropic = new Anthropic({ apiKey })
@@ -275,7 +390,7 @@ export async function POST(request: NextRequest) {
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8000,
-      system: SYSTEM_PROMPT,
+      system: isTeamReport ? TEAM_SYSTEM_PROMPT : SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
@@ -300,6 +415,11 @@ export async function POST(request: NextRequest) {
     } catch {
       console.error('Failed to parse Claude response:', responseText.substring(0, 500))
       return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
+    }
+
+    // Informe de equipo: marcar plantilla y añadir el perfil (datos estructurados) al report_data.
+    if (isTeamReport) {
+      reportData = { _template: 'team_performance', perfil: teamPerfil, ...reportData }
     }
 
     // Save report to database
