@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { getReportInstructions } from '@/lib/reports/prompt'
 
 // Cap de jugadores incluidos en el prompt v1 (evita desbordar tokens en estudios grandes).
 const MAX_PLAYERS_IN_PROMPT = 40
 
-const SYSTEM_PROMPT = `Eres un fisioterapeuta clínico experto de Clínica PODIUM redactando un INFORME AGREGADO DE CAMPAÑA: una valoración de conjunto de uno o varios equipos de un grupo deportivo, a partir de las valoraciones individuales de sus jugadores. Escribes en español clínico profesional, riguroso y útil para el cuerpo técnico y médico.
-
-IMPORTANTE — naturaleza cualitativa: dispones de NOTAS y de la interpretación del fisioterapeuta por jugador y por prueba, NO de datos numéricos estructurados. Por tanto el informe es CUALITATIVO: describe patrones, tendencias y hallazgos agrupados en lenguaje clínico, SIN inventar cifras, medias ni porcentajes que no estén en los datos.
+// ESTRUCTURA FIJA del informe de campaña (el rol/instrucciones editables se anteponen).
+const STRUCTURE_CAMPAIGN = `IMPORTANTE — naturaleza cualitativa: dispones de NOTAS y de la interpretación del fisioterapeuta por jugador y por prueba, NO de datos numéricos estructurados. Por tanto el informe es CUALITATIVO: describe patrones, tendencias y hallazgos agrupados en lenguaje clínico, SIN inventar cifras, medias ni porcentajes que no estén en los datos.
 
 ESTRUCTURA DEL INFORME (responde SOLO con un JSON válido con estas claves):
 
@@ -171,12 +171,16 @@ export async function POST(request: NextRequest) {
       context += `\n(Nota: se han incluido los primeros ${MAX_PLAYERS_IN_PROMPT} jugadores valorados de ${valuedPlayers.length} por límite de longitud.)\n`
     }
 
+    // Rol/instrucciones editables por la clínica (Ajustes → Informes) + estructura fija.
+    const reportInstructions = await getReportInstructions(supabase, profile.clinic_id, 'campaign')
+    const systemPrompt = `${reportInstructions}\n\n${STRUCTURE_CAMPAIGN}`
+
     // Llamada a Claude.
     const anthropic = new Anthropic({ apiKey })
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8000,
-      system: SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [
         {
           role: 'user',

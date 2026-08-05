@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2, X, ClipboardEdit } from 'lucide-react'
+import { User, Building2, Users, FileText, Save, Plus, Loader2, UserX, UserCheck, Upload, Image as ImageIcon, Copy, Check, Eye, EyeOff, KeyRound, Dumbbell, ClipboardList, ChevronRight, ShieldCheck, Trash2, X, ClipboardEdit, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import type { User as UserType, Clinic } from '@/types/database'
 
-type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'anamnesis' | 'consents' | 'report'
+type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'anamnesis' | 'consents' | 'reports' | 'report'
 
 interface Props {
   currentUser: UserType
@@ -29,6 +29,7 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
     { id: 'catalog' as Tab, label: 'Deportes y pruebas', icon: Dumbbell, adminOnly: true },
     { id: 'anamnesis' as Tab, label: 'Anamnesis', icon: ClipboardEdit, adminOnly: true },
     { id: 'consents' as Tab, label: 'Consentimientos', icon: ShieldCheck, adminOnly: true },
+    { id: 'reports' as Tab, label: 'Informes (IA)', icon: Sparkles, adminOnly: true },
     { id: 'report' as Tab, label: 'Informe', icon: FileText, adminOnly: true },
   ].filter(tab => !tab.adminOnly || isAdmin)
 
@@ -118,6 +119,18 @@ export default function SettingsClient({ currentUser, currentUserEmail, clinic, 
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900">Textos de consentimientos</p>
             <p className="text-xs text-gray-500">Protección de datos, tratamiento de la información y uso de IA</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300" />
+        </Link>
+      )}
+      {activeTab === 'reports' && (
+        <Link href="/settings/reports" className="bg-white rounded-2xl border border-gray-200 p-5 hover:bg-gray-50 transition-colors flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-5 h-5 text-blue-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Instrucciones de los informes (IA)</p>
+            <p className="text-xs text-gray-500">Rol y enfoque de la IA para individual, jugador de equipo y equipo completo</p>
           </div>
           <ChevronRight className="w-4 h-4 text-gray-300" />
         </Link>

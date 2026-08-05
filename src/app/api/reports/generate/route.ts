@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { getReportInstructions } from '@/lib/reports/prompt'
 
-const SYSTEM_PROMPT = `Eres un fisioterapeuta clínico experto redactando informes de valoración integral para Clínica PODIUM. Escribes en español clínico profesional, dirigiéndote al paciente con cercanía pero rigor.
-
-ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
+// ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
+const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
 
 1. "portada_intro": Texto introductorio para la portada. Explica que el informe recoge la información de la Valoración Integral Avanzada PODIUM. Menciona la metodología propia de PODIUM (entender qué está limitando la capacidad, no solo identificar una lesión). Incluye que a lo largo del informe encontrará: resumen de anamnesis, hallazgos de exploración, resultados objetivos, explicación integrada y recomendación de itinerario. Termina con el compromiso de acompañar con criterio clínico, claridad y planificación coherente. Adapta el texto al caso concreto del paciente.
 
@@ -49,9 +49,8 @@ REGLAS:
 // Informe de EQUIPO / deportista — "Informe de Rendimiento y Prevención" (Metodología Podium®).
 // Estructura distinta del individual: sin exploración física ni pruebas de imagen; foco en
 // valoración funcional (VALD), semáforo, conclusiones, recomendaciones y resumen ejecutivo.
-const TEAM_SYSTEM_PROMPT = `Eres un fisioterapeuta del deporte experto redactando el "Informe de Rendimiento y Prevención" (Metodología Podium®) para un deportista. Escribes en español clínico-deportivo, profesional y claro. El informe se basa en la VALORACIÓN FUNCIONAL (batería de pruebas, muchas medidas con tecnología VALD) — NO hay exploración física manual ni pruebas de imagen.
-
-Se te adjuntan (si existen) los informes/gráficas de VALD en PDF y/o imágenes: LÉELOS e interpreta sus resultados objetivos (valores por lado izq/der, asimetrías %, potencia W/kg, fuerza N, percentiles, control postural). Cruza esos datos con las notas del fisio por prueba y su guía de interpretación.
+// ESTRUCTURA FIJA del informe de equipo (el rol/instrucciones editables se anteponen).
+const STRUCTURE_TEAM = `Se te adjuntan (si existen) los informes/gráficas de VALD en PDF y/o imágenes: LÉELOS e interpreta sus resultados objetivos (valores por lado izq/der, asimetrías %, potencia W/kg, fuerza N, percentiles, control postural). Cruza esos datos con las notas del fisio por prueba y su guía de interpretación.
 
 Genera SOLO un JSON válido con esta estructura:
 
@@ -384,13 +383,17 @@ export async function POST(request: NextRequest) {
       ? `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}. Se adjuntan ${docBlocks.length} documento(s) (informes/gráficas de VALD y/o imágenes clínicas): LÉELOS e interpreta sus resultados objetivos según las reglas. Responde SOLO con JSON válido.\n\n${patientContext}`
       : `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}. Responde SOLO con JSON válido.\n\n${patientContext}`
 
+    // Rol/instrucciones editables por la clínica (Ajustes → Informes) + estructura fija.
+    const reportInstructions = await getReportInstructions(supabase, patient.clinic_id, isTeamReport ? 'team' : 'individual')
+    const systemPrompt = `${reportInstructions}\n\n${isTeamReport ? STRUCTURE_TEAM : STRUCTURE_INDIVIDUAL}`
+
     // Call Claude
     const anthropic = new Anthropic({ apiKey })
 
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 8000,
-      system: isTeamReport ? TEAM_SYSTEM_PROMPT : SYSTEM_PROMPT,
+      system: systemPrompt,
       messages: [
         {
           role: 'user',
