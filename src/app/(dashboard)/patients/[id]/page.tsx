@@ -139,11 +139,18 @@ export default async function PatientDetailPage({
   const campaignGroups = blockIds.map((id) => ({ id, name: campaignNames.get(id) || 'Estudio', sessions: sessionsByCampaign.get(id) || [] }))
 
   // Render de un tramo de timeline (reutilizado por grupos e individual)
-  const renderTimeline = (sessions: any[]) => (
+  const renderTimeline = (sessions: any[]) => {
+    // Numeración POR GRUPO: la consulta más antigua de este bloque es la "Valoración inicial"
+    // y las siguientes "Seguimiento N". Cada estudio (y las individuales) numeran por separado.
+    const ordinalById = new Map<string, number>()
+    ;[...sessions]
+      .sort((a: any, b: any) => (a.session_number || 0) - (b.session_number || 0))
+      .forEach((s: any, idx: number) => ordinalById.set(s.id, idx))
+    return (
     <div className="relative">
       {sessions.map((s: any, i: number) => {
-        const num = s.session_number || 1
-        const type = num === 1 ? 'Valoración inicial' : `Seguimiento ${num - 1}`
+        const ord = ordinalById.get(s.id) ?? 0
+        const type = ord === 0 ? 'Valoración inicial' : `Seguimiento ${ord}`
         const done = s.status === 'completed'
         const report = reportBySession.get(s.id)
         return (
@@ -178,7 +185,8 @@ export default async function PatientDetailPage({
         )
       })}
     </div>
-  )
+    )
+  }
 
   return (
     <div className="max-w-4xl mx-auto">
