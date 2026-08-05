@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
     whisperFormData.append('model', 'whisper-1')
     whisperFormData.append('language', 'es')
     whisperFormData.append('response_format', 'json')
+    // temperature 0 = menos "alucinaciones" del modelo con audio flojo/silencio
+    whisperFormData.append('temperature', '0')
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -53,7 +55,34 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await response.json()
-    return NextResponse.json({ text: result.text })
+
+    // Whisper "alucina" frases comunes de YouTube cuando el audio es (casi) silencio.
+    // Si la transcripción es EXACTAMENTE una de esas frases-basura conocidas, la
+    // descartamos y devolvemos vacío (la UI dirá "No se detectó texto, repite").
+    const raw = String(result.text || '')
+    const norm = raw
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, "") // quitar acentos
+      .replace(/[^a-z0-9 ]/g, '')
+      .trim()
+    const HALLUCINATIONS = new Set([
+      'gracias por ver el video',
+      'gracias por ver este video',
+      'gracias por ver el video hasta el final',
+      'suscribete',
+      'suscribete al canal',
+      'no te olvides de suscribirte',
+      'subtitulos realizados por la comunidad de amaraorg',
+      'subtitulos por la comunidad de amaraorg',
+      'subtitulado por la comunidad de amaraorg',
+      'mas informacion en wwwalimmentaes',
+      'gracias',
+      'gracias por su atencion',
+      'hasta la proxima',
+    ])
+    const text = HALLUCINATIONS.has(norm) ? '' : raw
+    return NextResponse.json({ text })
   } catch (error: any) {
     console.error('Transcription error:', error)
     return NextResponse.json(
