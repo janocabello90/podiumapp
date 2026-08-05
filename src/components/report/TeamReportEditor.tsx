@@ -30,17 +30,45 @@ export default function TeamReportEditor({
   patientName,
   initialData,
   initialStatus,
+  documents,
+  clinicLogoUrl,
 }: {
   reportId: string
   patientName: string
   initialData: any
   initialStatus: string
+  documents?: { file_name: string; storage_path: string }[]
+  clinicLogoUrl?: string | null
 }) {
   const router = useRouter()
   const [data, setData] = useState<any>(initialData || {})
   const [status, setStatus] = useState(initialStatus)
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const approved = status === 'approved'
+
+  async function exportPdf() {
+    setExporting(true)
+    try {
+      const res = await fetch('/api/reports/export-pdf-team', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reportData: data, patientName, documents: documents || [], clinicLogoUrl: clinicLogoUrl || null }),
+      })
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Informe_Rendimiento_${patientName.replace(/\s+/g, '_')}.pdf`
+      document.body.appendChild(a); a.click(); a.remove()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error('No se pudo generar el PDF')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function persist(next: any) {
     setSaving(true)
@@ -102,8 +130,8 @@ export default function TeamReportEditor({
               <Check className="w-4 h-4" /> Aprobar
             </button>
           )}
-          <button disabled title="PDF con las gráficas de VALD — próximamente" className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 text-gray-400 text-sm font-medium rounded-xl cursor-not-allowed">
-            <FileDown className="w-4 h-4" /> PDF (próximamente)
+          <button onClick={exportPdf} disabled={exporting} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl disabled:opacity-50">
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />} PDF
           </button>
         </div>
       </div>
@@ -139,7 +167,7 @@ export default function TeamReportEditor({
         <SubField label="3.3 Fuerza" path="valoracion_funcional.fuerza" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="3.4 Potencia" path="valoracion_funcional.potencia" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="3.5 Capacidad reactiva" path="valoracion_funcional.capacidad_reactiva" get={getField} onSave={savePath} disabled={approved} />
-        <p className="text-xs text-gray-400 mt-2">Las gráficas de VALD se incrustarán aquí en el PDF (próximamente).</p>
+        <p className="text-xs text-gray-400 mt-2">Las gráficas de VALD (PDF subido a la consulta) se incrustan aquí al exportar el PDF.</p>
       </Section>
 
       <Section title="4. Hallazgos principales">

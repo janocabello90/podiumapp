@@ -52,8 +52,14 @@ export default async function ReportPage({
     doc_type: d.doc_type,
     file_name: d.file_name,
     storage_path: d.storage_path,
+    session_id: d.session_id,
     extracted_data: d.extracted_data,
   }))
+  // Para el informe de equipo: PDFs de VALD de la sesión de ese informe (o del paciente si no hay session_id)
+  const teamValdDocs = documents
+    .filter((d: any) => d.doc_type !== 'medical_image' && /\.pdf$/i.test(d.file_name || ''))
+    .filter((d: any) => !latestReport?.session_id || d.session_id === latestReport.session_id)
+    .map((d: any) => ({ file_name: d.file_name, storage_path: d.storage_path }))
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -78,6 +84,8 @@ export default async function ReportPage({
             patientName={patient.full_name}
             initialData={latestReport.report_data}
             initialStatus={latestReport.status}
+            documents={teamValdDocs}
+            clinicLogoUrl={clinicLogoUrl}
           />
         ) : (
           <ReportEditor
