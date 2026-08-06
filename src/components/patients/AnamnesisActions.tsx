@@ -37,6 +37,32 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
   )
   const supabase = createClient()
 
+  const [regenerating, setRegenerating] = useState(false)
+  async function regenerate() {
+    if (!currentAnamnesis?.id) return
+    if (typeof window !== 'undefined' && !window.confirm('¿Regenerar la anamnesis? Se borrará la actual y se creará un enlace nuevo para que el paciente la rellene otra vez.')) return
+    setRegenerating(true)
+    try {
+      const res = await fetch('/api/anamnesis/regenerate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ anamnesisId: currentAnamnesis.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo regenerar')
+      const link = `${window.location.origin}/anamnesis/${data.token}`
+      setToken(data.token)
+      setAnamnesisLink(link)
+      setRenewed(true)
+      toast.success('Anamnesis regenerada — enlace nuevo listo para enviar')
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo regenerar')
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
   async function sendByEmail() {
     if (!token) return
     setSendingEmail(true)
@@ -104,9 +130,9 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
   }
 
   // Already completed
-  if (currentAnamnesis?.status === 'completed') {
+  if (currentAnamnesis?.status === 'completed' && !renewed) {
     return (
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex items-center gap-3 flex-wrap">
         <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-xs font-medium rounded-lg">
           <Check className="w-3 h-3" />
           Completada
@@ -118,6 +144,15 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
           anamnesisId={currentAnamnesis.id}
           blocks={blocks}
         />
+        <button
+          onClick={regenerate}
+          disabled={regenerating}
+          title="Borrar esta anamnesis y crear un enlace nuevo para rellenarla otra vez"
+          className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-600 disabled:opacity-50"
+        >
+          {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+          Regenerar
+        </button>
       </div>
     )
   }
