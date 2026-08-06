@@ -250,7 +250,7 @@ export default async function PatientDetailPage({
             ) : latestAnamnesis?.status !== 'completed' && (
               <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2 mb-1">Cada paciente debe tener su anamnesis rellena. Envíasela para que la complete (recomendado antes de valorar).</p>
             )}
-            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} expired={anamnesisExpired} blocks={anamnesisBlocks} />
+            <AnamnesisActions patientId={patient.id} clinicId={patient.clinic_id} patientName={patient.full_name} currentAnamnesis={latestAnamnesis} expired={anamnesisExpired} blocks={anamnesisBlocks} patientEmail={patient.email} />
           </div>
 
           {/* Historial de consultas (timeline) — común a equipo e individual */}

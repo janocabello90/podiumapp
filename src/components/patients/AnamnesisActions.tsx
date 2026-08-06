@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Send, Copy, Check, ExternalLink, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Send, Copy, Check, ExternalLink, RefreshCw, AlertTriangle, Mail, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { AnamnesisForm } from '@/types/database'
 import type { AnamnesisBlock } from '@/components/anamnesis/anamnesisFields'
@@ -18,12 +18,16 @@ interface Props {
   expired?: boolean
   /** Plantilla usada (según tipo de paciente) para etiquetar respuestas en el visor. */
   blocks?: AnamnesisBlock[]
+  /** Email del paciente (para el botón de enviar por correo). */
+  patientEmail?: string | null
 }
 
-export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis, expired = false, blocks }: Props) {
+export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis, expired = false, blocks, patientEmail }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [sendingEmail, setSendingEmail] = useState(false)
+  const [token, setToken] = useState<string | null>(currentAnamnesis?.token || null)
   // Al renovar generamos un enlace nuevo (fresco): dejamos de tratar la anamnesis como caducada.
   const [renewed, setRenewed] = useState(false)
   const [anamnesisLink, setAnamnesisLink] = useState<string | null>(
@@ -32,6 +36,25 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
       : null
   )
   const supabase = createClient()
+
+  async function sendByEmail() {
+    if (!token) return
+    setSendingEmail(true)
+    try {
+      const res = await fetch('/api/anamnesis/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo enviar el correo')
+      toast.success(`Anamnesis enviada por correo${data?.to ? ` a ${data.to}` : ''}`)
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo enviar el correo')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
 
   async function createAnamnesis() {
     setLoading(true)
@@ -49,6 +72,7 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
 
       const link = `${window.location.origin}/anamnesis/${data.token}`
       setAnamnesisLink(link)
+      setToken(data.token)
       setRenewed(true)
       toast.success('Nuevo enlace de anamnesis creado')
       router.refresh()
@@ -147,6 +171,15 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
           >
             <Send className="w-3 h-3" />
             Enviar por WhatsApp
+          </button>
+          <button
+            onClick={sendByEmail}
+            disabled={sendingEmail || !patientEmail}
+            title={patientEmail ? `Enviar a ${patientEmail}` : 'El paciente no tiene email en su ficha'}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-clinical-primary hover:bg-clinical-navy text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {sendingEmail ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+            Enviar por correo
           </button>
           <a
             href={anamnesisLink}

@@ -2,7 +2,13 @@
 
 > Cosas acordadas para más adelante (no bloquean lo actual). Añadir aquí lo que se aparque.
 
-## 📧 Envío de anamnesis por email (Resend) — APARCADO (2026-07-31)
+## 📧 Envío de anamnesis por email (Resend) — CÓDIGO HECHO, falta config (2026-08)
+**Estado**: implementado el botón **"Enviar por correo"** en la tarjeta de Anamnesis + endpoint `POST /api/anamnesis/send-email` (Resend vía REST). **Falta solo la configuración de entorno en Vercel**:
+1. `RESEND_API_KEY` (cuenta de Resend).
+2. **Dominio verificado** en Resend + `RESEND_FROM` (p. ej. `Clínica Podium <no-reply@dominio.com>`). Sin dominio verificado, Resend solo entrega a la propia cuenta (modo test con `onboarding@resend.dev`), no a pacientes.
+El botón se deshabilita si el paciente no tiene email; da error claro si falta `RESEND_API_KEY`.
+
+## 📧 (Histórico) Envío de anamnesis por email (Resend) — APARCADO (2026-07-31)
 **Qué:** poder **enviar / reenviar la anamnesis por correo** al paciente (individual y en lote por equipo), además del WhatsApp/copiar enlace actual.
 
 **Por qué está aparcado:** requiere infraestructura de email que aún no está configurada.
