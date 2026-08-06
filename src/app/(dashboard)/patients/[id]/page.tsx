@@ -6,9 +6,9 @@ import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
 import SportSelect from '@/components/sports/SportSelect'
-import { consentLabel } from '@/lib/clinical/consents'
 import { isAnamnesisExpired } from '@/lib/clinical/anamnesis'
 import { getAnamnesisTemplateBlocks } from '@/lib/anamnesis/template'
+import ConsentsCard from '@/components/patients/ConsentsCard'
 import StartSessionButton from '@/components/sessions/StartSessionButton'
 import DeleteSessionButton from '@/components/sessions/DeleteSessionButton'
 
@@ -59,7 +59,7 @@ export default async function PatientDetailPage({
   // Consentimientos registrados (trazabilidad) — último por tipo
   const { data: rawConsents } = await supabase
     .from('consents')
-    .select('type, granted, granted_at, version_label, metadata')
+    .select('id, type, granted, granted_at, revoked_at, version_label, metadata')
     .eq('patient_id', params.id)
     .order('granted_at', { ascending: false })
   const consentsByType = new Map<string, any>()
@@ -348,42 +348,8 @@ export default async function PatientDetailPage({
             </div>
           )}
 
-          {/* Consentimientos (trazabilidad) */}
-          {consents.length > 0 && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Consentimientos</h3>
-              {consentRepresentative && (
-                <div className="mb-3 text-xs bg-amber-50 text-amber-800 rounded-lg px-3 py-2">
-                  Menor de edad · otorgados por su representante legal
-                  {consentRepresentative.name ? `: ${consentRepresentative.name}` : ''}
-                  {consentRepresentative.relation ? ` (${consentRepresentative.relation})` : ''}
-                  {consentRepresentative.dni ? ` · DNI ${consentRepresentative.dni}` : ''}
-                </div>
-              )}
-              <ul className="space-y-2">
-                {consents.map((c: any) => (
-                  <li key={c.type} className="text-sm">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-gray-600 truncate">{consentLabel(c.type)}</span>
-                      <span className="flex items-center gap-2 flex-shrink-0">
-                        <span className={c.granted ? 'text-green-600' : 'text-red-500'}>
-                          {c.granted ? 'Aceptado' : 'Rechazado'}
-                        </span>
-                        {c.granted_at && (
-                          <span className="text-xs text-gray-400">
-                            {new Date(c.granted_at).toLocaleDateString('es-ES')}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    {c.type === 'image_rights' && c.granted && Array.isArray(c.metadata?.channels) && c.metadata.channels.length > 0 && (
-                      <p className="text-xs text-gray-400 mt-0.5">Soportes: {c.metadata.channels.join(', ')}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {/* Consentimientos (trazabilidad + revocación) */}
+          <ConsentsCard consents={consents as any} representative={consentRepresentative} />
 
           {/* Patient info card */}
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
