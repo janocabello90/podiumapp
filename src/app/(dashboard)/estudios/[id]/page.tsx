@@ -1,9 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Shield, Check, Sparkles, AlertTriangle, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Sparkles, AlertTriangle } from 'lucide-react'
 import CloseCampaignButton from '@/components/teams/CloseCampaignButton'
 import CampaignReportButton from '@/components/teams/CampaignReportButton'
+import StudyRoster from '@/components/teams/StudyRoster'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +39,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const sessionsByPatient = new Map<string, number>()
   if (teamIds.length > 0) {
     const [{ data: pl }, { data: sess }] = await Promise.all([
-      supabase.from('patients').select('id, full_name, team_id').in('team_id', teamIds).eq('status', 'active').order('full_name'),
+      supabase.from('patients').select('id, full_name, team_id, email').in('team_id', teamIds).eq('status', 'active').order('full_name'),
       supabase.from('sessions').select('id, patient_id').eq('campaign_id', campaign.id).eq('clinic_id', profile.clinic_id),
     ])
     players = pl || []
@@ -160,50 +161,18 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         </div>
       </div>
 
-      {/* Roster por equipo */}
-      {teams.length === 0 ? (
-        <p className="text-sm text-gray-400">Este estudio no tiene equipos.</p>
-      ) : (
-        <div className="space-y-6">
-          {teams.map((team) => {
-            const teamPlayers = players.filter((p) => p.team_id === team.id)
-            return (
-              <div key={team.id}>
-                <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-2">
-                  <Shield className="w-4 h-4 text-blue-500" /> {team.name}
-                </h2>
-                {teamPlayers.length === 0 ? (
-                  <p className="text-xs text-gray-400 bg-white rounded-2xl border border-gray-200 px-4 py-4">Sin jugadores.</p>
-                ) : (
-                  <div className="bg-white rounded-2xl border border-gray-200 divide-y divide-gray-100">
-                    {teamPlayers.map((p) => {
-                      const count = sessionsByPatient.get(p.id) || 0
-                      return (
-                        <Link key={p.id} href={`/patients/${p.id}?ctx=equipo`} className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="text-sm font-medium text-gray-900 truncate group-hover:text-blue-700">{p.full_name}</span>
-                            {count > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-xs text-green-600 flex-shrink-0">
-                                <Check className="w-3.5 h-3.5" /> {count} sesión{count !== 1 ? 'es' : ''}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400 flex-shrink-0">Sin valorar</span>
-                            )}
-                            {anamnesisByPatient.get(p.id) !== 'completed' && (
-                              <span className="text-[11px] text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full flex-shrink-0">Anamnesis pendiente</span>
-                            )}
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                        </Link>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {/* Roster por equipo con selección múltiple + envío masivo de anamnesis (un envío por paciente) */}
+      <StudyRoster
+        teams={teams}
+        players={players.map((p) => ({
+          id: p.id,
+          full_name: p.full_name,
+          team_id: p.team_id,
+          email: p.email ?? null,
+          anamnesisCompleted: anamnesisByPatient.get(p.id) === 'completed',
+          sessionCount: sessionsByPatient.get(p.id) || 0,
+        }))}
+      />
     </div>
   )
 }
