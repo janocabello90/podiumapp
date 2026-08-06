@@ -22,6 +22,14 @@ interface Props {
   patientEmail?: string | null
 }
 
+// Base pública de los enlaces de anamnesis: dominio de marca si está configurado
+// (NEXT_PUBLIC_APP_URL), si no el origen actual. Así el paciente nunca ve la URL interna.
+function publicBase(): string {
+  const env = process.env.NEXT_PUBLIC_APP_URL
+  const base = env && env.trim() ? env.trim() : (typeof window !== 'undefined' ? window.location.origin : '')
+  return base.replace(/\/$/, '')
+}
+
 export default function AnamnesisActions({ patientId, clinicId, patientName, currentAnamnesis, expired = false, blocks, patientEmail }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -31,9 +39,7 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
   // Al renovar generamos un enlace nuevo (fresco): dejamos de tratar la anamnesis como caducada.
   const [renewed, setRenewed] = useState(false)
   const [anamnesisLink, setAnamnesisLink] = useState<string | null>(
-    currentAnamnesis?.token
-      ? `${typeof window !== 'undefined' ? window.location.origin : ''}/anamnesis/${currentAnamnesis.token}`
-      : null
+    currentAnamnesis?.token ? `${publicBase()}/anamnesis/${currentAnamnesis.token}` : null
   )
   const supabase = createClient()
 
@@ -50,7 +56,7 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'No se pudo regenerar')
-      const link = `${window.location.origin}/anamnesis/${data.token}`
+      const link = `${publicBase()}/anamnesis/${data.token}`
       setToken(data.token)
       setAnamnesisLink(link)
       setRenewed(true)
@@ -96,7 +102,7 @@ export default function AnamnesisActions({ patientId, clinicId, patientName, cur
 
       if (error) throw error
 
-      const link = `${window.location.origin}/anamnesis/${data.token}`
+      const link = `${publicBase()}/anamnesis/${data.token}`
       setAnamnesisLink(link)
       setToken(data.token)
       setRenewed(true)

@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
 
     const { data: clinic } = await supabase.from('clinics').select('name').eq('id', profile.clinic_id).single()
     const clinicName = clinic?.name || 'tu clínica'
-    const link = `${request.nextUrl.origin}/anamnesis/${anamnesis.token}`
+    const base = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin).replace(/\/$/, '')
+    const link = `${base}/anamnesis/${anamnesis.token}`
 
     const sent = await sendAnamnesisEmail({ to, patientName: patient.full_name || '', clinicName, link })
     if (!sent.ok) {

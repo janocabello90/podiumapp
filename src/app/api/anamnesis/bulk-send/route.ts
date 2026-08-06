@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const latestAnam = new Map<string, any>()
     for (const a of anam || []) if (!latestAnam.has(a.patient_id)) latestAnam.set(a.patient_id, a)
 
-    const origin = request.nextUrl.origin
+    const origin = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin).replace(/\/$/, '')
     const now = Date.now()
     const summary = { sent: 0, no_email: 0, completed: 0, error: 0 }
     const results: Record<string, string> = {}
