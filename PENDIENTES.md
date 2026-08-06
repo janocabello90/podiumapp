@@ -33,6 +33,35 @@ Ambos dependen de lo mismo: **cuenta Resend + dominio verificado**. Con eso se r
 
 ---
 
+## 🌐 Dominio propio + ocultar la app a los pacientes — PASOS (código ya hecho, 2026-08)
+**Objetivo**: que las anamnesis lleguen desde un dominio de la clínica (no `podiumapp-two.vercel.app`) y que, si un paciente va a la raíz de ese dominio, NO descubra la app de gestión (login/dashboard). **El código ya está**: solo falta configurar dominios + variables en Vercel.
+
+**Modelo: dos dominios para la misma app**
+- **App (staff)**: por donde entráis vosotros (login/gestión). Puede ser la URL de Vercel actual o un subdominio propio (p. ej. `app.clinicapodium.com`).
+- **Público (pacientes)**: p. ej. `anamnesis.clinicapodium.com` → SOLO sirve las anamnesis; el resto de rutas se bloquean.
+
+**Pasos (se pueden hacer estos días):**
+1. **Tener un dominio** de la clínica (si no, comprar uno; p. ej. en el registrador que uséis). Ej.: `clinicapodium.com`.
+2. **Vercel → Project → Settings → Domains → Add**: añadir `anamnesis.clinicapodium.com` (y, si queréis, `app.clinicapodium.com`). Vercel mostrará un **registro DNS** (normalmente **CNAME** → `cname.vercel-dns.com`).
+3. **En el DNS del dominio** (panel del registrador/gestor de DNS): crear el/los registros que indique Vercel:
+   - `CNAME  anamnesis  →  cname.vercel-dns.com` (el valor exacto lo da Vercel).
+   - (opcional) `CNAME  app  →  cname.vercel-dns.com`.
+   - Esperar propagación (minutos–horas). Vercel valida y pone el HTTPS solo.
+4. **Vercel → Settings → Environment Variables** (Production) — añadir:
+   - `NEXT_PUBLIC_APP_URL = https://anamnesis.clinicapodium.com` (los enlaces a pacientes usarán este dominio).
+   - `PUBLIC_ANAMNESIS_HOST = anamnesis.clinicapodium.com` (activa el "modo solo-anamnesis" en ese host).
+   - `PUBLIC_REDIRECT_URL = https://www.clinicapodium.com` (opcional: a dónde mandar a quien husmee la raíz; si no se pone, sale un 404 neutro).
+5. **Redeploy** (las variables `NEXT_PUBLIC_*` se aplican al hacer un nuevo deploy: un push cualquiera o "Redeploy" en Vercel).
+6. **Staff**: acceder SIEMPRE por el dominio de la app (Vercel o `app.clinicapodium.com`), NO por `anamnesis.clinicapodium.com` (ese host bloquea el login a propósito).
+7. **Probar**: abrir `https://anamnesis.clinicapodium.com/` → debe dar 404/redirección; abrir un enlace de anamnesis real → debe funcionar.
+
+**Notas**
+- Sin estas variables, todo sigue igual (un solo dominio). Es opcional y no rompe nada.
+- El mismo dominio de la clínica sirve para el **remitente de correos (Resend)** — ver la sección de email; así se resuelven ambos con el mismo dominio verificado.
+- Límite honesto: oculta la app a un paciente normal por completo; un técnico muy determinado podría fingerprintear Next.js/Vercel, pero no verá "podiumapp" ni el login/gestión.
+
+---
+
 ## 📝 Consentimientos — pendiente de revisar (2026-08)
 Contexto: se digitalizó el documento unificado de la clínica (imagen + protección de datos + consentimiento informado + ficha del deportista). Estado y pendientes:
 
