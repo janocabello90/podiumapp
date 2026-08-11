@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, ClipboardList } from 'lucide-react'
+import { Loader2, ClipboardList, Check } from 'lucide-react'
 import VoiceDictation from '@/components/assessment/VoiceDictation'
 import toast from 'react-hot-toast'
 
@@ -37,6 +37,15 @@ export default function SessionTestsPanel({
   const supabase = createClient()
   const [tests, setTests] = useState<SessionTest[]>(initialTests)
   const [loadingSport, setLoadingSport] = useState(false)
+  const [savedId, setSavedId] = useState<string | null>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Muestra "Guardado ✓" en la prueba `id` durante ~2 s.
+  function flashSaved(id: string) {
+    setSavedId(id)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setSavedId((cur) => (cur === id ? null : cur)), 2000)
+  }
 
   function setLocal(id: string, patch: Partial<SessionTest>) {
     setTests((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
@@ -46,11 +55,13 @@ export default function SessionTestsPanel({
     setLocal(id, { status })
     const { error } = await supabase.from('session_tests').update({ status }).eq('id', id)
     if (error) toast.error('Error al guardar')
+    else flashSaved(id)
   }
 
   async function saveNotes(id: string, notes: string) {
     const { error } = await supabase.from('session_tests').update({ notes }).eq('id', id)
     if (error) toast.error('Error al guardar la nota')
+    else flashSaved(id)
   }
 
   async function loadFromSport() {
@@ -133,7 +144,12 @@ export default function SessionTestsPanel({
                     ))}
                   </select>
                 </div>
-                <div className="flex justify-end">
+                <div className="flex justify-between items-center">
+                  <span
+                    className={`inline-flex items-center gap-1 text-xs text-green-600 transition-opacity duration-300 ${savedId === t.id ? 'opacity-100' : 'opacity-0'}`}
+                  >
+                    <Check className="w-3.5 h-3.5" /> Guardado
+                  </span>
                   <VoiceDictation
                     currentText={t.notes ?? ''}
                     onTranscription={(text) => { setLocal(t.id, { notes: text }); saveNotes(t.id, text) }}

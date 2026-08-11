@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardList, Check } from 'lucide-react'
 import VoiceDictation from '@/components/assessment/VoiceDictation'
 import toast from 'react-hot-toast'
 
@@ -30,6 +30,15 @@ export default function SessionTestPicker({
     return m
   })
   const [busy, setBusy] = useState<string | null>(null)
+  const [savedId, setSavedId] = useState<string | null>(null)
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Muestra "Guardado ✓" en la prueba `testId` durante ~2 s.
+  function flashSaved(testId: string) {
+    setSavedId(testId)
+    if (savedTimer.current) clearTimeout(savedTimer.current)
+    savedTimer.current = setTimeout(() => setSavedId((cur) => (cur === testId ? null : cur)), 2000)
+  }
 
   async function toggle(test: CatalogTest) {
     if (busy) return
@@ -78,6 +87,7 @@ export default function SessionTestPicker({
     setSelected((prev) => ({ ...prev, [testId]: { ...prev[testId], notes } }))
     const { error } = await supabase.from('session_tests').update({ notes }).eq('id', cur.rowId)
     if (error) toast.error('Error al guardar la nota')
+    else flashSaved(testId)
   }
 
   if (catalog.length === 0) {
@@ -118,7 +128,12 @@ export default function SessionTestPicker({
               </label>
               {sel && (
                 <div className="mt-2 ml-7 w-[calc(100%-1.75rem)]">
-                  <div className="flex justify-end mb-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <span
+                      className={`inline-flex items-center gap-1 text-xs text-green-600 transition-opacity duration-300 ${savedId === t.id ? 'opacity-100' : 'opacity-0'}`}
+                    >
+                      <Check className="w-3.5 h-3.5" /> Guardado
+                    </span>
                     <VoiceDictation
                       currentText={sel.notes}
                       onTranscription={(text) => saveNotes(t.id, text)}
