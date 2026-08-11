@@ -73,6 +73,16 @@ Contexto: se digitalizó el documento unificado de la clínica (imagen + protecc
 - **DNI del jugador**: ✅ añadido a la anamnesis de equipo (campo opcional en "Datos personales").
 - **Otros huecos del documento vs app** (menores): **nº de colegiado del fisioterapeuta** (no hay campo) y **historial de lesiones como tabla estructurada** (hoy texto libre) siguen pendientes si se quieren.
 
+## 🔒 Privacidad — nombre del paciente hacia la IA (2026-08)
+**Hecho**: al generar informes, el **texto** que se envía a la IA va **seudonimizado** — el nombre real se sustituye por un marcador (`[[PACIENTE]]` en individual/sesión; `[[JUGADOR_n]]` en estudio) y se **restituye** el nombre real en el informe recibido. Cubre datos, anamnesis, notas del fisio, exploración y notas por prueba. Código: `src/lib/reports/redact.ts` + `api/reports/generate` + `api/reports/campaign-generate`.
+
+**⚠️ Límite conocido (pendiente de decisión jurídica)**: los **PDFs de VALD y las imágenes** que se adjuntan a la IA (lectura por *vision* para interpretar resultados) **suelen llevar el nombre del deportista impreso**. Por tanto el nombre **puede llegar a la IA a través del propio documento adjunto**, no por nuestro texto. No se puede tapar sin degradar la lectura del documento. Opciones:
+- **Asumirlo** (recomendado): el texto va anonimizado; el nombre solo podría venir en el documento, que ya es del propio paciente. Es lo práctico y habitual.
+- **Exportar el VALD sin nombre** desde la plataforma VALD (si permite anonimizar el sujeto) antes de subirlo.
+- **No adjuntar el PDF** a la IA (se perdería la lectura automática de resultados).
+
+Acordar con el cliente/asesoría qué nivel de anonimización exigen sobre los documentos adjuntos.
+
 ## Otros pendientes conocidos (de docs previos)
 - **Multi-equipo real** (una persona compartida en varios equipos, tabla N:M). Hoy: una ficha por (persona, equipo). Ver `FLUJO-EQUIPOS-CIERRE.md`.
 - **Resultados de prueba estructurados** (`session_tests.result_data`) → habilitaría estadística numérica en el informe de estudio (hoy cualitativo).
