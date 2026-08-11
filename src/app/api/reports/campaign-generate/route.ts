@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
+import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
 
 // Cap de jugadores incluidos en el prompt v1 (evita desbordar tokens en estudios grandes).
 const MAX_PLAYERS_IN_PROMPT = 40
@@ -144,10 +145,14 @@ export async function POST(request: NextRequest) {
     context += `COBERTURA (jugadores valorados / total del roster): ${coverage}\n`
 
     const cappedPlayers = valuedPlayers.slice(0, MAX_PLAYERS_IN_PROMPT)
+    // PRIVACIDAD: cada jugador se identifica ante la IA por una etiqueta «[[JUGADOR_n]]»,
+    // no por su nombre real. Se restituye el nombre real en el resultado.
+    const nameEntries = cappedPlayers.map((p: any, i: number) => ({ name: p.full_name || `Jugador ${i + 1}`, token: `[[JUGADOR_${i + 1}]]` }))
+    const tokenByPatient = new Map<string, string>(cappedPlayers.map((p: any, i: number) => [p.id, `[[JUGADOR_${i + 1}]]`]))
     for (const p of cappedPlayers) {
       const s = sessionByPatient.get(p.id)
       const teamName = teamNameById.get(p.team_id) || 'Sin equipo'
-      context += `\n--- JUGADOR: ${p.full_name} (equipo: ${teamName}) ---\n`
+      context += `\n--- JUGADOR: ${tokenByPatient.get(p.id)} (equipo: ${teamName}) ---\n`
 
       if (s?.notes && String(s.notes).trim()) {
         context += `Notas de la valoración: ${s.notes}\n`
@@ -171,6 +176,9 @@ export async function POST(request: NextRequest) {
       context += `\n(Nota: se han incluido los primeros ${MAX_PLAYERS_IN_PROMPT} jugadores valorados de ${valuedPlayers.length} por límite de longitud.)\n`
     }
 
+    // PRIVACIDAD: eliminar cualquier nombre real que aún aparezca en notas/interpretaciones.
+    context = redactManyNames(context, nameEntries)
+
     // Rol/instrucciones editables por la clínica (Ajustes → Informes) + estructura fija.
     const reportInstructions = await getReportInstructions(supabase, profile.clinic_id, 'campaign')
     const systemPrompt = `${reportInstructions}\n\n${STRUCTURE_CAMPAIGN}`
@@ -184,7 +192,7 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `Genera el informe agregado de estudio PODIUM. Responde SOLO con JSON válido.\n\n${context}`,
+          content: `Genera el informe agregado de estudio PODIUM. Responde SOLO con JSON válido.\n\nPRIVACIDAD: por protección de datos NO se facilitan nombres reales. Cada jugador está identificado por una etiqueta «[[JUGADOR_n]]»; úsala TAL CUAL cuando debas nombrar a un jugador (p. ej. en "jugadores_a_vigilar"). No inventes nombres.\n\n${context}`,
         },
       ],
     })
@@ -203,6 +211,9 @@ export async function POST(request: NextRequest) {
       console.error('Failed to parse Claude campaign response:', responseText.substring(0, 500))
       return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
     }
+
+    // PRIVACIDAD: restituir los nombres reales (la IA solo vio etiquetas «[[JUGADOR_n]]»).
+    reportData = restoreManyNames(reportData, nameEntries)
 
     // Metadatos de cobertura para la UI/PDF.
     reportData._meta = {

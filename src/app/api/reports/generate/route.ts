@@ -3,13 +3,14 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
+import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/reports/redact'
 
 // ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
 const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
 
 1. "portada_intro": Texto introductorio para la portada. Explica que el informe recoge la información de la Valoración Integral Avanzada PODIUM. Menciona la metodología propia de PODIUM (entender qué está limitando la capacidad, no solo identificar una lesión). Incluye que a lo largo del informe encontrará: resumen de anamnesis, hallazgos de exploración, resultados objetivos, explicación integrada y recomendación de itinerario. Termina con el compromiso de acompañar con criterio clínico, claridad y planificación coherente. Adapta el texto al caso concreto del paciente.
 
-2. "resumen_anamnesis": Resumen narrativo en 2-3 párrafos de la anamnesis. Describe el motivo de consulta, la cronología, los síntomas, el contexto laboral/personal, tratamientos previos, y el enfoque de la valoración. Redacta en tercera persona refiriéndote al paciente por su nombre.
+2. "resumen_anamnesis": Resumen narrativo en 2-3 párrafos de la anamnesis. Describe el motivo de consulta, la cronología, los síntomas, el contexto laboral/personal, tratamientos previos, y el enfoque de la valoración. Redacta en tercera persona refiriéndote a la persona como «[[PACIENTE]]» (marcador que se sustituye por el nombre al emitir el informe).
 
 3. "exploracion_fisica": Objeto con:
    - "introduccion": Párrafo introductorio explicando qué se ha valorado
@@ -38,7 +39,7 @@ const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en forma
 REGLAS:
 - Escribe en español profesional clínico, pero comprensible para el paciente.
 - Usa párrafos narrativos, NO bullet points (excepto en la portada donde se listan los contenidos del informe).
-- Refiere al paciente por su nombre de pila.
+- Refiérete a la persona SIEMPRE como «[[PACIENTE]]» (marcador que se sustituye por el nombre al emitir el informe); no inventes un nombre.
 - NO inventes datos que no estén en la información proporcionada.
 - Si no hay datos de alguna sección de exploración, indica que no se han registrado hallazgos en esa área.
 - Las hipótesis diagnósticas siempre con "posible", "compatible con" o "sugiere".
@@ -94,7 +95,7 @@ REGLAS:
 - Español profesional; párrafos narrativos (salvo el semáforo, que son valores).
 - El "semaforo": cada área SOLO puede valer "adecuado", "mejorable" o "prioritario" (en minúscula), según los datos. Si no hay datos suficientes de un área, usa "mejorable" y decláralo en el texto.
 - NO inventes valores: usa los que leas de las gráficas de VALD o las notas; si no hay, interpreta cualitativamente sin cifras.
-- Refiere al deportista por su nombre de pila.
+- Refiérete al deportista SIEMPRE como «[[PACIENTE]]» (marcador que se sustituye por el nombre al emitir el informe); no inventes un nombre.
 - Responde SOLO con el JSON válido, sin texto adicional.`
 
 function ageFromDob(dob: string | null | undefined): number | null {
@@ -382,8 +383,15 @@ ${testsBlock}`
       patientContext = `PERFIL DEL DEPORTISTA:\n${perfilLines}\n\n${patientContext}`
     }
 
+    // PRIVACIDAD (protección de datos): la IA NO debe ver el nombre real del paciente.
+    // Se sustituye por un marcador en TODO el contexto (datos, anamnesis, notas, exploración…)
+    // y se restituye por el nombre real en el resultado, tras la respuesta de la IA.
+    patientContext = redactPatientName(patientContext, patient.full_name || '')
+
     const informeNombre = isTeamReport ? 'Informe de Rendimiento y Prevención (Metodología Podium®)' : 'Valoración Integral Avanzada PODIUM'
     const guia = `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}.
+
+PRIVACIDAD: por protección de datos NO se te facilita el nombre real. Cuando debas referirte a la persona, usa EXACTAMENTE el marcador «${PATIENT_TOKEN}» (se sustituirá por el nombre al emitir el informe). No inventes un nombre.
 
 CÓMO USAR EL CONTEXTO (viene ordenado a continuación):
 - DATOS y ANAMNESIS: quién es y su relato/contexto.${isTeamReport ? '' : '\n- EXPLORACIÓN FÍSICA / VALORACIÓN: hallazgos de la exploración del fisio.'}
@@ -432,6 +440,9 @@ ${patientContext}`
       console.error('Failed to parse Claude response:', responseText.substring(0, 500))
       return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
     }
+
+    // PRIVACIDAD: restituir el nombre real (la IA solo vio el marcador «[[PACIENTE]]»).
+    reportData = restorePatientName(reportData, patient.full_name || '')
 
     // Informe de equipo: marcar plantilla y añadir el perfil (datos estructurados) al report_data.
     if (isTeamReport) {
