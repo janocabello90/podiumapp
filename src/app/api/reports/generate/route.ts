@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
 import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/reports/redact'
+import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 
 // ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
 const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
@@ -34,7 +35,7 @@ const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en forma
      * Fase 5 "Movimiento con propósito": consolidar cambios, prevención y autonomía
    Adapta cada fase al caso concreto del paciente.
 
-5. "descargo": El descargo de responsabilidad estándar (este es siempre igual): "El presente informe ha sido elaborado conforme al Método Podium™, un sistema de valoración clínica propio de la fisioterapia orientado a la evaluación del dolor, el movimiento, la capacidad y la función desde un enfoque clínico-funcional y biopsicosocial. La redacción de este documento ha sido asistida por un sistema de inteligencia artificial (Anthropic Claude, vía API) como herramienta de soporte, y ha sido íntegramente revisado, editado y aprobado por un fisioterapeuta colegiado antes de su emisión. El proveedor de IA no almacena ni reutiliza los datos del paciente. Este documento no constituye un diagnóstico médico, no sustituye la valoración realizada por un facultativo médico y no debe interpretarse como informe pericial ni como prueba válida en procedimientos judiciales, administrativos, aseguradores o legales. La información y los datos objetivos recogidos tienen como finalidad guiar el proceso terapéutico, apoyar la toma de decisiones clínicas en fisioterapia y facilitar la comprensión del estado funcional del paciente en el momento de la valoración. Cualquier uso fuera del ámbito asistencial para el que ha sido diseñado queda expresamente desaconsejado."
+(El "descargo" de responsabilidad NO lo generes: es un texto legal fijo que añade el sistema automáticamente. Omítelo del JSON.)
 
 REGLAS:
 - Escribe en español profesional clínico, pero comprensible para el paciente.
@@ -87,9 +88,10 @@ Genera SOLO un JSON válido con esta estructura:
     "aspectos_mejorar": "Aspectos a mejorar (breve).",
     "riesgo_funcional": "Nivel/áreas de riesgo funcional (breve).",
     "objetivo_principal": "Objetivo principal de trabajo (una frase)."
-  },
-  "descargo": "El presente informe ha sido elaborado conforme a la Metodología Podium®, un sistema de valoración funcional orientado al rendimiento y la prevención de lesiones en el deporte. La redacción ha sido asistida por un sistema de inteligencia artificial (Anthropic Claude, vía API) y ha sido revisada y aprobada por un fisioterapeuta colegiado antes de su emisión. No constituye un diagnóstico médico ni sustituye la valoración de otros profesionales sanitarios. Los resultados representan una fotografía del momento actual y deben interpretarse junto con la evolución del entrenamiento."
+  }
 }
+
+(El "descargo" de responsabilidad NO lo incluyas: es un texto legal fijo que añade el sistema automáticamente.)
 
 REGLAS:
 - Español profesional; párrafos narrativos (salvo el semáforo, que son valores).
@@ -443,6 +445,9 @@ ${patientContext}`
 
     // PRIVACIDAD: restituir el nombre real (la IA solo vio el marcador «[[PACIENTE]]»).
     reportData = restorePatientName(reportData, patient.full_name || '')
+
+    // Descargo legal FIJO: lo añade el sistema (no lo genera la IA) → siempre idéntico.
+    reportData.descargo = isTeamReport ? DESCARGO_TEAM : DESCARGO_INDIVIDUAL
 
     // Informe de equipo: marcar plantilla y añadir el perfil (datos estructurados) al report_data.
     if (isTeamReport) {

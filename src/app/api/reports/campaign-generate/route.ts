@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
 import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
+import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
 
 // Cap de jugadores incluidos en el prompt v1 (evita desbordar tokens en estudios grandes).
 const MAX_PLAYERS_IN_PROMPT = 40
@@ -26,7 +27,7 @@ ESTRUCTURA DEL INFORME (responde SOLO con un JSON válido con estas claves):
 
 7. "recomendaciones": Recomendaciones colectivas priorizadas (prevención, trabajo por grupos, seguimiento), adaptadas al Método Podium™.
 
-8. "descargo": Descargo estándar adaptado a informe colectivo: "El presente informe de estudio ha sido elaborado conforme al Método Podium™, agregando las valoraciones individuales de los jugadores incluidos. Su redacción ha sido asistida por un sistema de inteligencia artificial (Anthropic Claude, vía API) como herramienta de soporte, y ha sido íntegramente revisado, editado y aprobado por un fisioterapeuta colegiado antes de su emisión. El proveedor de IA no almacena ni reutiliza los datos. Este documento no constituye un diagnóstico médico, no sustituye la valoración individual de cada jugador ni la valoración de un facultativo médico, y no debe interpretarse como informe pericial ni prueba en procedimientos judiciales, administrativos, aseguradores o legales. Su finalidad es orientar el trabajo colectivo y el seguimiento del grupo en el ámbito asistencial para el que ha sido diseñado."
+(El "descargo" de responsabilidad NO lo generes: es un texto legal fijo que añade el sistema automáticamente. Omítelo del JSON.)
 
 REGLAS:
 - Español clínico profesional, párrafos narrativos.
@@ -214,6 +215,9 @@ export async function POST(request: NextRequest) {
 
     // PRIVACIDAD: restituir los nombres reales (la IA solo vio etiquetas «[[JUGADOR_n]]»).
     reportData = restoreManyNames(reportData, nameEntries)
+
+    // Descargo legal FIJO: lo añade el sistema (no lo genera la IA) → siempre idéntico.
+    reportData.descargo = DESCARGO_CAMPAIGN
 
     // Metadatos de cobertura para la UI/PDF.
     reportData._meta = {

@@ -10,6 +10,7 @@ import {
   parseXlsx,
   tableToRows,
   buildTemplateCsv,
+  templateTable,
   normalize,
   type ParsedRow,
 } from '@/lib/patients/rosterImport'
@@ -91,14 +92,34 @@ export default function BulkImportPlayers({ teamId, clinicId, existingEmails }: 
     setRows((prev) => prev.map((r) => (r.index === index && r.state !== 'error' ? { ...r, include: !r.include } : r)))
   }
 
-  function downloadTemplate() {
-    const blob = new Blob([buildTemplateCsv()], { type: 'text/csv;charset=utf-8' })
+  function triggerDownload(blob: Blob, name: string) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'plantilla_jugadores.csv'
+    a.download = name
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  function downloadTemplateCsv() {
+    triggerDownload(new Blob([buildTemplateCsv()], { type: 'text/csv;charset=utf-8' }), 'plantilla_jugadores.csv')
+  }
+
+  // XLSX: import dinámico de SheetJS (mismo patrón que la lectura de .xlsx; no infla el bundle).
+  async function downloadTemplateXlsx() {
+    try {
+      const XLSX = await import('xlsx')
+      const ws = XLSX.utils.aoa_to_sheet(templateTable())
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Jugadores')
+      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      triggerDownload(
+        new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }),
+        'plantilla_jugadores.xlsx',
+      )
+    } catch {
+      toast.error('No se pudo generar la plantilla Excel')
+    }
   }
 
   async function handleImport() {
@@ -190,10 +211,16 @@ export default function BulkImportPlayers({ teamId, clinicId, existingEmails }: 
               <Upload className="w-4 h-4" /> Elegir fichero
             </button>
             <button
-              onClick={downloadTemplate}
+              onClick={downloadTemplateCsv}
               className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg"
             >
-              <Download className="w-4 h-4" /> Plantilla
+              <Download className="w-4 h-4" /> Plantilla CSV
+            </button>
+            <button
+              onClick={downloadTemplateXlsx}
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg"
+            >
+              <Download className="w-4 h-4" /> Plantilla Excel
             </button>
             {fileName && <span className="text-xs text-gray-500 truncate">{fileName}</span>}
           </div>

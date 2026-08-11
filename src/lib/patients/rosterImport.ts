@@ -166,9 +166,15 @@ export function tableToRows(table: string[][]): { map: Partial<Record<keyof Pati
   return { map, rows }
 }
 
+// Tabla-plantilla (cabeceras + fila de ejemplo). Fuente única para CSV y XLSX.
+export function templateTable(): string[][] {
+  return [
+    ['nombre', 'email', 'telefono', 'fecha_nacimiento', 'sexo', 'notas'],
+    ['Pedro García López', 'pedro@email.com', '600111222', '15/03/2005', 'hombre', 'Extremo derecho'],
+  ]
+}
+
 // Plantilla CSV de ejemplo con todas las cabeceras.
 export function buildTemplateCsv(): string {
-  const header = 'nombre,email,telefono,fecha_nacimiento,sexo,notas'
-  const example = 'Pedro García López,pedro@email.com,600111222,15/03/2005,hombre,Extremo derecho'
-  return `${header}\n${example}\n`
+  return templateTable().map((row) => row.join(',')).join('\n') + '\n'
 }
