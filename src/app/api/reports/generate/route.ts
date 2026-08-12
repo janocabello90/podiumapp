@@ -5,6 +5,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
 import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/reports/redact'
 import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
+import { buildReferencesContext } from '@/lib/reports/references'
 
 // ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
 const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
-    const { patientId, sessionId } = await request.json()
+    const { patientId, sessionId, referenceIds } = await request.json()
     if (!patientId) {
       return NextResponse.json({ error: 'patientId requerido' }, { status: 400 })
     }
@@ -390,6 +391,20 @@ ${testsBlock}`
     // y se restituye por el nombre real en el resultado, tras la respuesta de la IA.
     patientContext = redactPatientName(patientContext, patient.full_name || '')
 
+    // Referencias / baremos normativos seleccionados por el fisio (se adjuntan como TEXTO).
+    let referencesBlock = ''
+    if (Array.isArray(referenceIds) && referenceIds.length > 0) {
+      const ids = referenceIds.filter((x: any) => typeof x === 'string').slice(0, 5)
+      if (ids.length > 0) {
+        const { data: refRows } = await supabase
+          .from('sport_references')
+          .select('name, sex, age_min, age_max, level, phase, season, prompt, body_md')
+          .in('id', ids)
+          .eq('clinic_id', patient.clinic_id)
+        if (refRows && refRows.length > 0) referencesBlock = buildReferencesContext(refRows as any[])
+      }
+    }
+
     const informeNombre = isTeamReport ? 'Informe de Rendimiento y Prevención (Metodología Podium®)' : 'Valoración Integral Avanzada PODIUM'
     const guia = `Genera el ${informeNombre} para este ${isTeamReport ? 'deportista' : 'paciente'}.
 
@@ -399,11 +414,11 @@ CÓMO USAR EL CONTEXTO (viene ordenado a continuación):
 - DATOS y ANAMNESIS: quién es y su relato/contexto.${isTeamReport ? '' : '\n- EXPLORACIÓN FÍSICA / VALORACIÓN: hallazgos de la exploración del fisio.'}
 - PRUEBAS REALIZADAS: cada prueba trae su GUÍA de interpretación y las OBSERVACIONES del fisio. Sus valores numéricos están en las GRÁFICAS DE VALD ADJUNTAS a este mensaje.
 - ANOTACIONES GENERALES DEL FISIO: impresión global y matices; tenlos muy en cuenta.
-${docBlocks.length > 0 ? `- DOCUMENTOS ADJUNTOS (${docBlocks.length}): informes/gráficas de VALD y/o imágenes. LÉELOS e interpreta sus resultados objetivos.` : '- (No se han adjuntado documentos; interpreta con las notas y guías disponibles.)'}
+${docBlocks.length > 0 ? `- DOCUMENTOS ADJUNTOS (${docBlocks.length}): informes/gráficas de VALD y/o imágenes. LÉELOS e interpreta sus resultados objetivos.` : '- (No se han adjuntado documentos; interpreta con las notas y guías disponibles.)'}${referencesBlock ? '\n- REFERENCIAS NORMATIVAS DEL DEPORTE: baremos para contextualizar los valores del jugador (ver al final). Úsalos con criterio y respeta la población que representan.' : ''}
 
 Integra y CRUZA todas estas fuentes; no te limites a listarlas. Responde SOLO con JSON válido.
 
-${patientContext}`
+${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
     const userText = guia
 
     // Rol/instrucciones editables por la clínica (Ajustes → Informes) + estructura fija.

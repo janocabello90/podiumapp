@@ -66,6 +66,12 @@ export type SportTest = Omit<T['sport_tests']['Row'], 'created_at'> & {
   created_at: string
 }
 
+// Referencias / baremos normativos por deporte (documentos "tratados" en Markdown).
+export type SportReference = Omit<T['sport_references']['Row'], 'created_at' | 'updated_at'> & {
+  created_at: string
+  updated_at: string
+}
+
 // Consentimientos y trazabilidad (Fase C).
 export type ConsentVersion = Omit<T['consent_versions']['Row'], 'created_at' | 'updated_at'> & {
   created_at: string

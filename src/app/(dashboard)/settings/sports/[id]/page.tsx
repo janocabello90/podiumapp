@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import SportTestsEditor from '@/components/settings/SportTestsEditor'
+import SportReferencesManager from '@/components/settings/SportReferencesManager'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,8 +31,8 @@ export default async function SportDetailPage({ params }: { params: { id: string
 
   if (!sport) notFound()
 
-  // Catálogo de pruebas activas + mapeo actual del deporte
-  const [{ data: tests }, { data: links }] = await Promise.all([
+  // Catálogo de pruebas activas + mapeo actual del deporte + referencias/baremos
+  const [{ data: tests }, { data: links }, { data: references }] = await Promise.all([
     supabase
       .from('tests')
       .select('id, name, description')
@@ -43,6 +44,12 @@ export default async function SportDetailPage({ params }: { params: { id: string
       .select('id, test_id, display_order, is_required')
       .eq('sport_id', sport.id)
       .eq('clinic_id', profile.clinic_id),
+    supabase
+      .from('sport_references')
+      .select('*')
+      .eq('sport_id', sport.id)
+      .eq('clinic_id', profile.clinic_id)
+      .order('created_at', { ascending: true }),
   ])
 
   return (
@@ -62,6 +69,12 @@ export default async function SportDetailPage({ params }: { params: { id: string
         sportId={sport.id}
         tests={tests || []}
         initialLinks={links || []}
+      />
+
+      <SportReferencesManager
+        clinicId={profile.clinic_id}
+        sportId={sport.id}
+        initialReferences={references || []}
       />
     </div>
   )

@@ -4,7 +4,6 @@
 //   herramienta `generate_typescript_types` (o `supabase gen types typescript`).
 // Los alias de dominio de la app viven en ./database.ts y derivan de aquí.
 // ============================================================================
-
 export type Json =
   | string
   | number
@@ -14,6 +13,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -81,6 +82,41 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anamnesis_templates: {
+        Row: {
+          audience: string
+          blocks: Json
+          clinic_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          audience: string
+          blocks?: Json
+          clinic_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string
+          blocks?: Json
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnesis_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -385,7 +421,10 @@ export type Database = {
           granted: boolean
           granted_at: string | null
           id: string
+          metadata: Json | null
           patient_id: string
+          revoked_at: string | null
+          revoked_by: string | null
           type: string
           version_body: string | null
           version_label: string | null
@@ -397,7 +436,10 @@ export type Database = {
           granted: boolean
           granted_at?: string | null
           id?: string
+          metadata?: Json | null
           patient_id: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           type: string
           version_body?: string | null
           version_label?: string | null
@@ -409,7 +451,10 @@ export type Database = {
           granted?: boolean
           granted_at?: string | null
           id?: string
+          metadata?: Json | null
           patient_id?: string
+          revoked_at?: string | null
+          revoked_by?: string | null
           type?: string
           version_body?: string | null
           version_label?: string | null
@@ -434,6 +479,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consents_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -658,6 +710,41 @@ export type Database = {
           },
         ]
       }
+      report_prompts: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          instructions: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          instructions?: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          instructions?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_prompts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reports: {
         Row: {
           ai_completion_tokens: number | null
@@ -725,17 +812,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "reports_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "reports_assessment_id_fkey"
             columns: ["assessment_id"]
             isOneToOne: false
             referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
           {
@@ -925,6 +1012,75 @@ export type Database = {
           },
           {
             foreignKeyName: "sessions_sport_id_fkey"
+            columns: ["sport_id"]
+            isOneToOne: false
+            referencedRelation: "sports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sport_references: {
+        Row: {
+          age_max: number | null
+          age_min: number | null
+          body_md: string
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          level: string | null
+          name: string
+          phase: string | null
+          prompt: string | null
+          season: string | null
+          sex: string | null
+          sport_id: string
+          updated_at: string
+        }
+        Insert: {
+          age_max?: number | null
+          age_min?: number | null
+          body_md?: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          level?: string | null
+          name: string
+          phase?: string | null
+          prompt?: string | null
+          season?: string | null
+          sex?: string | null
+          sport_id: string
+          updated_at?: string
+        }
+        Update: {
+          age_max?: number | null
+          age_min?: number | null
+          body_md?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          level?: string | null
+          name?: string
+          phase?: string | null
+          prompt?: string | null
+          season?: string | null
+          sex?: string | null
+          sport_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sport_references_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sport_references_sport_id_fkey"
             columns: ["sport_id"]
             isOneToOne: false
             referencedRelation: "sports"
@@ -1174,6 +1330,7 @@ export type Database = {
     }
     Functions: {
       get_user_clinic_id: { Args: never; Returns: string }
+      is_clinic_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
