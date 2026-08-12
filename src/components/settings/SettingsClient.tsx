@@ -9,11 +9,28 @@ import type { User as UserType, Clinic } from '@/types/database'
 
 type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'anamnesis' | 'consents' | 'reports' | 'report'
 
+// Miembro del personal + última conexión (de auth.users, añadida en el servidor).
+type MemberRow = UserType & { last_sign_in_at?: string | null }
+
+// Formatea la última conexión de forma amable: "hoy", "ayer", "hace N días" o fecha.
+function formatLastSeen(iso?: string | null): string {
+  if (!iso) return 'Nunca'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return 'Nunca'
+  const now = new Date()
+  const days = Math.floor((now.getTime() - d.getTime()) / 86400000)
+  const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  if (days <= 0 && now.getDate() === d.getDate()) return `Hoy, ${time}`
+  if (days <= 1) return `Ayer, ${time}`
+  if (days < 7) return `Hace ${days} días`
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 interface Props {
   currentUser: UserType
   currentUserEmail: string
   clinic: Clinic | null
-  teamMembers: UserType[]
+  teamMembers: MemberRow[]
 }
 
 export default function SettingsClient({ currentUser, currentUserEmail, clinic, teamMembers: initialMembers }: Props) {
@@ -364,7 +381,7 @@ function ClinicSection({ clinic }: { clinic: Clinic | null }) {
 
 // ===================== TEAM (via API route) =====================
 function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
-  teamMembers: UserType[]
+  teamMembers: MemberRow[]
   currentUserId: string
   clinicId: string
   supabase: any
@@ -708,6 +725,9 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
                   </p>
                   <p className="text-xs text-gray-400 truncate">
                     {member.email} · {member.role === 'admin' ? 'Admin' : 'Fisio'}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    Última conexión: {formatLastSeen(member.last_sign_in_at)}
                   </p>
                 </div>
               </div>
