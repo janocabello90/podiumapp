@@ -9,8 +9,9 @@ import type { User as UserType, Clinic } from '@/types/database'
 
 type Tab = 'profile' | 'clinic' | 'team' | 'catalog' | 'anamnesis' | 'consents' | 'reports' | 'report'
 
-// Miembro del personal + última conexión (de auth.users, añadida en el servidor).
-type MemberRow = UserType & { last_sign_in_at?: string | null }
+// Miembro del personal + última conexión (auth.users) y última actividad clínica
+// (derivada de patients/sessions/reports), ambas añadidas en el servidor.
+type MemberRow = UserType & { last_sign_in_at?: string | null; last_activity_at?: string | null }
 
 // Formatea la última conexión de forma amable: "hoy", "ayer", "hace N días" o fecha.
 function formatLastSeen(iso?: string | null): string {
@@ -727,7 +728,7 @@ function TeamSection({ teamMembers, currentUserId, clinicId, supabase }: {
                     {member.email} · {member.role === 'admin' ? 'Admin' : 'Fisio'}
                   </p>
                   <p className="text-xs text-gray-400 truncate">
-                    Última conexión: {formatLastSeen(member.last_sign_in_at)}
+                    Última conexión: {formatLastSeen(member.last_sign_in_at)} · Última actividad: {formatLastSeen(member.last_activity_at)}
                   </p>
                 </div>
               </div>
