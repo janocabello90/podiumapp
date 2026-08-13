@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FileText, Eye, X, MessageSquare, Trash2, Loader2, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Document } from '@/types/database'
@@ -18,6 +18,9 @@ export default function DocumentList({ documents, onDelete }: Props) {
   const [notesValue, setNotesValue] = useState<string>('')
   const [savingNotes, setSavingNotes] = useState(false)
   const [localDocs, setLocalDocs] = useState<Document[]>(documents)
+  // Sincroniza con la lista de arriba (DocumentSection) cuando cambia: así al subir/borrar
+  // se refleja en pantalla sin recargar. Antes esta copia local quedaba congelada.
+  useEffect(() => { setLocalDocs(documents) }, [documents])
 
   async function openPreview(doc: Document) {
     setLoadingPreview(doc.id)
