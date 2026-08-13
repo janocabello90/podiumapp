@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Camera, Upload, Loader2, X, Eye, Trash2, FileCheck, FileX, Mic, MicOff } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
@@ -18,7 +19,10 @@ const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', '
 const MAX_SIZE_MB = 20
 
 export default function ImageGallerySection({ patientId, clinicId, initialImages, sessionId }: Props) {
+  const router = useRouter()
   const [images, setImages] = useState<Document[]>(initialImages)
+  // Resincroniza con el servidor tras un router.refresh() (subida/borrado) → sin recargar a mano.
+  useEffect(() => { setImages(initialImages) }, [initialImages])
   const [uploading, setUploading] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -90,6 +94,7 @@ export default function ImageGallerySection({ patientId, clinicId, initialImages
     setUploading(false)
     if (successCount > 0) {
       toast.success(`${successCount} imagen${successCount > 1 ? 'es' : ''} subida${successCount > 1 ? 's' : ''}`)
+      router.refresh()
     }
   }
 
@@ -180,6 +185,7 @@ export default function ImageGallerySection({ patientId, clinicId, initialImages
     if (!confirm('¿Eliminar esta imagen?')) return
     setImages(prev => prev.filter(i => i.id !== docId))
     toast.success('Imagen eliminada')
+    router.refresh()
   }
 
   // Get thumbnail URL (generate signed URL on demand)

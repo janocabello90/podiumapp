@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { Document } from '@/types/database'
 import DocumentUploader from './DocumentUploader'
 import DocumentList from './DocumentList'
@@ -19,6 +19,9 @@ interface Props {
 
 export default function DocumentSection({ patientId, clinicId, initialDocuments, initialInterpretation, sessionId }: Props) {
   const [documents, setDocuments] = useState<Document[]>(initialDocuments)
+  // Tras un router.refresh() (p. ej. después de subir), el servidor devuelve la lista fresca:
+  // la reflejamos aquí para que aparezcan TODOS los documentos sin recargar a mano.
+  useEffect(() => { setDocuments(initialDocuments) }, [initialDocuments])
   const [interpretation, setInterpretation] = useState(initialInterpretation || '')
   const [showInterpretation, setShowInterpretation] = useState(!!initialInterpretation)
   const [savingInterpretation, setSavingInterpretation] = useState(false)

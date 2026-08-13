@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import VoiceDictation from '@/components/assessment/VoiceDictation'
+import { useDebouncedRefresh } from '@/lib/hooks/useDebouncedRefresh'
 import { MessageSquare } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -15,6 +16,7 @@ interface Props {
  *  y se incluyen en el contexto del informe IA). Autoguardado al salir del campo. */
 export default function SessionNotes({ sessionId, initialNotes }: Props) {
   const supabase = createClient()
+  const scheduleRefresh = useDebouncedRefresh()
   const [value, setValue] = useState(initialNotes)
   const [savedValue, setSavedValue] = useState(initialNotes)
   const [saving, setSaving] = useState(false)
@@ -35,6 +37,7 @@ export default function SessionNotes({ sessionId, initialNotes }: Props) {
     }
     setSavedValue(value)
     toast.success('Anotaciones guardadas')
+    scheduleRefresh()
   }
 
   return (

@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ClipboardList, Check } from 'lucide-react'
 import VoiceDictation from '@/components/assessment/VoiceDictation'
+import { useDebouncedRefresh } from '@/lib/hooks/useDebouncedRefresh'
 import toast from 'react-hot-toast'
 
 type CatalogTest = { id: string; name: string }
@@ -24,6 +25,7 @@ export default function SessionTestPicker({
   initialSelected: SelectedRow[]
 }) {
   const supabase = createClient()
+  const scheduleRefresh = useDebouncedRefresh()
   const [selected, setSelected] = useState<Record<string, { rowId: string; notes: string }>>(() => {
     const m: Record<string, { rowId: string; notes: string }> = {}
     for (const r of initialSelected) if (r.test_id) m[r.test_id] = { rowId: r.id, notes: r.notes ?? '' }
@@ -70,6 +72,7 @@ export default function SessionTestPicker({
         if (error) throw error
         setSelected((prev) => ({ ...prev, [test.id]: { rowId: data.id, notes: '' } }))
       }
+      scheduleRefresh()
     } catch (e: any) {
       toast.error(e.message || 'Error al actualizar la prueba')
     } finally {
@@ -87,7 +90,7 @@ export default function SessionTestPicker({
     setSelected((prev) => ({ ...prev, [testId]: { ...prev[testId], notes } }))
     const { error } = await supabase.from('session_tests').update({ notes }).eq('id', cur.rowId)
     if (error) toast.error('Error al guardar la nota')
-    else flashSaved(testId)
+    else { flashSaved(testId); scheduleRefresh() }
   }
 
   if (catalog.length === 0) {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Upload, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Document } from '@/types/database'
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function DocumentUploader({ patientId, clinicId, onUploaded, sessionId }: Props) {
+  const router = useRouter()
   const [isDragging, setIsDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [uploadQueue, setUploadQueue] = useState<File[]>([])
@@ -66,6 +68,9 @@ export default function DocumentUploader({ patientId, clinicId, onUploaded, sess
 
     if (successCount > 0) {
       toast.success(`${successCount} informe${successCount > 1 ? 's' : ''} subido${successCount > 1 ? 's' : ''}`)
+      // Resincroniza la lista con el servidor (garantiza que aparezcan TODOS los subidos,
+      // sin depender solo del estado local ni requerir recarga manual).
+      router.refresh()
     }
   }
 

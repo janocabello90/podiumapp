@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Loader2, ClipboardList, Check } from 'lucide-react'
 import VoiceDictation from '@/components/assessment/VoiceDictation'
+import { useDebouncedRefresh } from '@/lib/hooks/useDebouncedRefresh'
 import toast from 'react-hot-toast'
 
 type SessionTest = {
@@ -34,6 +35,7 @@ export default function SessionTestsPanel({
   initialTests: SessionTest[]
 }) {
   const router = useRouter()
+  const scheduleRefresh = useDebouncedRefresh()
   const supabase = createClient()
   const [tests, setTests] = useState<SessionTest[]>(initialTests)
   const [loadingSport, setLoadingSport] = useState(false)
@@ -55,13 +57,13 @@ export default function SessionTestsPanel({
     setLocal(id, { status })
     const { error } = await supabase.from('session_tests').update({ status }).eq('id', id)
     if (error) toast.error('Error al guardar')
-    else flashSaved(id)
+    else { flashSaved(id); scheduleRefresh() }
   }
 
   async function saveNotes(id: string, notes: string) {
     const { error } = await supabase.from('session_tests').update({ notes }).eq('id', id)
     if (error) toast.error('Error al guardar la nota')
-    else flashSaved(id)
+    else { flashSaved(id); scheduleRefresh() }
   }
 
   async function loadFromSport() {
