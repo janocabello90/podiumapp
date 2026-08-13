@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import { PDFDocument } from 'pdf-lib'
 import { createClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 
 interface ReportData {
   portada_intro: string
@@ -105,7 +106,7 @@ function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSiz
       applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
     }
     // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
-    if (i < lines.length - 1) doc.text(lines[i], MARGIN_LEFT, y, { align: 'justify', maxWidth: CONTENT_WIDTH })
+    if (i < lines.length - 1) drawJustifiedLine(doc, lines[i], MARGIN_LEFT, y, CONTENT_WIDTH)
     else doc.text(lines[i], MARGIN_LEFT, y)
     y += lineHeight
   }

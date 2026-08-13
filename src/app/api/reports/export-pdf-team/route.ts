@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf'
 import { PDFDocument } from 'pdf-lib'
 import { createClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 
 // PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 8 secciones.
 // Las gráficas de VALD (PDF) se INCRUSTAN como punto 3, entre la intro de "Valoración
@@ -60,7 +61,7 @@ function para(doc: jsPDF, text: string, y: number, o?: { fontSize?: number; font
       applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
     }
     // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
-    if (i < lines.length - 1) doc.text(lines[i], MARGIN_LEFT, y, { align: 'justify', maxWidth: CONTENT_WIDTH })
+    if (i < lines.length - 1) drawJustifiedLine(doc, lines[i], MARGIN_LEFT, y, CONTENT_WIDTH)
     else doc.text(lines[i], MARGIN_LEFT, y)
     y += lh
   }
