@@ -54,12 +54,15 @@ function para(doc: jsPDF, text: string, y: number, o?: { fontSize?: number; font
   applyStyle()
   const lines = doc.splitTextToSize(text || '—', CONTENT_WIDTH)
   const lh = fs * 0.45
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
     if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 10) {
       addFooter(doc); doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
       applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
     }
-    doc.text(line, MARGIN_LEFT, y); y += lh
+    // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
+    if (i < lines.length - 1) doc.text(lines[i], MARGIN_LEFT, y, { align: 'justify', maxWidth: CONTENT_WIDTH })
+    else doc.text(lines[i], MARGIN_LEFT, y)
+    y += lh
   }
   return y + 3
 }

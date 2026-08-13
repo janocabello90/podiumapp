@@ -44,11 +44,13 @@ function writeParagraph(doc: jsPDF, text: string, y: number, opts?: { fontSize?:
   const applyStyle = () => { doc.setFont('helvetica', fontStyle); doc.setFontSize(fontSize); doc.setTextColor(color[0], color[1], color[2]) }
   const lines = doc.splitTextToSize(text, CONTENT_WIDTH)
   const lineHeight = fontSize * 0.45
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
     const prevY = y
     y = ensureSpace(doc, y, 10)
     if (y !== prevY) applyStyle() // hubo salto de página: addFooter dejó la letra en 8pt gris
-    doc.text(line, MARGIN_LEFT, y)
+    // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
+    if (i < lines.length - 1) doc.text(lines[i], MARGIN_LEFT, y, { align: 'justify', maxWidth: CONTENT_WIDTH })
+    else doc.text(lines[i], MARGIN_LEFT, y)
     y += lineHeight
   }
   return y + 3

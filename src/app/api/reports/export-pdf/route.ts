@@ -96,7 +96,7 @@ function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSiz
   const lines = doc.splitTextToSize(text, CONTENT_WIDTH)
   const lineHeight = fontSize * 0.45
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
     if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 10) {
       addFooter(doc)
       doc.addPage()
@@ -104,7 +104,9 @@ function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSiz
       y = MARGIN_TOP + 10
       applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
     }
-    doc.text(line, MARGIN_LEFT, y)
+    // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
+    if (i < lines.length - 1) doc.text(lines[i], MARGIN_LEFT, y, { align: 'justify', maxWidth: CONTENT_WIDTH })
+    else doc.text(lines[i], MARGIN_LEFT, y)
     y += lineHeight
   }
 
