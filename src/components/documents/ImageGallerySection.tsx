@@ -183,9 +183,18 @@ export default function ImageGallerySection({ patientId, clinicId, initialImages
   // Delete image
   async function handleDelete(docId: string) {
     if (!confirm('¿Eliminar esta imagen?')) return
-    setImages(prev => prev.filter(i => i.id !== docId))
-    toast.success('Imagen eliminada')
-    router.refresh()
+    try {
+      const res = await fetch(`/api/documents?id=${encodeURIComponent(docId)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Error al eliminar')
+      }
+      setImages(prev => prev.filter(i => i.id !== docId))
+      toast.success('Imagen eliminada')
+      router.refresh()
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar')
+    }
   }
 
   // Get thumbnail URL (generate signed URL on demand)

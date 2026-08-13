@@ -206,3 +206,42 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
   }
 }
+
+// Borrado REAL de un documento: quita el fichero de Storage y la fila de la BBDD.
+// Verifica que el documento pertenece a la clínica del usuario antes de borrar.
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = createServerSupabaseClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+
+    const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+    if (!profile) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+
+    const id = new URL(request.url).searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
+
+    // Verificar propiedad (clínica) antes de borrar.
+    const { data: doc } = await supabase
+      .from('documents')
+      .select('id, clinic_id, storage_path')
+      .eq('id', id)
+      .single()
+    if (!doc || doc.clinic_id !== profile.clinic_id) {
+      return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 })
+    }
+
+    const admin = createAdminSupabaseClient()
+    // 1) Quitar el fichero del bucket privado (no fatal si ya no está).
+    if (doc.storage_path) {
+      try { await admin.storage.from('documents').remove([doc.storage_path]) } catch { /* no fatal */ }
+    }
+    // 2) Borrar la fila.
+    const { error: delErr } = await admin.from('documents').delete().eq('id', id)
+    if (delErr) return NextResponse.json({ error: 'No se pudo borrar el documento' }, { status: 500 })
+
+    return NextResponse.json({ ok: true })
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })
+  }
+}

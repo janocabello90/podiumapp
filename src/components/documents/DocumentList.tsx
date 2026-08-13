@@ -65,12 +65,17 @@ export default function DocumentList({ documents, onDelete }: Props) {
   async function handleDelete(docId: string) {
     if (!confirm('¿Eliminar este documento?')) return
     try {
-      // We'll just hide it locally - actual delete would need another API endpoint
+      // Borrado REAL en el servidor (Storage + BBDD); solo se quita de la UI si va bien.
+      const res = await fetch(`/api/documents?id=${encodeURIComponent(docId)}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || 'Error al eliminar')
+      }
       setLocalDocs(prev => prev.filter(d => d.id !== docId))
       onDelete(docId)
       toast.success('Documento eliminado')
-    } catch (err) {
-      toast.error('Error al eliminar')
+    } catch (err: any) {
+      toast.error(err.message || 'Error al eliminar')
     }
   }
 
