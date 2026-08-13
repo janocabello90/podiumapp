@@ -101,6 +101,7 @@ export default async function ReportPage({
             initialStatus={latestReport.status}
             documents={teamValdDocs}
             clinicLogoUrl={clinicLogoUrl}
+            reportDate={latestReport.created_at}
           />
         ) : (
           <ReportEditor

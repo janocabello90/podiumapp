@@ -95,11 +95,12 @@ export async function POST(request: NextRequest) {
     const { data: authProfile } = await authSupabase.from('users').select('clinic_id').eq('id', user.id).single()
     if (!authProfile) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
 
-    const { reportData, patientName, documents, clinicLogoUrl } = await request.json() as {
+    const { reportData, patientName, documents, clinicLogoUrl, reportDate } = await request.json() as {
       reportData: any
       patientName: string
       documents?: { file_name: string; storage_path: string }[]
       clinicLogoUrl?: string | null
+      reportDate?: string | null
     }
 
     // Verificar propiedad de los adjuntos (evitar fuga entre clínicas)
@@ -142,7 +143,37 @@ export async function POST(request: NextRequest) {
     docA.text('INFORME DE RENDIMIENTO Y PREVENCIÓN', PAGE_WIDTH / 2, y + 16, { align: 'center' })
     docA.setFont('helvetica', 'normal'); docA.setFontSize(10); docA.setTextColor(120, 120, 120)
     docA.text('Metodología Podium®', PAGE_WIDTH / 2, y + 23, { align: 'center' })
-    y = y + 34
+
+    // Tarjeta de datos del informe en la portada (deportista, deporte, equipo, estudio, fecha).
+    y = y + 33
+    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+    const fmtFecha = (iso?: string | null) => {
+      const d = iso ? new Date(iso) : new Date()
+      const dd = isNaN(d.getTime()) ? new Date() : d
+      return `${dd.getDate()} de ${MESES[dd.getMonth()]} de ${dd.getFullYear()}`
+    }
+    const coverRows: [string, string][] = [
+      ['Deportista', String(perfil.nombre || patientName || '—')],
+      ['Edad · Sexo', [perfil.edad != null ? `${perfil.edad} años` : null, perfil.sexo].filter(Boolean).join(' · ') || '—'],
+      ['Deporte · Posición', [perfil.deporte, perfil.posicion].filter(Boolean).join(' · ') || '—'],
+      ['Equipo', String(perfil.equipo || '—')],
+      ...(perfil.estudio ? ([['Estudio', String(perfil.estudio)]] as [string, string][]) : []),
+      ['Fecha del informe', fmtFecha(reportDate)],
+    ]
+    const cardRowH = 7.5, cardPad = 6
+    const cardH = cardPad * 2 + coverRows.length * cardRowH
+    docA.setDrawColor(228, 228, 228); docA.setLineWidth(0.3); docA.setFillColor(250, 250, 250)
+    docA.roundedRect(MARGIN_LEFT, y, CONTENT_WIDTH, cardH, 2, 2, 'FD')
+    let ry = y + cardPad + 4
+    for (const [label, value] of coverRows) {
+      docA.setFont('helvetica', 'bold'); docA.setFontSize(9); docA.setTextColor(90, 90, 90)
+      docA.text(label, MARGIN_LEFT + 6, ry)
+      docA.setFont('helvetica', 'normal'); docA.setFontSize(9); docA.setTextColor(30, 30, 30)
+      docA.text(value, MARGIN_LEFT + 58, ry)
+      ry += cardRowH
+    }
+    y = y + cardH + 12
+
     y = para(docA, rd.objetivo_intro || '', y)
     addFooter(docA)
 

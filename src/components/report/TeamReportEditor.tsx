@@ -32,6 +32,7 @@ export default function TeamReportEditor({
   initialStatus,
   documents,
   clinicLogoUrl,
+  reportDate,
 }: {
   reportId: string
   patientName: string
@@ -39,6 +40,7 @@ export default function TeamReportEditor({
   initialStatus: string
   documents?: { file_name: string; storage_path: string }[]
   clinicLogoUrl?: string | null
+  reportDate?: string | null
 }) {
   const router = useRouter()
   const [data, setData] = useState<any>(initialData || {})
@@ -53,7 +55,7 @@ export default function TeamReportEditor({
       const res = await fetch('/api/reports/export-pdf-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportData: data, patientName, documents: documents || [], clinicLogoUrl: clinicLogoUrl || null }),
+        body: JSON.stringify({ reportData: data, patientName, documents: documents || [], clinicLogoUrl: clinicLogoUrl || null, reportDate: reportDate || null }),
       })
       if (!res.ok) throw new Error()
       const blob = await res.blob()

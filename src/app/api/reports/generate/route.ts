@@ -216,6 +216,13 @@ export async function POST(request: NextRequest) {
         const { data: sp } = await supabase.from('sports').select('name').eq('id', sportId).single()
         sportName = (sp as any)?.name ?? null
       }
+      // Estudio (campaña) al que pertenece la sesión — para la portada del informe.
+      let estudioName: string | null = null
+      const campaignId = (session as any)?.campaign_id
+      if (campaignId) {
+        const { data: cmp } = await supabase.from('campaigns').select('name').eq('id', campaignId).single()
+        estudioName = (cmp as any)?.name ?? null
+      }
       const lateralidad = [fd.dominant_leg ? `Pierna ${fd.dominant_leg}` : null, fd.dominant_arm ? `Brazo ${fd.dominant_arm}` : null].filter(Boolean).join(' · ') || null
       teamPerfil = {
         nombre: patient.full_name,
@@ -229,6 +236,7 @@ export async function POST(request: NextRequest) {
         lateralidad,
         horas_entreno_semana: fd.training_hours_week ?? null,
         equipo: teamName,
+        estudio: estudioName,
       }
     }
 
