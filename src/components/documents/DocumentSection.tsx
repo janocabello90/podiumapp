@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import type { Document } from '@/types/database'
 import DocumentUploader from './DocumentUploader'
 import DocumentList from './DocumentList'
@@ -19,9 +19,6 @@ interface Props {
 
 export default function DocumentSection({ patientId, clinicId, initialDocuments, initialInterpretation, sessionId }: Props) {
   const [documents, setDocuments] = useState<Document[]>(initialDocuments)
-  // Tras un router.refresh() (p. ej. después de subir), el servidor devuelve la lista fresca:
-  // la reflejamos aquí para que aparezcan TODOS los documentos sin recargar a mano.
-  useEffect(() => { setDocuments(initialDocuments) }, [initialDocuments])
   const [interpretation, setInterpretation] = useState(initialInterpretation || '')
   const [showInterpretation, setShowInterpretation] = useState(!!initialInterpretation)
   const [savingInterpretation, setSavingInterpretation] = useState(false)
@@ -31,6 +28,21 @@ export default function DocumentSection({ patientId, clinicId, initialDocuments,
   function handleUploaded(doc: Document) {
     setDocuments(prev => [doc, ...prev])
   }
+
+  // Re-consulta autoritativa tras subir: trae de la BBDD TODOS los documentos de esta sesión
+  // (o del paciente si no hay sesión), evitando estados locales incompletos. El cliente ve la
+  // escritura recién hecha (misma primaria), así que no hay lag como con el refresh del servidor.
+  const refetch = useCallback(async () => {
+    const col = sessionId ? 'session_id' : 'patient_id'
+    const val = sessionId || patientId
+    const { data } = await supabase
+      .from('documents')
+      .select('*')
+      .eq(col, val)
+      .neq('doc_type', 'medical_image')
+      .order('created_at', { ascending: false })
+    if (data) setDocuments(data as Document[])
+  }, [supabase, sessionId, patientId])
 
   function handleDelete(docId: string) {
     setDocuments(prev => prev.filter(d => d.id !== docId))
@@ -74,6 +86,7 @@ export default function DocumentSection({ patientId, clinicId, initialDocuments,
         patientId={patientId}
         clinicId={clinicId}
         onUploaded={handleUploaded}
+        onDone={refetch}
         sessionId={sessionId}
       />
       {documents.length > 0 && (
