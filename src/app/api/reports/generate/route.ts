@@ -44,6 +44,7 @@ REGLAS:
 - Usa párrafos narrativos, NO bullet points (excepto en la portada donde se listan los contenidos del informe).
 - Refiérete a la persona SIEMPRE como «[[PACIENTE]]» (marcador que se sustituye por el nombre al emitir el informe); no inventes un nombre.
 - NO inventes datos que no estén en la información proporcionada.
+- COHERENCIA DE DATOS: no introduzcas contradicciones internas; las cifras y los datos deben ser coherentes entre todas las secciones. Para los datos demográficos (edad, sexo, fecha de nacimiento) usa EXCLUSIVAMENTE los de DATOS DEL PACIENTE aportados; si un documento adjunto (p. ej. una gráfica de VALD) muestra un dato distinto, PREVALECE la ficha. No reafirmes una edad ni una fecha distintas de las aportadas.
 - Si no hay datos de alguna sección de exploración, indica que no se han registrado hallazgos en esa área.
 - Las hipótesis diagnósticas siempre con "posible", "compatible con" o "sugiere".
 - El tono es cercano pero riguroso, como un profesional que explica al paciente su situación.
@@ -99,6 +100,7 @@ REGLAS:
 - Español profesional; párrafos narrativos (salvo el semáforo, que son valores).
 - El "semaforo": cada área SOLO puede valer "adecuado", "mejorable" o "prioritario" (en minúscula), según los datos. Si no hay datos suficientes de un área, usa "mejorable" y decláralo en el texto.
 - NO inventes valores: usa los que leas de las gráficas de VALD o las notas; si no hay, interpreta cualitativamente sin cifras.
+- COHERENCIA DE DATOS: no introduzcas contradicciones internas; las cifras y los datos deben ser coherentes entre todas las secciones. Para los datos demográficos (edad, sexo, deporte, posición, equipo, lateralidad) usa EXCLUSIVAMENTE los del PERFIL DEL DEPORTISTA / DATOS DEL PACIENTE aportados; si un documento adjunto (p. ej. una gráfica de VALD) muestra un dato distinto, PREVALECE la ficha. No reafirmes una edad ni una fecha de nacimiento distintas de las aportadas.
 - Refiérete al deportista SIEMPRE como «[[PACIENTE]]» (marcador que se sustituye por el nombre al emitir el informe); no inventes un nombre.
 - Responde SOLO con el JSON válido, sin texto adicional.`
 

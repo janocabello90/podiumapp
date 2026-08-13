@@ -4,6 +4,7 @@ import { PDFDocument } from 'pdf-lib'
 import { createClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
+import { METODOLOGIA_JPEG_BASE64 } from '@/lib/reports/metodologiaAsset'
 
 // PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 8 secciones.
 // Las gráficas de VALD (PDF) se INCRUSTAN como punto 3, entre la intro de "Valoración
@@ -238,6 +239,22 @@ export async function POST(request: NextRequest) {
     y = line(docB, y)
     y = para(docB, 'Descargo de responsabilidad:', y, { fontStyle: 'bolditalic', fontSize: 9, color: [100, 100, 100] })
     y = para(docB, rd.descargo || '', y, { fontStyle: 'italic', fontSize: 8, color: [120, 120, 120] })
+    addFooter(docB)
+
+    // Página final: ilustración de la Metodología Podium (escalera PODIO 1–5), ajustada
+    // a la caja respetando su proporción y centrada. La imagen ya lleva su propio título.
+    docB.addPage(); addHeader(docB)
+    const methImg = `data:image/jpeg;base64,${METODOLOGIA_JPEG_BASE64}`
+    try {
+      const mp = docB.getImageProperties(methImg)
+      const ratio = mp.width / mp.height
+      const maxW = CONTENT_WIDTH, maxH = 232
+      let w = maxW, h = maxW / ratio
+      if (h > maxH) { h = maxH; w = maxH * ratio }
+      docB.addImage(methImg, 'JPEG', PAGE_WIDTH / 2 - w / 2, 34, w, h)
+    } catch (e) {
+      console.error('No se pudo incrustar la metodología:', e)
+    }
     addFooter(docB)
     const partB = Buffer.from(docB.output('arraybuffer'))
 
