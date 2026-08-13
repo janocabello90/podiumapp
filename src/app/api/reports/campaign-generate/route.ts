@@ -4,6 +4,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
 import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
 import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
+import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
 
 // Cap de jugadores incluidos en el prompt v1 (evita desbordar tokens en estudios grandes).
 const MAX_PLAYERS_IN_PROMPT = 40
@@ -186,9 +187,12 @@ export async function POST(request: NextRequest) {
 
     // Llamada a Claude.
     const anthropic = new Anthropic({ apiKey })
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 8000,
+    // Streaming (evita timeouts con max_tokens alto); finalMessage() = mismo objeto que create().
+    const stream = anthropic.messages.stream({
+      model: REPORT_MODEL,
+      max_tokens: REPORT_MAX_TOKENS,
+      thinking: REPORT_THINKING,
+      output_config: REPORT_EFFORT,
       system: systemPrompt,
       messages: [
         {
@@ -196,7 +200,8 @@ export async function POST(request: NextRequest) {
           content: `Genera el informe agregado de estudio PODIUM. Responde SOLO con JSON válido.\n\nPRIVACIDAD: por protección de datos NO se facilitan nombres reales. Cada jugador está identificado por una etiqueta «[[JUGADOR_n]]»; úsala TAL CUAL cuando debas nombrar a un jugador (p. ej. en "jugadores_a_vigilar"). No inventes nombres.\n\n${context}`,
         },
       ],
-    })
+    } as any)
+    const message = await stream.finalMessage()
 
     const responseText = message.content
       .filter((block: any) => block.type === 'text')
@@ -238,7 +243,7 @@ export async function POST(request: NextRequest) {
         generated_by: user.id,
         status: 'draft',
         report_data: reportData,
-        ai_model: 'claude-sonnet-4-20250514',
+        ai_model: REPORT_MODEL,
         ai_prompt_tokens: message.usage?.input_tokens || null,
         ai_completion_tokens: message.usage?.output_tokens || null,
       })

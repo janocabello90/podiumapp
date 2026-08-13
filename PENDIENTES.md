@@ -83,6 +83,11 @@ Contexto: se digitalizó el documento unificado de la clínica (imagen + protecc
 
 Acordar con el cliente/asesoría qué nivel de anonimización exigen sobre los documentos adjuntos.
 
+## 🤖 IA — modelo, calidad y coste (2026-08)
+- **Migrar a Sonnet 5** (hoy `claude-sonnet-4-20250514`, en retirada jun-2026). Mejor visión (lee mejor las gráficas VALD) y razonamiento. Plan detallado en **`PLAN-SONNET5.md`**. Incluye: pensamiento adaptativo, `max_tokens` 8k→16k, streaming, subir el SDK y centralizar la config de IA. Coste ≈ el mismo (promo $2/$10 hasta 31-ago; luego ~+30% por tokenizador nuevo, sigue siendo céntimos).
+- **Mostrar coste/tokens por informe en la UI (admin).** La app YA guarda por informe `ai_prompt_tokens` (entrada), `ai_completion_tokens` (salida) y `ai_model` en la tabla `reports`, pero **no se pinta en ninguna pantalla**. Añadir un indicador (p. ej. en la vista del informe, solo admin: *"X tokens entrada / Y salida ≈ Z €"*) + un acumulado mensual en Actividad/Ajustes. La app guarda tokens (dato duro); el € se calcula por el precio del modelo.
+- **Caché de prompt para las guías de equipo (optimización de coste).** En balonmano se hacen las 22 pruebas → cada informe envía las 22 guías (~84k tokens, idénticas entre jugadores). Reordenando el prompt (guías fijas delante, datos del jugador detrás) + generando los informes seguidos, la caché baja el coste ~60% en los informes siguientes al primero (de ~$0,34 a ~$0,12 por jugador). Requiere reestructurar el prompt de `reports/generate`; ver `PLAN-SONNET5.md` (fase opcional).
+
 ## Otros pendientes conocidos (de docs previos)
 - **Multi-equipo real** (una persona compartida en varios equipos, tabla N:M). Hoy: una ficha por (persona, equipo). Ver `FLUJO-EQUIPOS-CIERRE.md`.
 - **Resultados de prueba estructurados** (`session_tests.result_data`) → habilitaría estadística numérica en el informe de estudio (hoy cualitativo).

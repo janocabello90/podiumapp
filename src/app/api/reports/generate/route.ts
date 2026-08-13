@@ -6,6 +6,7 @@ import { getReportInstructions } from '@/lib/reports/prompt'
 import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/reports/redact'
 import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
+import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
 
 // ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
 const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
@@ -428,9 +429,13 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
     // Call Claude
     const anthropic = new Anthropic({ apiKey })
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 8000,
+    // Streaming: con max_tokens alto (16k) evita timeouts HTTP. finalMessage() devuelve
+    // el mensaje completo, con la misma forma que create() (parseo posterior sin cambios).
+    const stream = anthropic.messages.stream({
+      model: REPORT_MODEL,
+      max_tokens: REPORT_MAX_TOKENS,
+      thinking: REPORT_THINKING,
+      output_config: REPORT_EFFORT,
       system: systemPrompt,
       messages: [
         {
@@ -438,7 +443,8 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
           content: [...docBlocks, { type: 'text', text: userText }] as any,
         }
       ],
-    })
+    } as any)
+    const message = await stream.finalMessage()
 
     // Extract text from response
     const responseText = message.content
@@ -481,7 +487,7 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
         assessment_id: assessment?.id || null,
         session_id: session?.id || null,
         report_data: reportData,
-        ai_model: 'claude-sonnet-4-20250514',
+        ai_model: REPORT_MODEL,
         ai_prompt_tokens: message.usage?.input_tokens || null,
         ai_completion_tokens: message.usage?.output_tokens || null,
       })
