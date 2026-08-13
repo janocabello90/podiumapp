@@ -50,10 +50,25 @@ function addFooter(doc: jsPDF) {
   doc.text(FOOTER_TEXT, PAGE_WIDTH / 2, pageHeight - 12, { align: 'center' })
 }
 
+// Ajusta el logo dentro de una caja maxW×maxH RESPETANDO su proporción real
+// (evita que salga aplastado por forzar ancho y alto fijos).
+function fitLogo(doc: jsPDF, dataUrl: string, maxW: number, maxH: number): { w: number; h: number; x: number } {
+  try {
+    const p = doc.getImageProperties(dataUrl)
+    const ratio = p.width / p.height
+    let w = maxW, h = maxW / ratio
+    if (h > maxH) { h = maxH; w = maxH * ratio }
+    return { w, h, x: PAGE_WIDTH / 2 - w / 2 }
+  } catch {
+    return { w: maxW, h: maxH, x: PAGE_WIDTH / 2 - maxW / 2 }
+  }
+}
+
 function addHeader(doc: jsPDF, logoDataUrl?: string | null, logoExt?: string) {
   if (logoDataUrl && logoExt) {
-    // Logo centered in header, max 30mm wide x 12mm tall
-    doc.addImage(logoDataUrl, logoExt, PAGE_WIDTH / 2 - 15, 8, 30, 12)
+    // Logo centrado en cabecera dentro de una caja máx. 30×12mm, sin deformar
+    const { w, h, x } = fitLogo(doc, logoDataUrl, 30, 12)
+    doc.addImage(logoDataUrl, logoExt, x, 8, w, h)
   }
 
   // Gold underline
@@ -71,9 +86,12 @@ function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSiz
   const fontStyle = options?.fontStyle || 'normal'
   const color = options?.color || [60, 60, 60]
 
-  doc.setFont('helvetica', fontStyle)
-  doc.setFontSize(fontSize)
-  doc.setTextColor(color[0], color[1], color[2])
+  const applyStyle = () => {
+    doc.setFont('helvetica', fontStyle)
+    doc.setFontSize(fontSize)
+    doc.setTextColor(color[0], color[1], color[2])
+  }
+  applyStyle()
 
   const lines = doc.splitTextToSize(text, CONTENT_WIDTH)
   const lineHeight = fontSize * 0.45
@@ -84,6 +102,7 @@ function writeParagraph(doc: jsPDF, text: string, y: number, options?: { fontSiz
       doc.addPage()
       addHeader(doc, _headerLogoDataUrl, _headerLogoExt)
       y = MARGIN_TOP + 10
+      applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
     }
     doc.text(line, MARGIN_LEFT, y)
     y += lineHeight
@@ -206,8 +225,9 @@ export async function POST(request: NextRequest) {
           _headerLogoDataUrl = logoDataUrl
           _headerLogoExt = ext
 
-          // Add logo centered on cover, max 50mm wide x 25mm tall
-          doc.addImage(logoDataUrl, ext, PAGE_WIDTH / 2 - 25, 15, 50, 25)
+          // Add logo centered on cover, max 50mm wide x 25mm tall, sin deformar
+          const fit = fitLogo(doc, logoDataUrl, 50, 25)
+          doc.addImage(logoDataUrl, ext, fit.x, 15, fit.w, fit.h)
           coverY = 48
         }
       } catch (e) {

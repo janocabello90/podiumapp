@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 interface Props {
   patientId: string
   sessionId?: string
+  hasExisting?: boolean
 }
 
 interface RefOption {
@@ -18,7 +19,7 @@ interface RefOption {
   reasons: string[]
 }
 
-export default function ReportGenerateButton({ patientId, sessionId }: Props) {
+export default function ReportGenerateButton({ patientId, sessionId, hasExisting }: Props) {
   const [generating, setGenerating] = useState(false)
   const [refs, setRefs] = useState<RefOption[]>([])
   const [selected, setSelected] = useState<Record<string, boolean>>({})
@@ -108,7 +109,7 @@ export default function ReportGenerateButton({ patientId, sessionId }: Props) {
         ) : (
           <>
             <Sparkles className="w-5 h-5" />
-            Generar informe
+            {hasExisting ? 'Regenerar informe' : 'Generar informe'}
           </>
         )}
       </button>

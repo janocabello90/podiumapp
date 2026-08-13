@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield } from 'lucide-react'
+import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield, CheckCircle2 } from 'lucide-react'
 import AssessmentForm from '@/components/assessment/AssessmentForm'
 import SessionTestsPanel from '@/components/sessions/SessionTestsPanel'
 import SessionTestPicker from '@/components/sessions/SessionTestPicker'
@@ -32,7 +32,7 @@ export default async function SessionPage({ params }: { params: { id: string; se
     .single()
   if (!session) notFound()
 
-  const [{ data: sessionTests }, { data: sports }, { data: testsCatalog }, { data: anamnesis }, { data: consents }, { data: sessionDocs }, { data: campaign }] = await Promise.all([
+  const [{ data: sessionTests }, { data: sports }, { data: testsCatalog }, { data: anamnesis }, { data: consents }, { data: sessionDocs }, { data: campaign }, { data: existingReport }] = await Promise.all([
     supabase.from('session_tests').select('id, test_id, test_name, status, notes, display_order, is_required').eq('session_id', session.id),
     supabase.from('sports').select('id, name').eq('clinic_id', profile.clinic_id).eq('is_active', true).order('name'),
     supabase.from('tests').select('id, name').eq('clinic_id', profile.clinic_id).eq('is_active', true).order('name'),
@@ -42,6 +42,8 @@ export default async function SessionPage({ params }: { params: { id: string; se
     (session as any).campaign_id
       ? supabase.from('campaigns').select('name').eq('id', (session as any).campaign_id).maybeSingle()
       : Promise.resolve({ data: null }),
+    // ¿Ya hay informe generado para ESTA sesión? (el más reciente)
+    supabase.from('reports').select('id, status, created_at').eq('session_id', session.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
   ])
 
   const patient = (session.patients as any) || {}
@@ -202,15 +204,30 @@ export default async function SessionPage({ params }: { params: { id: string; se
       {/* Informe individual sobre la sesión */}
       <section>
         <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Informe</h2>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-gray-600">
-            Genera el informe IA con el contexto de <strong>esta sesión</strong> ({isStudySession ? 'anamnesis, pruebas, VALD y anotaciones' : 'anamnesis, exploración, pruebas, VALD y anotaciones'}). Tras generarlo, se revisa y aprueba en la ficha.
-          </p>
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <ReportGenerateButton patientId={params.id} sessionId={session.id} />
-            <Link href={`/patients/${params.id}/report`} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg">
-              <FileText className="w-3.5 h-3.5" /> Ver / revisar
-            </Link>
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
+          {/* Indicador de informe ya generado para esta sesión */}
+          {existingReport && (
+            <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-2 text-sm">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>
+                Informe <strong>{existingReport.status === 'approved' ? 'aprobado' : 'generado (borrador)'}</strong>
+                {' · '}
+                {new Date(existingReport.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-gray-600">
+              {existingReport
+                ? 'Ya hay un informe para esta sesión. Puedes revisarlo/aprobarlo o volver a generarlo (creará uno nuevo).'
+                : <>Genera el informe IA con el contexto de <strong>esta sesión</strong> ({isStudySession ? 'anamnesis, pruebas, VALD y anotaciones' : 'anamnesis, exploración, pruebas, VALD y anotaciones'}). Tras generarlo, se revisa y aprueba en la ficha.</>}
+            </p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <ReportGenerateButton patientId={params.id} sessionId={session.id} hasExisting={!!existingReport} />
+              <Link href={`/patients/${params.id}/report`} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg">
+                <FileText className="w-3.5 h-3.5" /> Ver / revisar
+              </Link>
+            </div>
           </div>
         </div>
       </section>

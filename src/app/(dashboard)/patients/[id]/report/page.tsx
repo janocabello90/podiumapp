@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 import ReportEditor from '@/components/report/ReportEditor'
 import TeamReportEditor from '@/components/report/TeamReportEditor'
 import ReportGenerateButton from '@/components/report/ReportGenerateButton'
+import ReportCostPanel from '@/components/report/ReportCostPanel'
 
 export default async function ReportPage({
   params,
@@ -27,16 +28,18 @@ export default async function ReportPage({
     notFound()
   }
 
-  // Get clinic logo
+  // Get clinic logo + rol del usuario (el coste solo se muestra a admins)
   const { data: { user } } = await supabase.auth.getUser()
   let clinicLogoUrl: string | null = null
+  let isAdmin = false
   if (user) {
     const { data: profile } = await supabase
       .from('users')
-      .select('clinic_id')
+      .select('clinic_id, role')
       .eq('id', user.id)
       .single()
     if (profile) {
+      isAdmin = profile.role === 'admin'
       const { data: clinic } = await supabase
         .from('clinics')
         .select('logo_url')
@@ -46,7 +49,10 @@ export default async function ReportPage({
     }
   }
 
-  const latestReport = patient.reports?.[0]
+  // Coger el informe MÁS RECIENTE por fecha (el join no garantiza orden).
+  const latestReport = [...(patient.reports || [])].sort(
+    (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  )[0]
   const documents = (patient.documents || []).map((d: any) => ({
     id: d.id,
     doc_type: d.doc_type,
@@ -76,6 +82,15 @@ export default async function ReportPage({
           <p className="text-sm text-gray-500 truncate">{patient.full_name}</p>
         </div>
       </div>
+
+      {/* Coste orientativo del informe (solo admin) */}
+      {latestReport && isAdmin && (latestReport.ai_prompt_tokens || latestReport.ai_completion_tokens) ? (
+        <ReportCostPanel
+          model={latestReport.ai_model}
+          inTokens={latestReport.ai_prompt_tokens || 0}
+          outTokens={latestReport.ai_completion_tokens || 0}
+        />
+      ) : null}
 
       {latestReport ? (
         (latestReport.report_data as any)?._template === 'team_performance' ? (

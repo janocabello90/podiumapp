@@ -20,23 +20,45 @@ const FOOTER_TEXT = 'www.clinicapodium.com  -  608392019  -  C/ Almagro 16 50004
 let _logoDataUrl: string | undefined
 let _logoExt: string | undefined
 
+// Ajusta el logo dentro de una caja maxW×maxH RESPETANDO su proporción real
+// (evita que salga aplastado por forzar ancho y alto fijos). Devuelve el tamaño
+// final y la x centrada. Si no se puede leer la imagen, cae a la caja completa.
+function fitLogo(doc: jsPDF, dataUrl: string, maxW: number, maxH: number): { w: number; h: number; x: number } {
+  try {
+    const p = doc.getImageProperties(dataUrl)
+    const ratio = p.width / p.height
+    let w = maxW, h = maxW / ratio
+    if (h > maxH) { h = maxH; w = maxH * ratio }
+    return { w, h, x: PAGE_WIDTH / 2 - w / 2 }
+  } catch {
+    return { w: maxW, h: maxH, x: PAGE_WIDTH / 2 - maxW / 2 }
+  }
+}
+
 function addFooter(doc: jsPDF) {
   const h = doc.internal.pageSize.getHeight()
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(150, 150, 150)
   doc.text(FOOTER_TEXT, PAGE_WIDTH / 2, h - 12, { align: 'center' })
 }
 function addHeader(doc: jsPDF) {
-  if (_logoDataUrl && _logoExt) doc.addImage(_logoDataUrl, _logoExt, PAGE_WIDTH / 2 - 15, 8, 30, 12)
+  if (_logoDataUrl && _logoExt) {
+    const { w, h, x } = fitLogo(doc, _logoDataUrl, 30, 12)
+    doc.addImage(_logoDataUrl, _logoExt, x, 8, w, h)
+  }
   doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.5)
   doc.line(MARGIN_LEFT, 24, PAGE_WIDTH - MARGIN_RIGHT, 24)
 }
 function para(doc: jsPDF, text: string, y: number, o?: { fontSize?: number; fontStyle?: string; color?: number[] }): number {
   const fs = o?.fontSize || 10, fst = o?.fontStyle || 'normal', c = o?.color || [60, 60, 60]
-  doc.setFont('helvetica', fst); doc.setFontSize(fs); doc.setTextColor(c[0], c[1], c[2])
+  const applyStyle = () => { doc.setFont('helvetica', fst); doc.setFontSize(fs); doc.setTextColor(c[0], c[1], c[2]) }
+  applyStyle()
   const lines = doc.splitTextToSize(text || '—', CONTENT_WIDTH)
   const lh = fs * 0.45
   for (const line of lines) {
-    if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 10) { addFooter(doc); doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10 }
+    if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - 10) {
+      addFooter(doc); doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+      applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
+    }
     doc.text(line, MARGIN_LEFT, y); y += lh
   }
   return y + 3
@@ -106,7 +128,10 @@ export async function POST(request: NextRequest) {
     // ===== PARTE A: portada + perfil + anamnesis + intro de valoración funcional =====
     const docA = new jsPDF('portrait', 'mm', 'a4')
     let y = 45
-    if (_logoDataUrl && _logoExt) { docA.addImage(_logoDataUrl, _logoExt, PAGE_WIDTH / 2 - 25, 15, 50, 25); y = 48 }
+    if (_logoDataUrl && _logoExt) {
+      const { w, h, x } = fitLogo(docA, _logoDataUrl, 50, 25)
+      docA.addImage(_logoDataUrl, _logoExt, x, 15, w, h); y = 48
+    }
     docA.setDrawColor(218, 165, 32); docA.setLineWidth(0.8); docA.line(MARGIN_LEFT, y + 2, PAGE_WIDTH - MARGIN_RIGHT, y + 2)
     docA.setFont('helvetica', 'bold'); docA.setFontSize(15); docA.setTextColor(30, 30, 30)
     docA.text('INFORME DE RENDIMIENTO Y PREVENCIÓN', PAGE_WIDTH / 2, y + 16, { align: 'center' })

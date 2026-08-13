@@ -18,3 +18,22 @@ export const REPORT_THINKING = { type: 'adaptive' as const }
 
 // Profundidad de razonamiento: 'high' = equilibrio calidad/coste/latencia.
 export const REPORT_EFFORT = { effort: 'high' as const }
+
+// Precio por millón de tokens (USD) por modelo, para mostrar el coste orientativo
+// de cada informe en la UI. Sonnet 5 va con el precio PROMOCIONAL ($2/$10) hasta el
+// 31-ago-2026; a partir de septiembre será $3/$15 (ajustar aquí cuando toque).
+export const MODEL_PRICING_USD: Record<string, { in: number; out: number }> = {
+  'claude-sonnet-5': { in: 2, out: 10 },
+  'claude-sonnet-4-20250514': { in: 3, out: 15 },
+  'claude-haiku-4-5-20251001': { in: 1, out: 5 },
+}
+
+// Tipo de cambio orientativo USD→EUR (solo para mostrar; no es contable).
+export const USD_TO_EUR = 0.92
+
+// Coste orientativo de un informe a partir de sus tokens de entrada/salida.
+export function estimateReportCost(model: string, inTokens: number, outTokens: number) {
+  const p = MODEL_PRICING_USD[model] || MODEL_PRICING_USD[REPORT_MODEL]
+  const usd = (inTokens / 1_000_000) * p.in + (outTokens / 1_000_000) * p.out
+  return { usd, eur: usd * USD_TO_EUR, pricing: p }
+}
