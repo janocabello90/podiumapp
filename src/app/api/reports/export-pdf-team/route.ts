@@ -61,8 +61,10 @@ function para(doc: jsPDF, text: string, y: number, o?: { fontSize?: number; font
       addFooter(doc); doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
       applyStyle() // restaura tamaño/estilo/color: addFooter los dejó en 8pt gris
     }
-    // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
-    if (i < lines.length - 1) drawJustifiedLine(doc, lines[i], MARGIN_LEFT, y, CONTENT_WIDTH)
+    // Justificar solo líneas "llenas": ni la última del texto ni la última de un párrafo
+    // (la siguiente en blanco, por '\n\n'), para no estirar los finales de párrafo.
+    const justify = i < lines.length - 1 && lines[i].trim() !== '' && (lines[i + 1] || '').trim() !== ''
+    if (justify) drawJustifiedLine(doc, lines[i], MARGIN_LEFT, y, CONTENT_WIDTH)
     else doc.text(lines[i], MARGIN_LEFT, y)
     y += lh
   }
@@ -154,8 +156,6 @@ export async function POST(request: NextRequest) {
     }
     const coverRows: [string, string][] = [
       ['Deportista', String(perfil.nombre || patientName || '—')],
-      ['Edad · Sexo', [perfil.edad != null ? `${perfil.edad} años` : null, perfil.sexo].filter(Boolean).join(' · ') || '—'],
-      ['Deporte · Posición', [perfil.deporte, perfil.posicion].filter(Boolean).join(' · ') || '—'],
       ['Equipo', String(perfil.equipo || '—')],
       ...(perfil.estudio ? ([['Estudio', String(perfil.estudio)]] as [string, string][]) : []),
       ['Fecha del informe', fmtFecha(reportDate)],

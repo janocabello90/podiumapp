@@ -49,8 +49,10 @@ function writeParagraph(doc: jsPDF, text: string, y: number, opts?: { fontSize?:
     const prevY = y
     y = ensureSpace(doc, y, 10)
     if (y !== prevY) applyStyle() // hubo salto de página: addFooter dejó la letra en 8pt gris
-    // Justificado en todas las líneas menos la última del párrafo (evita huecos feos al final).
-    if (i < lines.length - 1) drawJustifiedLine(doc, lines[i], MARGIN_LEFT, y, CONTENT_WIDTH)
+    // Justificar solo líneas "llenas": ni la última del texto ni la última de un párrafo
+    // (la siguiente en blanco, por '\n\n'), para no estirar los finales de párrafo.
+    const justify = i < lines.length - 1 && lines[i].trim() !== '' && (lines[i + 1] || '').trim() !== ''
+    if (justify) drawJustifiedLine(doc, lines[i], MARGIN_LEFT, y, CONTENT_WIDTH)
     else doc.text(lines[i], MARGIN_LEFT, y)
     y += lineHeight
   }
