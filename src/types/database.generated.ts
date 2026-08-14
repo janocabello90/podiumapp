@@ -1201,6 +1201,8 @@ export type Database = {
           created_at: string | null
           group_id: string
           id: string
+          invite_active: boolean
+          invite_token: string | null
           name: string
           notes: string | null
           sport_id: string | null
@@ -1212,6 +1214,8 @@ export type Database = {
           created_at?: string | null
           group_id: string
           id?: string
+          invite_active?: boolean
+          invite_token?: string | null
           name: string
           notes?: string | null
           sport_id?: string | null
@@ -1223,6 +1227,8 @@ export type Database = {
           created_at?: string | null
           group_id?: string
           id?: string
+          invite_active?: boolean
+          invite_token?: string | null
           name?: string
           notes?: string | null
           sport_id?: string | null

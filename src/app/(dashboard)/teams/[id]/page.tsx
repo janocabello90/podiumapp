@@ -6,6 +6,7 @@ import { computeStage } from '@/lib/clinical/stage'
 import { getRegionLabel, getPathologyLabel } from '@/lib/clinical/taxonomy'
 import SportSelect from '@/components/sports/SportSelect'
 import BulkImportPlayers from '@/components/teams/BulkImportPlayers'
+import TeamInviteLink from '@/components/teams/TeamInviteLink'
 import { normalize } from '@/lib/patients/rosterImport'
 
 export const dynamic = 'force-dynamic'
@@ -28,7 +29,7 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
   // Equipo + su grupo (defensa en profundidad: filtro clinic_id además de RLS)
   const { data: team } = await supabase
     .from('teams')
-    .select('id, name, category, group_id, sport_id, groups(name)')
+    .select('id, name, category, group_id, sport_id, invite_token, invite_active, groups(name)')
     .eq('id', params.id)
     .eq('clinic_id', profile.clinic_id)
     .single()
@@ -122,6 +123,14 @@ export default async function TeamRosterPage({ params }: { params: { id: string 
           </div>
         ) : null
       )}
+
+      {/* Enlace público de alta de jugadores (fisios y admins) */}
+      <TeamInviteLink
+        teamId={team.id}
+        teamName={team.name}
+        initialToken={(team as any).invite_token ?? null}
+        initialActive={(team as any).invite_active ?? true}
+      />
 
       {/* Roster */}
       {players.length === 0 ? (
