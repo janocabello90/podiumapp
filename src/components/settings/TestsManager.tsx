@@ -180,13 +180,24 @@ export default function TestsManager({ clinicId, initialTests }: Props) {
                   {/* Métricas clave: las que la IA extrae del VALD y alimentan el informe de equipo */}
                   <div className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
                     <p className="text-xs font-medium text-gray-600">Métricas clave (para el informe de equipo)</p>
+                    <p className="text-[11px] text-gray-400 leading-snug">
+                      <b>Clave</b>: id interno (sin espacios) · <b>Nombre visible</b>: cómo aparece en el informe · <b>Unidad</b>: N, °, cm, %… · <b>izq/der</b>: si tiene lado · <b>percentil</b>: si VALD lo da
+                    </p>
                     {editForm.metrics.length === 0 && (
                       <p className="text-[11px] text-gray-400">Sin métricas. La IA no extraerá cifras de esta prueba.</p>
+                    )}
+                    {editForm.metrics.length > 0 && (
+                      <div className="flex items-center gap-1.5 px-0.5 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                        <span className="w-24">Clave</span>
+                        <span className="w-40">Nombre visible</span>
+                        <span className="w-14">Unidad</span>
+                        <span>Tipo</span>
+                      </div>
                     )}
                     {editForm.metrics.map((m, i) => (
                       <div key={i} className="flex items-center gap-1.5 flex-wrap">
                         <input value={m.key} onChange={(e) => updateMetric(i, { key: e.target.value })} placeholder="clave" className="w-24 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
-                        <input value={m.label} onChange={(e) => updateMetric(i, { label: e.target.value })} placeholder="etiqueta" className="w-40 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
+                        <input value={m.label} onChange={(e) => updateMetric(i, { label: e.target.value })} placeholder="nombre visible" className="w-40 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
                         <input value={m.unit || ''} onChange={(e) => updateMetric(i, { unit: e.target.value })} placeholder="ud" className="w-14 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
                         <label className="inline-flex items-center gap-1 text-[11px] text-gray-600"><input type="checkbox" checked={!!m.bilateral} onChange={(e) => updateMetric(i, { bilateral: e.target.checked })} className="w-3.5 h-3.5 rounded border-gray-300" /> izq/der</label>
                         <label className="inline-flex items-center gap-1 text-[11px] text-gray-600"><input type="checkbox" checked={!!m.percentil} onChange={(e) => updateMetric(i, { percentil: e.target.checked })} className="w-3.5 h-3.5 rounded border-gray-300" /> percentil</label>
