@@ -203,7 +203,7 @@ export default async function PatientDetailPage({
           <div className="min-w-0">
             {isTeamPatient && team && (
               <nav className="flex items-center gap-1.5 text-xs text-gray-400 mb-0.5 truncate">
-                <Link href="/groups" className="hover:text-blue-600">Equipos</Link>
+                <Link href="/groups" className="hover:text-blue-600">Grupos</Link>
                 {team.groups?.name && (
                   <>
                     <span>›</span>

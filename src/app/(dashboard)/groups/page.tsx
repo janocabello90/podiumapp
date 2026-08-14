@@ -36,7 +36,7 @@ export default async function GroupsPage() {
     <div className="max-w-4xl mx-auto">
       {/* Header */}
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Equipos</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Grupos</h1>
         <p className="text-sm text-gray-500 mt-0.5">
           {groups.length} grupo{groups.length !== 1 ? 's' : ''} · gestiona grupos y sus equipos
         </p>

@@ -11,7 +11,7 @@ const navigation = [
   { name: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Estudios', href: '/estudios', icon: Megaphone },
   { name: 'Pacientes', href: '/patients', icon: Users },
-  { name: 'Equipos', href: '/groups', icon: Shield },
+  { name: 'Grupos', href: '/groups', icon: Shield },
   { name: 'Informes', href: '/reports', icon: FileText, adminOnly: true },
   { name: 'Actividad', href: '/activity', icon: Activity, adminOnly: true },
   { name: 'Ajustes', href: '/settings', icon: Settings },

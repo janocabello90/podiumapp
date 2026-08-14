@@ -78,7 +78,7 @@ export default function CreateStudyForm({ clinicId, groups }: { clinicId: string
     return (
       <p className="text-sm text-gray-400">
         Crea antes un grupo y sus equipos en{' '}
-        <a href="/groups" className="text-clinical-primary hover:underline">Equipos</a>{' '}para poder abrir un estudio.
+        <a href="/groups" className="text-clinical-primary hover:underline">Grupos</a>{' '}para poder abrir un estudio.
       </p>
     )
   }

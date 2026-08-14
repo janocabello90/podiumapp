@@ -6,7 +6,7 @@ const SECTION: Record<string, string> = {
   dashboard: 'Inicio',
   patients: 'Pacientes',
   estudios: 'Estudios',
-  groups: 'Equipos',
+  groups: 'Grupos',
   teams: 'Equipos',
   reports: 'Informes',
   activity: 'Actividad',
