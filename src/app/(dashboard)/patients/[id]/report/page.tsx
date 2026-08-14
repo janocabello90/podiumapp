@@ -6,6 +6,7 @@ import ReportEditor from '@/components/report/ReportEditor'
 import TeamReportEditor from '@/components/report/TeamReportEditor'
 import ReportGenerateButton from '@/components/report/ReportGenerateButton'
 import ReportCostPanel from '@/components/report/ReportCostPanel'
+import { parseMetricsSchema } from '@/lib/reports/metrics'
 
 export default async function ReportPage({
   params,
@@ -67,6 +68,24 @@ export default async function ReportPage({
     .filter((d: any) => !latestReport?.session_id || d.session_id === latestReport.session_id)
     .map((d: any) => ({ file_name: d.file_name, storage_path: d.storage_path }))
 
+  // Datos objetivos (métricas) de la sesión del informe — solo pruebas con métricas definidas.
+  let metricTests: any[] = []
+  if (latestReport?.session_id) {
+    const { data: sts } = await supabase
+      .from('session_tests')
+      .select('id, test_name, result_data, display_order, tests(result_schema)')
+      .eq('session_id', latestReport.session_id)
+      .order('display_order', { ascending: true })
+    metricTests = (sts || [])
+      .map((st: any) => ({
+        id: st.id,
+        test_name: st.test_name,
+        metrics: parseMetricsSchema(st.tests?.result_schema),
+        values: st.result_data || {},
+      }))
+      .filter((t: any) => t.metrics.length > 0)
+  }
+
   return (
     <div className="max-w-4xl mx-auto">
       {/* Header */}
@@ -102,6 +121,8 @@ export default async function ReportPage({
             documents={teamValdDocs}
             clinicLogoUrl={clinicLogoUrl}
             reportDate={latestReport.created_at}
+            metricTests={metricTests}
+            sessionId={latestReport.session_id}
           />
         ) : (
           <ReportEditor

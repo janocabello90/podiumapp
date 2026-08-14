@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Check, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
+import SessionMetricsSection, { type MetricTest } from '@/components/report/SessionMetricsSection'
 
 // Editor del "Informe de Rendimiento y Prevención" (equipo). Estructura de 8 secciones.
 // Los campos son editables (autoguardado al salir del campo). El fisio siempre puede ajustar.
@@ -33,6 +34,8 @@ export default function TeamReportEditor({
   documents,
   clinicLogoUrl,
   reportDate,
+  metricTests,
+  sessionId,
 }: {
   reportId: string
   patientName: string
@@ -41,6 +44,8 @@ export default function TeamReportEditor({
   documents?: { file_name: string; storage_path: string }[]
   clinicLogoUrl?: string | null
   reportDate?: string | null
+  metricTests?: MetricTest[]
+  sessionId?: string | null
 }) {
   const router = useRouter()
   const [data, setData] = useState<any>(initialData || {})
@@ -55,7 +60,7 @@ export default function TeamReportEditor({
       const res = await fetch('/api/reports/export-pdf-team', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reportData: data, patientName, documents: documents || [], clinicLogoUrl: clinicLogoUrl || null, reportDate: reportDate || null }),
+        body: JSON.stringify({ reportData: data, patientName, documents: documents || [], clinicLogoUrl: clinicLogoUrl || null, reportDate: reportDate || null, sessionId: sessionId || null }),
       })
       if (!res.ok) throw new Error()
       const blob = await res.blob()
@@ -171,6 +176,16 @@ export default function TeamReportEditor({
         <SubField label="3.5 Capacidad reactiva" path="valoracion_funcional.capacidad_reactiva" get={getField} onSave={savePath} disabled={approved} />
         <p className="text-xs text-gray-400 mt-2">Las gráficas de VALD (PDF subido a la consulta) se incrustan aquí al exportar el PDF.</p>
       </Section>
+
+      {/* Datos objetivos (VALD): métricas por prueba, editables. No salen en el PDF por defecto. */}
+      {metricTests && metricTests.length > 0 && (
+        <SessionMetricsSection
+          tests={metricTests}
+          includeInPdf={!!data?._meta?.include_metrics_in_pdf}
+          onToggleInclude={(v) => savePath('_meta.include_metrics_in_pdf', v)}
+          disabled={approved}
+        />
+      )}
 
       <Section title="4. Hallazgos principales">
         <Field path="hallazgos" value={getField('hallazgos')} onSave={(v) => savePath('hallazgos', v)} disabled={approved} />

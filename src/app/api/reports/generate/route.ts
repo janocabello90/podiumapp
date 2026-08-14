@@ -6,6 +6,7 @@ import { getReportInstructions } from '@/lib/reports/prompt'
 import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/reports/redact'
 import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
+import { parseMetricsSchema, buildMetricsInstruction, metricsByTestName } from '@/lib/reports/metrics'
 import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
 
 // ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
       const [{ data: st }, { data: sessionDocs }] = await Promise.all([
         supabase
           .from('session_tests')
-          .select('test_name, notes, status, display_order, tests(vald_interpretation_prompt)')
+          .select('id, test_id, test_name, notes, status, display_order, tests(vald_interpretation_prompt, result_schema)')
           .eq('session_id', session.id)
           .order('display_order', { ascending: true }),
         supabase
@@ -431,7 +432,14 @@ ${docBlocks.length > 0 ? `- DOCUMENTOS ADJUNTOS (${docBlocks.length}): informes/
 Integra y CRUZA todas estas fuentes; no te limites a listarlas. Responde SOLO con JSON válido.
 
 ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
-    const userText = guia
+
+    // Capa de datos objetivos: pedir a la IA que EXTRAIGA las métricas clave de las pruebas que
+    // las tengan definidas (tests.result_schema). Si ninguna las tiene, no añade nada al prompt
+    // y el individual se genera exactamente igual que antes (aditivo, no rompe lo actual).
+    const metricsInstruction = buildMetricsInstruction(
+      sessionTests.map((st: any) => ({ test_name: st.test_name, metrics: parseMetricsSchema(st.tests?.result_schema) }))
+    )
+    const userText = guia + metricsInstruction
 
     // Rol/instrucciones editables por la clínica (Ajustes → Informes) + estructura fija.
     const reportInstructions = await getReportInstructions(supabase, patient.clinic_id, isTeamReport ? 'team' : 'individual')
@@ -477,6 +485,23 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
 
     // PRIVACIDAD: restituir el nombre real (la IA solo vio el marcador «[[PACIENTE]]»).
     reportData = restorePatientName(reportData, patient.full_name || '')
+
+    // Capa de datos objetivos: persistir las métricas extraídas en session_tests.result_data
+    // (marcadas como NO revisadas; el fisio las valida en la pantalla de revisión). No forman
+    // parte de la narrativa, así que se quitan del report_data antes de guardar.
+    if (reportData && (reportData as any)._metricas) {
+      const byName = metricsByTestName((reportData as any)._metricas)
+      for (const st of sessionTests as any[]) {
+        const valores = byName.get(String(st.test_name).trim())
+        if (valores && st.id) {
+          await supabase
+            .from('session_tests')
+            .update({ result_data: { ...valores, _meta: { fuente: 'ia', revisado: false } } })
+            .eq('id', st.id)
+        }
+      }
+      delete (reportData as any)._metricas
+    }
 
     // Descargo legal FIJO: lo añade el sistema (no lo genera la IA) → siempre idéntico.
     reportData.descargo = isTeamReport ? DESCARGO_TEAM : DESCARGO_INDIVIDUAL

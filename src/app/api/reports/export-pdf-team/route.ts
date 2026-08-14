@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 import { METODOLOGIA_JPEG_BASE64 } from '@/lib/reports/metodologiaAsset'
+import { parseMetricsSchema, type MetricDef } from '@/lib/reports/metrics'
 
 // PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 8 secciones.
 // Las gráficas de VALD (PDF) se INCRUSTAN como punto 3, entre la intro de "Valoración
@@ -97,12 +98,13 @@ export async function POST(request: NextRequest) {
     const { data: authProfile } = await authSupabase.from('users').select('clinic_id').eq('id', user.id).single()
     if (!authProfile) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
 
-    const { reportData, patientName, documents, clinicLogoUrl, reportDate } = await request.json() as {
+    const { reportData, patientName, documents, clinicLogoUrl, reportDate, sessionId } = await request.json() as {
       reportData: any
       patientName: string
       documents?: { file_name: string; storage_path: string }[]
       clinicLogoUrl?: string | null
       reportDate?: string | null
+      sessionId?: string | null
     }
 
     // Verificar propiedad de los adjuntos (evitar fuga entre clínicas)
@@ -111,6 +113,21 @@ export async function POST(request: NextRequest) {
       const { data: owned } = await authSupabase.from('documents').select('storage_path, clinic_id').in('storage_path', paths)
       const ok = new Set((owned || []).filter((d) => d.clinic_id === authProfile.clinic_id).map((d) => d.storage_path))
       if (paths.some((p) => !ok.has(p))) return NextResponse.json({ error: 'Recursos no autorizados' }, { status: 403 })
+    }
+
+    // Anexo de datos objetivos (opcional): si el fisio activó "incluir en PDF", se leen FRESCOS
+    // los valores de session_tests.result_data de la sesión (solo pruebas con métricas definidas).
+    let metricsAnnex: { test_name: string; metrics: MetricDef[]; values: Record<string, any> }[] = []
+    if (reportData?._meta?.include_metrics_in_pdf && sessionId) {
+      const { data: sts } = await authSupabase
+        .from('session_tests')
+        .select('test_name, result_data, display_order, tests(result_schema)')
+        .eq('session_id', sessionId)
+        .eq('clinic_id', authProfile.clinic_id)
+        .order('display_order', { ascending: true })
+      metricsAnnex = (sts || [])
+        .map((st: any) => ({ test_name: st.test_name, metrics: parseMetricsSchema(st.tests?.result_schema), values: st.result_data || {} }))
+        .filter((t) => t.metrics.length > 0)
     }
 
     _logoDataUrl = undefined; _logoExt = undefined
@@ -271,6 +288,29 @@ export async function POST(request: NextRequest) {
     y = para(docB, 'Descargo de responsabilidad:', y, { fontStyle: 'bolditalic', fontSize: 9, color: [100, 100, 100] })
     y = para(docB, rd.descargo || '', y, { fontStyle: 'italic', fontSize: 8, color: [120, 120, 120] })
     addFooter(docB)
+
+    // Anexo de datos objetivos (solo si el fisio lo activó): tabla de métricas por prueba.
+    if (metricsAnnex.length > 0) {
+      docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
+      y = sectionTitle(docB, 'Anexo · Datos objetivos (VALD)', y)
+      const fmtVal = (m: MetricDef, v: any): string => {
+        v = v || {}
+        if (m.bilateral) {
+          const base = `izq ${v.izq ?? '—'} / der ${v.der ?? '—'}`
+          return m.percentil ? `${base} · pct izq ${v.pct_izq ?? '—'} / der ${v.pct_der ?? '—'}` : base
+        }
+        const base = `${v.valor ?? '—'}${m.percentil ? ` · pct ${v.percentil ?? '—'}` : ''}`
+        return v.lado ? `${base} (${v.lado})` : base
+      }
+      for (const t of metricsAnnex) {
+        y = subTitle(docB, t.test_name, y)
+        for (const m of t.metrics) {
+          y = para(docB, `${m.label}${m.unit ? ` (${m.unit})` : ''}: ${fmtVal(m, t.values[m.key])}`, y, { fontSize: 9 })
+        }
+        y += 2
+      }
+      addFooter(docB)
+    }
 
     // Página final: ilustración de la Metodología Podium (escalera PODIO 1–5), ajustada
     // a la caja respetando su proporción y centrada. La imagen ya lleva su propio título.

@@ -6,7 +6,13 @@ import CampaignReportView from '@/components/report/CampaignReportView'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CampaignReportPage({ params }: { params: { id: string } }) {
+export default async function CampaignReportPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string }
+  searchParams: { team?: string; round?: string }
+}) {
   const supabase = createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -22,15 +28,25 @@ export default async function CampaignReportPage({ params }: { params: { id: str
     .single()
   if (!campaign) notFound()
 
-  const { data: report } = await supabase
+  const teamId = searchParams.team || null
+  const round = searchParams.round ? Number(searchParams.round) : null
+
+  // Último informe de equipo para (estudio, equipo, ronda).
+  let query = supabase
     .from('reports')
-    .select('id, status, report_data')
+    .select('id, status, report_data, team_id, campaign_round')
     .eq('campaign_id', campaign.id)
     .eq('scope', 'campaign')
     .eq('clinic_id', profile.clinic_id)
     .order('created_at', { ascending: false })
     .limit(1)
-    .maybeSingle()
+  if (teamId) query = query.eq('team_id', teamId)
+  if (round != null) query = query.eq('campaign_round', round)
+  const { data: report } = await query.maybeSingle()
+
+  const rd = (report?.report_data as any) || {}
+  const equipo = rd?.portada?.equipo || rd?._meta?.equipo || 'Equipo'
+  const ronda = rd?.portada?.ronda ?? rd?._meta?.ronda
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -39,15 +55,17 @@ export default async function CampaignReportPage({ params }: { params: { id: str
           <ArrowLeft className="w-5 h-5 text-gray-500" />
         </Link>
         <div className="min-w-0">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Informe de estudio</h1>
-          <p className="text-sm text-gray-500 mt-0.5 truncate">{campaign.name}</p>
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">Informe de equipo</h1>
+          <p className="text-sm text-gray-500 mt-0.5 truncate">
+            {campaign.name}{report ? ` · ${equipo}${ronda != null ? ` · Ronda ${ronda}` : ''}` : ''}
+          </p>
         </div>
       </div>
 
       {!report ? (
         <div className="bg-white rounded-2xl border border-gray-200 px-4 py-10 text-center">
           <p className="text-sm text-gray-500">
-            Este estudio aún no tiene informe. Genéralo desde{' '}
+            No hay informe para este equipo/ronda todavía. Genéralo desde{' '}
             <Link href={`/estudios/${campaign.id}`} className="text-blue-600 hover:underline">la página del estudio</Link>.
           </p>
         </div>
@@ -55,7 +73,7 @@ export default async function CampaignReportPage({ params }: { params: { id: str
         <CampaignReportView
           reportId={report.id}
           initialStatus={report.status || 'draft'}
-          initialData={(report.report_data as any) || {}}
+          initialData={rd}
         />
       )}
     </div>

@@ -55,6 +55,19 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     const nextNumber = ((last as any)?.session_number ?? 0) + 1
 
+    // Ronda de estudio (campaign_round): índice de consulta DENTRO del estudio, propio de él
+    // (independiente de session_number, que es el contador de por vida del jugador).
+    // = nº de sesiones de este jugador en este estudio + 1. Fuera de estudio → null.
+    let campaignRound: number | null = null
+    if (campaignId) {
+      const { count } = await supabase
+        .from('sessions')
+        .select('id', { count: 'exact', head: true })
+        .eq('patient_id', patientId)
+        .eq('campaign_id', campaignId)
+      campaignRound = (count ?? 0) + 1
+    }
+
     // Crear sesión
     const { data: session, error: sErr } = await supabase
       .from('sessions')
@@ -64,6 +77,7 @@ export async function POST(request: NextRequest) {
         physio_id: profile.id,
         sport_id: sportId,
         campaign_id: campaignId || null,
+        campaign_round: campaignRound,
         session_number: nextNumber,
         status: 'in_progress',
         clinical_data: {},

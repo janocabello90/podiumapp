@@ -753,6 +753,7 @@ export type Database = {
           anamnesis_id: string | null
           assessment_id: string | null
           campaign_id: string | null
+          campaign_round: number | null
           clinic_id: string
           created_at: string | null
           generated_by: string | null
@@ -763,6 +764,7 @@ export type Database = {
           scope: string
           session_id: string | null
           status: string | null
+          team_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -772,6 +774,7 @@ export type Database = {
           anamnesis_id?: string | null
           assessment_id?: string | null
           campaign_id?: string | null
+          campaign_round?: number | null
           clinic_id: string
           created_at?: string | null
           generated_by?: string | null
@@ -782,6 +785,7 @@ export type Database = {
           scope?: string
           session_id?: string | null
           status?: string | null
+          team_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -791,6 +795,7 @@ export type Database = {
           anamnesis_id?: string | null
           assessment_id?: string | null
           campaign_id?: string | null
+          campaign_round?: number | null
           clinic_id?: string
           created_at?: string | null
           generated_by?: string | null
@@ -801,6 +806,7 @@ export type Database = {
           scope?: string
           session_id?: string | null
           status?: string | null
+          team_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -851,6 +857,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -925,6 +938,7 @@ export type Database = {
       sessions: {
         Row: {
           campaign_id: string | null
+          campaign_round: number | null
           clinic_id: string
           clinical_data: Json | null
           completed_at: string | null
@@ -942,6 +956,7 @@ export type Database = {
         }
         Insert: {
           campaign_id?: string | null
+          campaign_round?: number | null
           clinic_id: string
           clinical_data?: Json | null
           completed_at?: string | null
@@ -959,6 +974,7 @@ export type Database = {
         }
         Update: {
           campaign_id?: string | null
+          campaign_round?: number | null
           clinic_id?: string
           clinical_data?: Json | null
           completed_at?: string | null

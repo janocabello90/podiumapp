@@ -109,96 +109,79 @@ export async function POST(request: NextRequest) {
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
 
-    // Portada sencilla.
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(22)
-    doc.setTextColor(20, 40, 80)
-    doc.text('Informe de Estudio', PAGE_WIDTH / 2, 60, { align: 'center' })
-    doc.setDrawColor(218, 165, 32)
-    doc.setLineWidth(0.8)
-    doc.line(PAGE_WIDTH / 2 - 30, 66, PAGE_WIDTH / 2 + 30, 66)
+    const p = rd.portada || {}
+    const equipo = p.equipo || meta.equipo || 'Equipo'
+    const estudio = p.estudio || meta.estudio || ''
+    const grupo = p.grupo || meta.grupo || ''
+    const ronda = p.ronda ?? meta.ronda
+    const cobertura = p.cobertura || (meta.cobertura_valorados != null && meta.roster_total != null ? `${meta.cobertura_valorados}/${meta.roster_total}` : '')
 
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(13)
-    doc.setTextColor(50, 50, 50)
-    if (meta.campaign_name) doc.text(String(meta.campaign_name), PAGE_WIDTH / 2, 80, { align: 'center' })
-    doc.setFontSize(10)
-    doc.setTextColor(90, 90, 90)
-    const subtitleBits: string[] = []
-    if (meta.group_name) subtitleBits.push(String(meta.group_name))
-    if (Array.isArray(meta.teams) && meta.teams.length) subtitleBits.push(meta.teams.join(', '))
-    if (subtitleBits.length) doc.text(subtitleBits.join('  ·  '), PAGE_WIDTH / 2, 88, { align: 'center' })
-    if (meta.valued != null && meta.roster_total != null) {
-      doc.text(`Cobertura: ${meta.valued} de ${meta.roster_total} jugadores valorados`, PAGE_WIDTH / 2, 96, { align: 'center' })
-    }
-    doc.text('Método Podium™ — informe asistido por IA y revisado por fisioterapeuta colegiado', PAGE_WIDTH / 2, 110, { align: 'center', maxWidth: CONTENT_WIDTH })
+    // Portada
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(20, 40, 80)
+    doc.text('Informe de Equipo', PAGE_WIDTH / 2, 58, { align: 'center' })
+    doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.8); doc.line(PAGE_WIDTH / 2 - 30, 64, PAGE_WIDTH / 2 + 30, 64)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(30, 30, 30)
+    doc.text(String(equipo), PAGE_WIDTH / 2, 78, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90, 90, 90)
+    const bits = [estudio, grupo, ronda != null ? `Ronda ${ronda}` : ''].filter(Boolean)
+    if (bits.length) doc.text(bits.join('  ·  '), PAGE_WIDTH / 2, 86, { align: 'center' })
+    if (cobertura) doc.text(`Cobertura: ${cobertura} jugadores`, PAGE_WIDTH / 2, 93, { align: 'center' })
+    doc.text('Método Podium™ — informe asistido por IA y revisado por fisioterapeuta colegiado', PAGE_WIDTH / 2, 107, { align: 'center', maxWidth: CONTENT_WIDTH })
 
     addFooter(doc)
     doc.addPage()
     addHeaderLine(doc)
     let y = MARGIN_TOP + 10
 
-    if (rd.portada_intro) {
-      y = writeParagraph(doc, String(rd.portada_intro), y)
-      y += 2
+    if (rd.resumen_equipo) {
+      y = writeSectionTitle(doc, 'Resumen del equipo', y)
+      y = writeParagraph(doc, String(rd.resumen_equipo), y)
     }
 
-    if (rd.resumen_campana) {
-      y = writeSectionTitle(doc, 'Resumen del estudio', y)
-      y = writeParagraph(doc, String(rd.resumen_campana), y)
-    }
-
-    if (Array.isArray(rd.hallazgos_por_equipo) && rd.hallazgos_por_equipo.length) {
-      y = writeSectionTitle(doc, 'Hallazgos por equipo', y)
-      for (const eq of rd.hallazgos_por_equipo) {
-        if (eq?.equipo) y = writeSubtitle(doc, String(eq.equipo), y)
-        if (eq?.resumen) y = writeParagraph(doc, String(eq.resumen), y)
-        if (Array.isArray(eq?.hallazgos)) {
-          for (const h of eq.hallazgos) y = writeParagraph(doc, `•  ${String(h)}`, y)
+    // Panel de métricas (calculado)
+    if (Array.isArray(rd.panel_metricas) && rd.panel_metricas.length) {
+      y = writeSectionTitle(doc, 'Panel de métricas del equipo', y)
+      const byTest: Record<string, any[]> = {}
+      for (const s of rd.panel_metricas) (byTest[s.test_name] ||= []).push(s)
+      for (const [testName, stats] of Object.entries(byTest)) {
+        y = writeSubtitle(doc, testName, y)
+        for (const s of stats as any[]) {
+          const stat = s.bilateral
+            ? `izq ${s.mean_izq ?? '—'} / der ${s.mean_der ?? '—'}`
+            : `media ${s.mean ?? '—'}${s.min != null ? ` (rango ${s.min}–${s.max})` : ''}`
+          const vig = Array.isArray(s.outliers) && s.outliers.length
+            ? `  ·  a vigilar: ${s.outliers.map((o: any) => `${o.nombre} (${o.detalle})`).join(', ')}`
+            : ''
+          y = writeParagraph(doc, `${s.label}${s.unit ? ` (${s.unit})` : ''}: ${stat}  ·  n=${s.n}${vig}`, y, { fontSize: 9 })
         }
-        y += 2
+        y += 1
       }
     }
 
-    if (rd.patrones_y_riesgos) {
-      y = writeSectionTitle(doc, 'Patrones y riesgos', y)
-      y = writeParagraph(doc, String(rd.patrones_y_riesgos), y)
-    }
-
-    if (rd.fortalezas) {
-      y = writeSectionTitle(doc, 'Fortalezas', y)
-      y = writeParagraph(doc, String(rd.fortalezas), y)
-    }
+    if (rd.patrones_y_riesgos) { y = writeSectionTitle(doc, 'Patrones y riesgos', y); y = writeParagraph(doc, String(rd.patrones_y_riesgos), y) }
+    if (rd.fortalezas) { y = writeSectionTitle(doc, 'Fortalezas del colectivo', y); y = writeParagraph(doc, String(rd.fortalezas), y) }
 
     if (Array.isArray(rd.jugadores_a_vigilar) && rd.jugadores_a_vigilar.length) {
       y = writeSectionTitle(doc, 'Jugadores a vigilar', y)
       for (const j of rd.jugadores_a_vigilar) {
         const nombre = j?.nombre ? String(j.nombre) : ''
-        const equipo = j?.equipo ? ` (${String(j.equipo)})` : ''
         const motivo = j?.motivo ? `: ${String(j.motivo)}` : ''
-        y = writeParagraph(doc, `•  ${nombre}${equipo}${motivo}`, y)
+        y = writeParagraph(doc, `•  ${nombre}${motivo}`, y)
       }
     }
 
-    if (rd.recomendaciones) {
-      y = writeSectionTitle(doc, 'Recomendaciones', y)
-      y = writeParagraph(doc, String(rd.recomendaciones), y)
-    }
-
-    if (rd.descargo) {
-      y = writeSectionTitle(doc, 'Descargo de responsabilidad', y)
-      y = writeParagraph(doc, String(rd.descargo), y, { fontSize: 8, color: [120, 120, 120] })
-    }
+    if (rd.recomendaciones) { y = writeSectionTitle(doc, 'Recomendaciones', y); y = writeParagraph(doc, String(rd.recomendaciones), y) }
+    if (rd.descargo) { y = writeSectionTitle(doc, 'Descargo de responsabilidad', y); y = writeParagraph(doc, String(rd.descargo), y, { fontSize: 8, color: [120, 120, 120] }) }
 
     addFooter(doc)
 
     const pdfBytes = Buffer.from(doc.output('arraybuffer'))
-    const safeName = String(meta.campaign_name || 'estudio').replace(/\s+/g, '_')
+    const safeName = String(equipo).replace(/\s+/g, '_')
     return new NextResponse(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `attachment; filename="Informe_Estudio_${safeName}.pdf"`,
+        'Content-Disposition': `attachment; filename="Informe_Equipo_${safeName}.pdf"`,
       },
     })
   } catch (error: any) {

@@ -5,10 +5,11 @@ import { createClient } from '@/lib/supabase/client'
 import type { Test } from '@/types/database'
 import { Plus, Pencil, Trash2, Check, X, ClipboardList } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { parseMetricsSchema, type MetricDef } from '@/lib/reports/metrics'
 
 type Props = { clinicId: string; initialTests: Test[] }
 
-const empty = { name: '', description: '', vald_interpretation_prompt: '' }
+const empty = { name: '', description: '', vald_interpretation_prompt: '', metrics: [] as MetricDef[] }
 
 export default function TestsManager({ clinicId, initialTests }: Props) {
   const supabase = createClient()
@@ -50,20 +51,34 @@ export default function TestsManager({ clinicId, initialTests }: Props) {
       name: t.name,
       description: t.description || '',
       vald_interpretation_prompt: t.vald_interpretation_prompt || '',
+      metrics: parseMetricsSchema((t as any).result_schema),
     })
+  }
+
+  // Métricas clave (result_schema): las que la IA extrae del VALD y alimentan el informe de equipo.
+  function updateMetric(i: number, patch: Partial<MetricDef>) {
+    setEditForm((p) => ({ ...p, metrics: p.metrics.map((m, idx) => (idx === i ? { ...m, ...patch } : m)) }))
+  }
+  function addMetric() {
+    setEditForm((p) => ({ ...p, metrics: [...p.metrics, { key: '', label: '', bilateral: false, percentil: false }] }))
+  }
+  function removeMetric(i: number) {
+    setEditForm((p) => ({ ...p, metrics: p.metrics.filter((_, idx) => idx !== i) }))
   }
 
   async function saveEdit(id: string) {
     if (!editForm.name.trim()) return toast.error('El nombre es obligatorio')
+    const metrics = editForm.metrics.filter((m) => m.key.trim() && m.label.trim())
     try {
       const patch = {
         name: editForm.name.trim(),
         description: editForm.description.trim() || null,
         vald_interpretation_prompt: editForm.vald_interpretation_prompt.trim() || null,
+        result_schema: metrics.length > 0 ? { metrics } : null,
       }
-      const { error } = await supabase.from('tests').update(patch).eq('id', id)
+      const { error } = await supabase.from('tests').update(patch as any).eq('id', id)
       if (error) throw error
-      setTests((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)))
+      setTests((prev) => prev.map((t) => (t.id === id ? ({ ...t, ...patch } as Test) : t)))
       setEditingId(null)
       toast.success('Prueba actualizada')
     } catch (err: any) {
@@ -161,6 +176,28 @@ export default function TestsManager({ clinicId, initialTests }: Props) {
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
                   />
+
+                  {/* Métricas clave: las que la IA extrae del VALD y alimentan el informe de equipo */}
+                  <div className="border border-gray-100 rounded-lg p-3 space-y-2 bg-gray-50/50">
+                    <p className="text-xs font-medium text-gray-600">Métricas clave (para el informe de equipo)</p>
+                    {editForm.metrics.length === 0 && (
+                      <p className="text-[11px] text-gray-400">Sin métricas. La IA no extraerá cifras de esta prueba.</p>
+                    )}
+                    {editForm.metrics.map((m, i) => (
+                      <div key={i} className="flex items-center gap-1.5 flex-wrap">
+                        <input value={m.key} onChange={(e) => updateMetric(i, { key: e.target.value })} placeholder="clave" className="w-24 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
+                        <input value={m.label} onChange={(e) => updateMetric(i, { label: e.target.value })} placeholder="etiqueta" className="w-40 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
+                        <input value={m.unit || ''} onChange={(e) => updateMetric(i, { unit: e.target.value })} placeholder="ud" className="w-14 px-2 py-1 border border-gray-300 rounded-md text-xs outline-none focus:ring-2 focus:ring-blue-100" />
+                        <label className="inline-flex items-center gap-1 text-[11px] text-gray-600"><input type="checkbox" checked={!!m.bilateral} onChange={(e) => updateMetric(i, { bilateral: e.target.checked })} className="w-3.5 h-3.5 rounded border-gray-300" /> izq/der</label>
+                        <label className="inline-flex items-center gap-1 text-[11px] text-gray-600"><input type="checkbox" checked={!!m.percentil} onChange={(e) => updateMetric(i, { percentil: e.target.checked })} className="w-3.5 h-3.5 rounded border-gray-300" /> percentil</label>
+                        <button type="button" onClick={() => removeMetric(i)} className="p-1 text-gray-400 hover:text-red-600 rounded"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={addMetric} className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700">
+                      <Plus className="w-3.5 h-3.5" /> Añadir métrica
+                    </button>
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <button onClick={() => saveEdit(t.id)} className="inline-flex items-center gap-1 px-3 py-1.5 bg-clinical-primary text-white text-xs font-medium rounded-lg">
                       <Check className="w-3.5 h-3.5" /> Guardar
@@ -177,6 +214,7 @@ export default function TestsManager({ clinicId, initialTests }: Props) {
                       <p className="text-sm font-medium text-gray-900 truncate">{t.name}</p>
                       {!t.is_active && <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">Inactiva</span>}
                       {t.vald_interpretation_prompt && <span className="text-[10px] px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded">prompt</span>}
+                      {parseMetricsSchema((t as any).result_schema).length > 0 && <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded">métricas</span>}
                     </div>
                     {t.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{t.description}</p>}
                   </div>
