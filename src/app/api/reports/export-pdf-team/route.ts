@@ -7,8 +7,8 @@ import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 import { METODOLOGIA_JPEG_BASE64 } from '@/lib/reports/metodologiaAsset'
 import { parseMetricsSchema, type MetricDef } from '@/lib/reports/metrics'
 
-// PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 6 secciones
-// (perfil, anamnesis, valoración funcional, hallazgos, conclusiones, recomendaciones).
+// PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 5 secciones
+// (perfil, anamnesis, valoración funcional, conclusiones, recomendaciones).
 // El cuerpo narrativo se construye con jsPDF; las gráficas de VALD (PDF) se añaden con
 // pdf-lib como ANEXO al final del documento (tras la página de metodología).
 
@@ -227,21 +227,15 @@ export async function POST(request: NextRequest) {
     para(doc, 'Las gráficas de la valoración funcional (VALD) se incluyen como anexo al final del informe.', y, { fontSize: 9, color: [120, 120, 120] })
     addFooter(doc)
 
-    // Sección 4 — Hallazgos principales
+    // Sección 4 — Conclusiones (síntesis única: déficits, fortalezas, riesgo y objetivo)
     y += 8
-    y = sectionTitle(doc, '4. Hallazgos principales', y)
-    y = para(doc, rd.hallazgos || '', y)
-    addFooter(doc)
-
-    // Sección 5 — Conclusiones (incluye la síntesis final: fortalezas, riesgo y objetivo)
-    y += 8
-    y = sectionTitle(doc, '5. Conclusiones', y)
+    y = sectionTitle(doc, '4. Conclusiones', y)
     y = para(doc, rd.conclusiones || '', y)
     addFooter(doc)
 
-    // Sección 6 — Recomendaciones + descargo
+    // Sección 5 — Recomendaciones + descargo
     y += 8
-    y = sectionTitle(doc, '6. Recomendaciones', y)
+    y = sectionTitle(doc, '5. Recomendaciones', y)
     const recSub = (label: string, txt: string) => { y = subTitle(doc, label, y); y = para(doc, txt || '', y); y += 1 }
     recSub('Capacidades prioritarias a desarrollar', rec.capacidades_prioritarias)
     recSub('Aspectos a monitorizar', rec.aspectos_monitorizar)

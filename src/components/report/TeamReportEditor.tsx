@@ -6,7 +6,7 @@ import { Loader2, Check, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import SessionMetricsSection, { type MetricTest } from '@/components/report/SessionMetricsSection'
 
-// Editor del "Informe de Rendimiento y Prevención" (equipo). Estructura de 6 secciones.
+// Editor del "Informe de Rendimiento y Prevención" (equipo). Estructura de 5 secciones.
 // Los campos son editables (autoguardado al salir del campo). El fisio siempre puede ajustar.
 
 export default function TeamReportEditor({
@@ -170,15 +170,11 @@ export default function TeamReportEditor({
         />
       )}
 
-      <Section title="4. Hallazgos principales">
-        <Field path="hallazgos" value={getField('hallazgos')} onSave={(v) => savePath('hallazgos', v)} disabled={approved} />
-      </Section>
-
-      <Section title="5. Conclusiones">
+      <Section title="4. Conclusiones">
         <Field path="conclusiones" value={getField('conclusiones')} onSave={(v) => savePath('conclusiones', v)} disabled={approved} />
       </Section>
 
-      <Section title="6. Recomendaciones">
+      <Section title="5. Recomendaciones">
         <SubField label="Capacidades prioritarias a desarrollar" path="recomendaciones.capacidades_prioritarias" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="Aspectos a monitorizar" path="recomendaciones.aspectos_monitorizar" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="Recomendaciones para el cuerpo técnico" path="recomendaciones.cuerpo_tecnico" get={getField} onSave={savePath} disabled={approved} />
