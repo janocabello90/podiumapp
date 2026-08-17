@@ -18,8 +18,14 @@ export const REPORT_MAX_TOKENS = 24000
 // Pensamiento adaptativo: el modelo decide cuánto razonar antes de escribir.
 export const REPORT_THINKING = { type: 'adaptive' as const }
 
-// Profundidad de razonamiento: 'high' = equilibrio calidad/coste/latencia.
-export const REPORT_EFFORT = { effort: 'high' as const }
+// Profundidad de razonamiento. En Sonnet 5 el pensamiento comparte presupuesto con el
+// texto (max_tokens = pensamiento + salida) y NO hay budget_tokens (retirado → daría 400).
+// Con 'high' + lectura de los PDFs de VALD por visión, el pensamiento se comía casi todo el
+// presupuesto y TRUNCABA el JSON del informe (stop_reason=max_tokens con el texto a medias).
+// 'medium' reduce el pensamiento y deja sitio a la salida (Sonnet 5 'medium' ≈ Sonnet 4.6
+// 'high' en calidad) y encaja con informes más sintéticos. El único lever real aquí es el
+// effort; no existe forma de "reservar" tokens de salida frente al pensamiento.
+export const REPORT_EFFORT = { effort: 'medium' as const }
 
 // Precio por millón de tokens (USD) por modelo, para mostrar el coste orientativo
 // de cada informe en la UI. Sonnet 5 va con el precio PROMOCIONAL ($2/$10) hasta el
