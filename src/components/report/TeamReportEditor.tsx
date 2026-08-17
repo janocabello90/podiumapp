@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, Check, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import SessionMetricsSection, { type MetricTest } from '@/components/report/SessionMetricsSection'
+import { formatDuration } from '@/lib/reports/formatDuration'
 
 // Editor del "Informe de Rendimiento y Prevención" (equipo). Estructura de 5 secciones.
 // Los campos son editables (autoguardado al salir del campo). El fisio siempre puede ajustar.
@@ -113,6 +114,9 @@ export default function TeamReportEditor({
             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 text-xs rounded-lg">Borrador</span>
           )}
           {saving && <span className="inline-flex items-center gap-1 text-xs text-gray-400"><Loader2 className="w-3 h-3 animate-spin" /> Guardando…</span>}
+          {formatDuration(data?._generation_ms) && (
+            <span className="text-xs text-gray-400">· Generado en {formatDuration(data._generation_ms)}</span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {!approved && (

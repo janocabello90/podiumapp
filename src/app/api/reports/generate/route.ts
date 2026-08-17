@@ -115,6 +115,7 @@ function ageFromDob(dob: string | null | undefined): number | null {
 }
 
 export async function POST(request: NextRequest) {
+  const requestStart = Date.now() // para registrar cuánto tarda en generarse el informe
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
@@ -549,6 +550,9 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
     if (isTeamReport) {
       reportData = { _template: 'team_performance', perfil: teamPerfil, ...reportData }
     }
+
+    // Registro del tiempo de generación (de inicio de petición a informe listo).
+    ;(reportData as any)._generation_ms = Date.now() - requestStart
 
     // Guardar el informe terminado: UPDATE de la fila 'generating' creada al inicio.
     const { error: reportError } = await supabase

@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { Loader2, FileText, Download, Save, CheckCircle, Edit3, Eye } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatDuration } from '@/lib/reports/formatDuration'
 
 interface ReportData {
   portada_intro: string
@@ -228,6 +229,9 @@ export default function ReportEditor({ reportId, patientName, patientDob, patien
             <span className="inline-flex items-center gap-1 text-xs text-gray-400">
               <Loader2 className="w-3 h-3 animate-spin" /> Guardando...
             </span>
+          )}
+          {formatDuration((reportData as any)?._generation_ms) && (
+            <span className="text-xs text-gray-400">· Generado en {formatDuration((reportData as any)._generation_ms)}</span>
           )}
         </div>
         <div className="flex items-center gap-2">

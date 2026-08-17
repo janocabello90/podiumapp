@@ -34,6 +34,7 @@ REGLAS:
 - Responde SOLO con el JSON válido, sin texto adicional.`
 
 export async function POST(request: NextRequest) {
+  const requestStart = Date.now() // para registrar cuánto tarda en generarse el informe
   try {
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'API key de Anthropic no configurada' }, { status: 500 })
@@ -286,6 +287,9 @@ export async function POST(request: NextRequest) {
         umbrales: TEAM_THRESHOLDS,
       },
     }
+
+    // Registro del tiempo de generación (de inicio de petición a informe listo).
+    ;(reportData as any)._generation_ms = Date.now() - requestStart
 
     const { error: reportError } = await supabase
       .from('reports')

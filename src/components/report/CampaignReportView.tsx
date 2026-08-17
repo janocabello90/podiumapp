@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, Save, CheckCircle2, FileDown, Plus, Trash2, BarChart3 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatDuration } from '@/lib/reports/formatDuration'
 
 interface MetricStat {
   test_name: string
@@ -125,8 +126,13 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
     <div className="space-y-5">
       {/* Barra de acciones */}
       <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 sticky top-2 z-10">
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-          {approved ? 'Aprobado' : 'Borrador'}
+        <span className="inline-flex items-center gap-2">
+          <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${approved ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+            {approved ? 'Aprobado' : 'Borrador'}
+          </span>
+          {formatDuration((data as any)?._generation_ms) && (
+            <span className="text-xs text-gray-400">Generado en {formatDuration((data as any)._generation_ms)}</span>
+          )}
         </span>
         <div className="flex items-center gap-2">
           <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs font-medium rounded-lg disabled:opacity-50">
