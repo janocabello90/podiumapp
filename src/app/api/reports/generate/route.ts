@@ -7,6 +7,7 @@ import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/repo
 import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
 import { parseMetricsSchema, buildMetricsInstruction, metricsByTestName } from '@/lib/reports/metrics'
+import { parseReportJson } from '@/lib/reports/parseReportJson'
 import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
@@ -500,16 +501,26 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
       .map((block: any) => block.text)
       .join('')
 
-    // Parse JSON
+    // Parse JSON (tolerante a preámbulo / valla sin cerrar por truncado). Si falla,
+    // guardamos la respuesta CRUDA de la IA + stop_reason en la propia fila, para poder
+    // diagnosticar el fallo desde la BD (no solo un mensaje genérico).
+    const stopReason = (message as any).stop_reason
     let reportData
     try {
-      // Try to extract JSON if wrapped in markdown code blocks
-      const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/)
-      const jsonStr = jsonMatch ? jsonMatch[1] : responseText
-      reportData = JSON.parse(jsonStr.trim())
+      reportData = parseReportJson(responseText)
     } catch {
-      console.error('Failed to parse Claude response:', responseText.substring(0, 500))
-      throw new Error('Error al procesar la respuesta de IA')
+      console.error('Failed to parse Claude response. stop_reason=', stopReason, '\n', responseText.substring(0, 800))
+      await supabase.from('reports').update({
+        status: 'error',
+        report_data: {
+          _error: stopReason === 'max_tokens'
+            ? 'La respuesta de la IA se cortó por longitud (max_tokens). Reinténtalo.'
+            : 'No se pudo parsear el JSON de la respuesta de la IA.',
+          _stop_reason: stopReason ?? null,
+          _raw_response: (responseText || '').slice(0, 24000),
+        },
+      }).eq('id', reportId)
+      return
     }
 
     // PRIVACIDAD: restituir el nombre real (la IA solo vio el marcador «[[PACIENTE]]»).

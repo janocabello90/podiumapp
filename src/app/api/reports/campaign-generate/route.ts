@@ -6,6 +6,7 @@ import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
 import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
 import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
 import { parseMetricsSchema, computeTeamMetrics, TEAM_THRESHOLDS, type PlayerMetrics, type TeamMetricStat } from '@/lib/reports/metrics'
+import { parseReportJson } from '@/lib/reports/parseReportJson'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
 // Generación en SEGUNDO PLANO (waitUntil tras responder).
@@ -236,13 +237,23 @@ export async function POST(request: NextRequest) {
     const message = await stream.finalMessage()
 
     const responseText = message.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
+    const stopReason = (message as any).stop_reason
     let ai: any
     try {
-      const m = responseText.match(/```(?:json)?\s*([\s\S]*?)```/)
-      ai = JSON.parse((m ? m[1] : responseText).trim())
+      ai = parseReportJson(responseText)
     } catch {
-      console.error('Failed to parse campaign response:', responseText.substring(0, 500))
-      throw new Error('Error al procesar la respuesta de IA')
+      console.error('Failed to parse campaign response. stop_reason=', stopReason, '\n', responseText.substring(0, 800))
+      await supabase.from('reports').update({
+        status: 'error',
+        report_data: {
+          _error: stopReason === 'max_tokens'
+            ? 'La respuesta de la IA se cortó por longitud (max_tokens). Reinténtalo.'
+            : 'No se pudo parsear el JSON de la respuesta de la IA.',
+          _stop_reason: stopReason ?? null,
+          _raw_response: (responseText || '').slice(0, 24000),
+        },
+      }).eq('id', reportId)
+      return
     }
     ai = restoreManyNames(ai, nameEntries)
 

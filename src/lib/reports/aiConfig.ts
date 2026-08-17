@@ -10,8 +10,10 @@
 // Modelo de generación de informes (individual, sesión y campaña).
 export const REPORT_MODEL = 'claude-sonnet-5'
 
-// Tope total de salida (pensamiento + texto). Amplio para no cortar el informe.
-export const REPORT_MAX_TOKENS = 16000
+// Tope total de salida (pensamiento + texto). Amplio para no cortar el informe:
+// con pensamiento adaptativo "high" + lectura de PDFs de VALD por visión, 16k se
+// quedaba corto y el JSON podía truncarse (→ fallo de parseo). Solo se paga lo usado.
+export const REPORT_MAX_TOKENS = 24000
 
 // Pensamiento adaptativo: el modelo decide cuánto razonar antes de escribir.
 export const REPORT_THINKING = { type: 'adaptive' as const }
