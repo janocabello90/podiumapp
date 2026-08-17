@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
     vfSub('3.4 Potencia', vf.potencia)
     vfSub('3.5 Capacidad reactiva', vf.capacidad_reactiva)
     y += 1
-    para(doc, 'Las gráficas de la valoración funcional (VALD) se incluyen como anexo al final del informe.', y, { fontSize: 9, color: [120, 120, 120] })
+    y = para(doc, 'Las gráficas de la valoración funcional (VALD) se incluyen como anexo al final del informe.', y, { fontSize: 9, color: [120, 120, 120] })
     addFooter(doc)
 
     // Sección 4 — Conclusiones (síntesis única: déficits, fortalezas, riesgo y objetivo)
