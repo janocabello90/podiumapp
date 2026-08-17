@@ -54,6 +54,11 @@ REGLAS:
 - Las hipótesis diagnósticas siempre con "posible", "compatible con" o "sugiere".
 - El tono es cercano pero riguroso, como un profesional que explica al paciente su situación.
 - Si se adjuntan documentos a este mensaje (informes/gráficas de VALD, ecografías, imágenes clínicas), LÉELOS e interpreta sus RESULTADOS OBJETIVOS: valores por lado (izq/der), asimetrías (%), potencia/fuerza, percentiles y hallazgos de imagen. Integra esos datos y su interpretación (cruzándolos con las notas del fisio y la guía de interpretación de cada prueba) en "exploracion_fisica.fuerza"/"hallazgos" y, sobre todo, en "conclusiones". No te limites a mencionar que existen: interpreta lo que muestran.
+- NOTAS DEL FISIO: intégralas REDACTADAS como interpretación clínica dentro del texto; NO las cites entrecomilladas ni las reproduzcas literalmente (nada de «bien, sin problema»).
+- COHERENCIA ANATÓMICA (¡importante!): no confundas regiones. «Tren superior» = hombro, codo, muñeca y columna dorsal; «tren inferior» = cadera, rodilla y tobillo. No atribuyas a una región hallazgos que pertenecen a otra; revisa CADA afirmación de "conclusiones" antes de cerrarla (p. ej., no cierres un párrafo sobre rodilla/cadera hablando de "tren superior").
+- CIFRAS CON MODERACIÓN: no satures el texto de números entre paréntesis. Conserva solo las cifras CLAVE (asimetrías y percentiles de lo prioritario); el resto de valores quedan consultables en el PDF de VALD y no hace falta repetirlos.
+- SÍNTESIS: redacta de forma directa y sintética, sin perder rigor clínico; evita relleno, rodeos y frases redundantes.
+- CADA APARTADO EN SU SITIO: en "exploracion_fisica.hallazgos" describe SOLO hallazgos de la exploración (sin conclusiones ni plan terapéutico, que van en "conclusiones"); no repitas la misma información entre secciones.
 - Responde SOLO con el JSON válido, sin texto adicional.`
 
 // Informe de EQUIPO / deportista — "Informe de Rendimiento y Prevención" (Metodología Podium®).
@@ -65,7 +70,7 @@ const STRUCTURE_TEAM = `Se te adjuntan (si existen) los informes/gráficas de VA
 Genera SOLO un JSON válido con esta estructura:
 
 {
-  "objetivo_intro": "Texto introductorio de portada en TRES párrafos separados por una línea en blanco (usa '\\n\\n' entre párrafos; NO uses viñetas ni guiones, redacta en prosa). Párrafo 1 (objetivo y metodología): el informe recoge los resultados de la Valoración Funcional (Metodología Podium®), un protocolo para analizar de forma objetiva el estado funcional del deportista e identificar los factores que influyen en su rendimiento, su tolerancia a la carga de entrenamiento y competición, y su riesgo de lesión; integra el análisis del movimiento y la medición objetiva mediante tecnología VALD de movilidad, fuerza, potencia, control motor y capacidad neuromuscular, adaptada a las demandas de su deporte y puesto. Párrafo 2 (contenido del informe, en prosa fluida, NO lista): enumera en una frase qué encontrará el lector — perfil del deportista, anamnesis deportiva, valoración funcional interpretada por áreas, hallazgos principales, semáforo funcional por capacidades, conclusiones, recomendaciones para el cuerpo técnico y resumen ejecutivo. Párrafo 3 (cierre técnico): el objetivo no es acumular datos sino convertir la información en decisiones útiles de rendimiento y prevención —qué capacidades priorizar y qué aspectos monitorizar—; los resultados son una fotografía funcional del momento que adquiere su valor al integrarse con la evolución del entrenamiento, la competición y las valoraciones sucesivas. Tono técnico dirigido al cuerpo técnico.",
+  "objetivo_intro": "Texto introductorio de portada en TRES párrafos separados por una línea en blanco (usa '\\n\\n' entre párrafos; NO uses viñetas ni guiones, redacta en prosa). Párrafo 1 (objetivo y metodología): el informe recoge los resultados de la Valoración Funcional (Metodología Podium®), un protocolo para analizar de forma objetiva el estado funcional del deportista e identificar los factores que influyen en su rendimiento, su tolerancia a la carga de entrenamiento y competición, y su riesgo de lesión; integra el análisis del movimiento y la medición objetiva mediante tecnología VALD de movilidad, fuerza, potencia, control motor y capacidad neuromuscular, adaptada a las demandas de su deporte y puesto. Párrafo 2 (contenido del informe, en prosa fluida, NO lista): enumera en una frase qué encontrará el lector — perfil del deportista, anamnesis deportiva, valoración funcional interpretada por áreas, hallazgos principales, conclusiones y recomendaciones para el cuerpo técnico. Párrafo 3 (cierre técnico): el objetivo no es acumular datos sino convertir la información en decisiones útiles de rendimiento y prevención —qué capacidades priorizar y qué aspectos monitorizar—; los resultados son una fotografía funcional del momento que adquiere su valor al integrarse con la evolución del entrenamiento, la competición y las valoraciones sucesivas. Tono técnico dirigido al cuerpo técnico.",
   "resumen_anamnesis": "Resumen narrativo (1-2 párrafos) de la anamnesis deportiva: historial de lesiones, molestias actuales, carga de entrenamiento/competición, sueño/recuperación/fatiga, objetivos de temporada y factores que puedan condicionar el rendimiento. Usa solo los datos disponibles.",
   "valoracion_funcional": {
     "introduccion": "Párrafo introductorio: se ha aplicado una batería de pruebas adaptada a las demandas del deporte; el análisis del movimiento, movilidad, fuerza, potencia, capacidad reactiva y asimetrías ofrece una radiografía funcional del deportista.",
@@ -76,38 +81,28 @@ Genera SOLO un JSON válido con esta estructura:
     "capacidad_reactiva": "Interpretación de la eficiencia del ciclo estiramiento-acortamiento y capacidad reactiva."
   },
   "hallazgos": "Resumen de los déficits y fortalezas con mayor impacto sobre el rendimiento y la prevención (2 párrafos).",
-  "semaforo": {
-    "movilidad": "adecuado|mejorable|prioritario",
-    "fuerza": "adecuado|mejorable|prioritario",
-    "potencia": "adecuado|mejorable|prioritario",
-    "control_motor": "adecuado|mejorable|prioritario",
-    "capacidad_reactiva": "adecuado|mejorable|prioritario",
-    "simetria": "adecuado|mejorable|prioritario"
-  },
-  "conclusiones": "Interpretación conjunta (2-3 párrafos) de todas las pruebas: cómo se mueve el deportista, cómo produce fuerza, cómo absorbe y genera carga, y qué factores pueden influir en su rendimiento y disponibilidad durante la temporada.",
+  "conclusiones": "Síntesis final integrada (2-3 párrafos): interpreta en conjunto cómo se mueve el deportista, cómo produce fuerza y cómo absorbe/genera carga, y CIERRA integrando en la prosa —sin epígrafes ni listas— sus principales fortalezas, los aspectos a mejorar, el nivel y las áreas de riesgo funcional, y el objetivo principal de trabajo para la temporada. Es el apartado que resume el informe: no repitas literalmente los hallazgos, intégralos.",
   "recomendaciones": {
     "capacidades_prioritarias": "Capacidades prioritarias a desarrollar.",
     "aspectos_monitorizar": "Aspectos a monitorizar.",
     "cuerpo_tecnico": "Recomendaciones para el cuerpo técnico.",
     "siguiente_valoracion": "Momento recomendado para la siguiente valoración funcional."
-  },
-  "resumen_ejecutivo": {
-    "fortalezas": "Principales fortalezas (breve).",
-    "aspectos_mejorar": "Aspectos a mejorar (breve).",
-    "riesgo_funcional": "Nivel/áreas de riesgo funcional (breve).",
-    "objetivo_principal": "Objetivo principal de trabajo (una frase)."
   }
 }
 
 (El "descargo" de responsabilidad NO lo incluyas: es un texto legal fijo que añade el sistema automáticamente.)
 
 REGLAS:
-- Español profesional; párrafos narrativos (salvo el semáforo, que son valores).
-- El "semaforo": cada área SOLO puede valer "adecuado", "mejorable" o "prioritario" (en minúscula), según los datos. Si no hay datos suficientes de un área, usa "mejorable" y decláralo en el texto.
+- Español profesional; párrafos narrativos.
 - NO inventes valores: usa los que leas de las gráficas de VALD o las notas; si no hay, interpreta cualitativamente sin cifras.
 - PERCENTILES Y MAGNITUDES (¡cuidado!): una misma prueba puede mostrar VARIOS percentiles, uno por métrica (RSI, altura de salto, tiempo de vuelo, tiempo de contacto, impulso, fuerza…). Asigna cada percentil SOLO a la métrica a la que pertenece; NUNCA lo traslades de una métrica a otra. Interpreta la magnitud correctamente: un percentil por debajo de ~40 es bajo, en torno a 50 es medio, y por encima de ~60 es medio-alto; NO describas como "bajo" un valor que esté en la media o por encima. Verifica lado (izquierda/derecha) y unidades antes de afirmar. Si no estás seguro de una cifra leída en una gráfica, descríbela de forma cualitativa en vez de arriesgar un número equivocado.
 - COHERENCIA DE DATOS: no introduzcas contradicciones internas; las cifras y los datos deben ser coherentes entre todas las secciones. Para los datos demográficos (edad, sexo, deporte, posición, equipo, lateralidad) usa EXCLUSIVAMENTE los del PERFIL DEL DEPORTISTA / DATOS DEL PACIENTE aportados; si un documento adjunto (p. ej. una gráfica de VALD) muestra un dato distinto, PREVALECE la ficha. No reafirmes una edad ni una fecha de nacimiento distintas de las aportadas.
 - Refiérete al deportista SIEMPRE como «[[PACIENTE]]» (marcador que se sustituye por el nombre al emitir el informe); no inventes un nombre.
+- NOTAS DEL FISIO: intégralas REDACTADAS dentro del texto como interpretación clínica; NO las cites entrecomilladas ni las reproduzcas literalmente (nada de «bien, sin problema»). Conviértelas en frases propias del informe.
+- COHERENCIA ANATÓMICA (¡importante!): no confundas regiones. «Tren superior» = hombro, codo, muñeca y columna dorsal; «tren inferior» = cadera, rodilla y tobillo. No atribuyas a una región hallazgos que pertenecen a otra; revisa CADA afirmación de "conclusiones" antes de cerrarla (p. ej., no cierres un párrafo sobre rodilla/cadera hablando de "tren superior").
+- CIFRAS CON MODERACIÓN: no satures el texto de números entre paréntesis. Conserva solo las cifras CLAVE (asimetrías y percentiles de lo prioritario); el resto de valores quedan consultables en el PDF de VALD y no hace falta repetirlos en el texto.
+- SÍNTESIS: redacta de forma directa y sintética, sin perder rigor clínico. Evita relleno, rodeos y frases redundantes; menos texto y más concreto.
+- CADA APARTADO EN SU SITIO: en "hallazgos" describe SOLO déficits y fortalezas (sin recomendaciones ni conclusiones); las recomendaciones van solo en "recomendaciones"; no repitas la misma información entre "hallazgos", "conclusiones" y "recomendaciones".
 - Responde SOLO con el JSON válido, sin texto adicional.`
 
 function ageFromDob(dob: string | null | undefined): number | null {

@@ -6,25 +6,8 @@ import { Loader2, Check, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import SessionMetricsSection, { type MetricTest } from '@/components/report/SessionMetricsSection'
 
-// Editor del "Informe de Rendimiento y Prevención" (equipo). Estructura de 8 secciones.
+// Editor del "Informe de Rendimiento y Prevención" (equipo). Estructura de 6 secciones.
 // Los campos son editables (autoguardado al salir del campo). El fisio siempre puede ajustar.
-
-type Semaforo = 'adecuado' | 'mejorable' | 'prioritario'
-
-const SEMAFORO_AREAS: { key: string; label: string }[] = [
-  { key: 'movilidad', label: 'Movilidad' },
-  { key: 'fuerza', label: 'Fuerza' },
-  { key: 'potencia', label: 'Potencia' },
-  { key: 'control_motor', label: 'Control motor' },
-  { key: 'capacidad_reactiva', label: 'Capacidad reactiva' },
-  { key: 'simetria', label: 'Simetría' },
-]
-
-const SEMAFORO_COLOR: Record<Semaforo, string> = {
-  adecuado: 'bg-emerald-500',
-  mejorable: 'bg-amber-500',
-  prioritario: 'bg-red-500',
-}
 
 export default function TeamReportEditor({
   reportId,
@@ -174,7 +157,7 @@ export default function TeamReportEditor({
         <SubField label="3.3 Fuerza" path="valoracion_funcional.fuerza" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="3.4 Potencia" path="valoracion_funcional.potencia" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="3.5 Capacidad reactiva" path="valoracion_funcional.capacidad_reactiva" get={getField} onSave={savePath} disabled={approved} />
-        <p className="text-xs text-gray-400 mt-2">Las gráficas de VALD (PDF subido a la consulta) se incrustan aquí al exportar el PDF.</p>
+        <p className="text-xs text-gray-400 mt-2">Las gráficas de VALD (PDF subido a la consulta) se incluyen como anexo al final del PDF.</p>
       </Section>
 
       {/* Datos objetivos (VALD): métricas por prueba, editables. No salen en el PDF por defecto. */}
@@ -191,48 +174,15 @@ export default function TeamReportEditor({
         <Field path="hallazgos" value={getField('hallazgos')} onSave={(v) => savePath('hallazgos', v)} disabled={approved} />
       </Section>
 
-      <Section title="5. Semáforo funcional">
-        <div className="space-y-2">
-          {SEMAFORO_AREAS.map((a) => {
-            const val = (getField(`semaforo.${a.key}`) || 'mejorable') as Semaforo
-            return (
-              <div key={a.key} className="flex items-center justify-between gap-3">
-                <span className="text-sm text-gray-700 inline-flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${SEMAFORO_COLOR[val] || 'bg-gray-300'}`} />
-                  {a.label}
-                </span>
-                <select
-                  value={val}
-                  disabled={approved}
-                  onChange={(e) => savePath(`semaforo.${a.key}`, e.target.value)}
-                  className="text-sm border border-gray-200 rounded-lg px-2 py-1 bg-white outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50"
-                >
-                  <option value="adecuado">Adecuado</option>
-                  <option value="mejorable">Mejorable</option>
-                  <option value="prioritario">Prioritario</option>
-                </select>
-              </div>
-            )
-          })}
-        </div>
-      </Section>
-
-      <Section title="6. Conclusiones">
+      <Section title="5. Conclusiones">
         <Field path="conclusiones" value={getField('conclusiones')} onSave={(v) => savePath('conclusiones', v)} disabled={approved} />
       </Section>
 
-      <Section title="7. Recomendaciones">
+      <Section title="6. Recomendaciones">
         <SubField label="Capacidades prioritarias a desarrollar" path="recomendaciones.capacidades_prioritarias" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="Aspectos a monitorizar" path="recomendaciones.aspectos_monitorizar" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="Recomendaciones para el cuerpo técnico" path="recomendaciones.cuerpo_tecnico" get={getField} onSave={savePath} disabled={approved} />
         <SubField label="Siguiente valoración funcional" path="recomendaciones.siguiente_valoracion" get={getField} onSave={savePath} disabled={approved} />
-      </Section>
-
-      <Section title="8. Resumen ejecutivo">
-        <SubField label="Fortalezas" path="resumen_ejecutivo.fortalezas" get={getField} onSave={savePath} disabled={approved} />
-        <SubField label="Aspectos a mejorar" path="resumen_ejecutivo.aspectos_mejorar" get={getField} onSave={savePath} disabled={approved} />
-        <SubField label="Riesgo funcional" path="resumen_ejecutivo.riesgo_funcional" get={getField} onSave={savePath} disabled={approved} />
-        <SubField label="Objetivo principal" path="resumen_ejecutivo.objetivo_principal" get={getField} onSave={savePath} disabled={approved} />
       </Section>
 
       <Section title="Descargo de responsabilidad">

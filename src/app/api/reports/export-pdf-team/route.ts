@@ -7,10 +7,10 @@ import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 import { METODOLOGIA_JPEG_BASE64 } from '@/lib/reports/metodologiaAsset'
 import { parseMetricsSchema, type MetricDef } from '@/lib/reports/metrics'
 
-// PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 8 secciones.
-// Las gráficas de VALD (PDF) se INCRUSTAN como punto 3, entre la intro de "Valoración
-// funcional" y las interpretaciones 3.1–3.5. Se construyen dos partes con jsPDF y se
-// fusionan con pdf-lib intercalando las páginas del VALD en medio.
+// PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 6 secciones
+// (perfil, anamnesis, valoración funcional, hallazgos, conclusiones, recomendaciones).
+// El cuerpo narrativo se construye con jsPDF; las gráficas de VALD (PDF) se añaden con
+// pdf-lib como ANEXO al final del documento (tras la página de metodología).
 
 const MARGIN_LEFT = 25
 const MARGIN_RIGHT = 25
@@ -87,9 +87,6 @@ function line(doc: jsPDF, y: number): number {
   doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3); doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y); return y + 6
 }
 
-const SEM_LABEL: Record<string, string> = { adecuado: 'Adecuado', mejorable: 'Mejorable', prioritario: 'Prioritario' }
-const SEM_RGB: Record<string, number[]> = { adecuado: [16, 185, 129], mejorable: [245, 158, 11], prioritario: [239, 68, 68] }
-
 export async function POST(request: NextRequest) {
   try {
     const authSupabase = createServerSupabaseClient()
@@ -147,21 +144,20 @@ export async function POST(request: NextRequest) {
     const perfil = rd.perfil || {}
     const vf = rd.valoracion_funcional || {}
     const rec = rd.recomendaciones || {}
-    const re = rd.resumen_ejecutivo || {}
-    const sem = rd.semaforo || {}
+    // (Semáforo y resumen ejecutivo retirados del informe; la síntesis final vive en "conclusiones".)
 
-    // ===== PARTE A: portada + perfil + anamnesis + intro de valoración funcional =====
-    const docA = new jsPDF('portrait', 'mm', 'a4')
+    // ===== Documento narrativo (una sola pieza). Las gráficas de VALD van como ANEXO al final. =====
+    const doc = new jsPDF('portrait', 'mm', 'a4')
     let y = 45
     if (_logoDataUrl && _logoExt) {
-      const { w, h, x } = fitLogo(docA, _logoDataUrl, 50, 25)
-      docA.addImage(_logoDataUrl, _logoExt, x, 15, w, h); y = 48
+      const { w, h, x } = fitLogo(doc, _logoDataUrl, 50, 25)
+      doc.addImage(_logoDataUrl, _logoExt, x, 15, w, h); y = 48
     }
-    docA.setDrawColor(218, 165, 32); docA.setLineWidth(0.8); docA.line(MARGIN_LEFT, y + 2, PAGE_WIDTH - MARGIN_RIGHT, y + 2)
-    docA.setFont('helvetica', 'bold'); docA.setFontSize(15); docA.setTextColor(30, 30, 30)
-    docA.text('INFORME DE RENDIMIENTO Y PREVENCIÓN', PAGE_WIDTH / 2, y + 16, { align: 'center' })
-    docA.setFont('helvetica', 'normal'); docA.setFontSize(10); docA.setTextColor(120, 120, 120)
-    docA.text('Metodología Podium®', PAGE_WIDTH / 2, y + 23, { align: 'center' })
+    doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.8); doc.line(MARGIN_LEFT, y + 2, PAGE_WIDTH - MARGIN_RIGHT, y + 2)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(30, 30, 30)
+    doc.text('INFORME DE RENDIMIENTO Y PREVENCIÓN', PAGE_WIDTH / 2, y + 16, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(120, 120, 120)
+    doc.text('Metodología Podium®', PAGE_WIDTH / 2, y + 23, { align: 'center' })
 
     // Tarjeta de datos del informe en la portada (deportista, deporte, equipo, estudio, fecha).
     y = y + 33
@@ -179,24 +175,24 @@ export async function POST(request: NextRequest) {
     ]
     const cardRowH = 7.5, cardPad = 6
     const cardH = cardPad * 2 + coverRows.length * cardRowH
-    docA.setDrawColor(228, 228, 228); docA.setLineWidth(0.3); docA.setFillColor(250, 250, 250)
-    docA.roundedRect(MARGIN_LEFT, y, CONTENT_WIDTH, cardH, 2, 2, 'FD')
+    doc.setDrawColor(228, 228, 228); doc.setLineWidth(0.3); doc.setFillColor(250, 250, 250)
+    doc.roundedRect(MARGIN_LEFT, y, CONTENT_WIDTH, cardH, 2, 2, 'FD')
     let ry = y + cardPad + 4
     for (const [label, value] of coverRows) {
-      docA.setFont('helvetica', 'bold'); docA.setFontSize(9); docA.setTextColor(90, 90, 90)
-      docA.text(label, MARGIN_LEFT + 6, ry)
-      docA.setFont('helvetica', 'normal'); docA.setFontSize(9); docA.setTextColor(30, 30, 30)
-      docA.text(value, MARGIN_LEFT + 58, ry)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(90, 90, 90)
+      doc.text(label, MARGIN_LEFT + 6, ry)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(30, 30, 30)
+      doc.text(value, MARGIN_LEFT + 58, ry)
       ry += cardRowH
     }
     y = y + cardH + 12
 
-    y = para(docA, rd.objetivo_intro || '', y)
-    addFooter(docA)
+    y = para(doc, rd.objetivo_intro || '', y)
+    addFooter(doc)
 
     // Sección 1 — Perfil del deportista
-    docA.addPage(); addHeader(docA); y = MARGIN_TOP + 10
-    y = sectionTitle(docA, '1. Perfil del deportista', y)
+    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y = sectionTitle(doc, '1. Perfil del deportista', y)
     const perfilRows: [string, any][] = [
       ['Nombre', perfil.nombre], ['Edad', perfil.edad != null ? `${perfil.edad} años` : null], ['Sexo', perfil.sexo],
       ['Deporte', perfil.deporte], ['Posición', perfil.posicion], ['Categoría', perfil.categoria], ['Equipo', perfil.equipo],
@@ -204,95 +200,63 @@ export async function POST(request: NextRequest) {
       ['Lateralidad', perfil.lateralidad], ['Horas de entrenamiento semanales', perfil.horas_entreno_semana != null ? String(perfil.horas_entreno_semana) : null],
     ]
     for (const [k, v] of perfilRows) {
-      docA.setFont('helvetica', 'bold'); docA.setFontSize(9); docA.setTextColor(70, 70, 70); docA.text(`${k}:`, MARGIN_LEFT, y)
-      docA.setFont('helvetica', 'normal'); docA.setTextColor(40, 40, 40); docA.text(String(v || '—'), MARGIN_LEFT + 70, y)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(70, 70, 70); doc.text(`${k}:`, MARGIN_LEFT, y)
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(40, 40, 40); doc.text(String(v || '—'), MARGIN_LEFT + 70, y)
       y += 6
     }
-    addFooter(docA)
+    addFooter(doc)
 
     // Sección 2 — Anamnesis deportiva
-    docA.addPage(); addHeader(docA); y = MARGIN_TOP + 10
-    y = sectionTitle(docA, '2. Anamnesis deportiva', y)
-    y = para(docA, rd.resumen_anamnesis || '', y)
-    addFooter(docA)
+    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y = sectionTitle(doc, '2. Anamnesis deportiva', y)
+    y = para(doc, rd.resumen_anamnesis || '', y)
+    addFooter(doc)
 
-    // Sección 3 — Valoración funcional (intro) → aquí van las gráficas de VALD
-    docA.addPage(); addHeader(docA); y = MARGIN_TOP + 10
-    y = sectionTitle(docA, '3. Valoración funcional', y)
-    y = para(docA, vf.introduccion || '', y, { fontStyle: 'italic' })
-    y += 2
-    para(docA, 'A continuación se muestran las gráficas de la valoración funcional (VALD). La interpretación por áreas continúa tras las gráficas.', y, { fontSize: 9, color: [120, 120, 120] })
-    addFooter(docA)
-    const partA = Buffer.from(docA.output('arraybuffer'))
+    // Sección 3 — Valoración funcional (intro + interpretación 3.1–3.5, seguida)
+    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y = sectionTitle(doc, '3. Valoración funcional', y)
+    y = para(doc, vf.introduccion || '', y, { fontStyle: 'italic' })
+    y += 1
+    const vfSub = (label: string, txt: string) => { y = subTitle(doc, label, y); y = para(doc, txt || '', y); y += 1 }
+    vfSub('3.1 Calidad del movimiento', vf.calidad_movimiento)
+    vfSub('3.2 Movilidad', vf.movilidad)
+    vfSub('3.3 Fuerza', vf.fuerza)
+    vfSub('3.4 Potencia', vf.potencia)
+    vfSub('3.5 Capacidad reactiva', vf.capacidad_reactiva)
+    y += 1
+    para(doc, 'Las gráficas de la valoración funcional (VALD) se incluyen como anexo al final del informe.', y, { fontSize: 9, color: [120, 120, 120] })
+    addFooter(doc)
 
-    // ===== PARTE B: interpretación 3.1-3.5 + hallazgos + semáforo + conclusiones + recomendaciones + resumen + descargo =====
-    const docB = new jsPDF('portrait', 'mm', 'a4')
-    addHeader(docB); y = MARGIN_TOP + 10
-    y = sectionTitle(docB, 'Valoración funcional — interpretación', y)
-    const sub = (label: string, txt: string) => { y = subTitle(docB, label, y); y = para(docB, txt || '', y); y += 1 }
-    sub('3.1 Calidad del movimiento', vf.calidad_movimiento)
-    sub('3.2 Movilidad', vf.movilidad)
-    sub('3.3 Fuerza', vf.fuerza)
-    sub('3.4 Potencia', vf.potencia)
-    sub('3.5 Capacidad reactiva', vf.capacidad_reactiva)
-    addFooter(docB)
+    // Sección 4 — Hallazgos principales
+    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y = sectionTitle(doc, '4. Hallazgos principales', y)
+    y = para(doc, rd.hallazgos || '', y)
+    addFooter(doc)
 
-    docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
-    y = sectionTitle(docB, '4. Hallazgos principales', y)
-    y = para(docB, rd.hallazgos || '', y)
-    addFooter(docB)
+    // Sección 5 — Conclusiones (incluye la síntesis final: fortalezas, riesgo y objetivo)
+    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y = sectionTitle(doc, '5. Conclusiones', y)
+    y = para(doc, rd.conclusiones || '', y)
+    addFooter(doc)
 
-    // Sección 5 — Semáforo funcional
-    docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
-    y = sectionTitle(docB, '5. Semáforo funcional', y)
-    const areas: [string, string][] = [
-      ['Movilidad', sem.movilidad], ['Fuerza', sem.fuerza], ['Potencia', sem.potencia],
-      ['Control motor', sem.control_motor], ['Capacidad reactiva', sem.capacidad_reactiva], ['Simetría', sem.simetria],
-    ]
-    for (const [label, val] of areas) {
-      const key = String(val || 'mejorable')
-      const rgb = SEM_RGB[key] || [156, 163, 175]
-      docB.setFillColor(rgb[0], rgb[1], rgb[2]); docB.circle(MARGIN_LEFT + 2, y - 1.2, 1.8, 'F')
-      docB.setFont('helvetica', 'normal'); docB.setFontSize(10); docB.setTextColor(50, 50, 50)
-      docB.text(label, MARGIN_LEFT + 8, y)
-      docB.setFont('helvetica', 'bold'); docB.setTextColor(rgb[0], rgb[1], rgb[2])
-      docB.text(SEM_LABEL[key] || key, PAGE_WIDTH - MARGIN_RIGHT, y, { align: 'right' })
-      y += 8
-    }
-    y += 2
-    para(docB, 'Clasificación:  Adecuado · Mejorable · Prioritario.', y, { fontSize: 8, color: [130, 130, 130] })
-    addFooter(docB)
-
-    docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
-    y = sectionTitle(docB, '6. Conclusiones', y)
-    y = para(docB, rd.conclusiones || '', y)
-    addFooter(docB)
-
-    docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
-    y = sectionTitle(docB, '7. Recomendaciones', y)
-    const recSub = (label: string, txt: string) => { y = subTitle(docB, label, y); y = para(docB, txt || '', y); y += 1 }
+    // Sección 6 — Recomendaciones + descargo
+    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y = sectionTitle(doc, '6. Recomendaciones', y)
+    const recSub = (label: string, txt: string) => { y = subTitle(doc, label, y); y = para(doc, txt || '', y); y += 1 }
     recSub('Capacidades prioritarias a desarrollar', rec.capacidades_prioritarias)
     recSub('Aspectos a monitorizar', rec.aspectos_monitorizar)
     recSub('Recomendaciones para el cuerpo técnico', rec.cuerpo_tecnico)
     recSub('Siguiente valoración funcional', rec.siguiente_valoracion)
-    addFooter(docB)
-
-    docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
-    y = sectionTitle(docB, '8. Resumen ejecutivo', y)
-    recSub('Fortalezas', re.fortalezas)
-    recSub('Aspectos a mejorar', re.aspectos_mejorar)
-    recSub('Riesgo funcional', re.riesgo_funcional)
-    recSub('Objetivo principal', re.objetivo_principal)
     y += 4
-    y = line(docB, y)
-    y = para(docB, 'Descargo de responsabilidad:', y, { fontStyle: 'bolditalic', fontSize: 9, color: [100, 100, 100] })
-    y = para(docB, rd.descargo || '', y, { fontStyle: 'italic', fontSize: 8, color: [120, 120, 120] })
-    addFooter(docB)
+    y = line(doc, y)
+    y = para(doc, 'Descargo de responsabilidad:', y, { fontStyle: 'bolditalic', fontSize: 9, color: [100, 100, 100] })
+    y = para(doc, rd.descargo || '', y, { fontStyle: 'italic', fontSize: 8, color: [120, 120, 120] })
+    addFooter(doc)
 
     // Anexo de datos objetivos (solo si el fisio lo activó): tabla de métricas por prueba.
     if (metricsAnnex.length > 0) {
-      docB.addPage(); addHeader(docB); y = MARGIN_TOP + 10
-      y = sectionTitle(docB, 'Anexo · Datos objetivos (VALD)', y)
+      doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+      y = sectionTitle(doc, 'Anexo · Datos objetivos (VALD)', y)
       const fmtVal = (m: MetricDef, v: any): string => {
         v = v || {}
         if (m.bilateral) {
@@ -303,44 +267,51 @@ export async function POST(request: NextRequest) {
         return v.lado ? `${base} (${v.lado})` : base
       }
       for (const t of metricsAnnex) {
-        y = subTitle(docB, t.test_name, y)
+        y = subTitle(doc, t.test_name, y)
         for (const m of t.metrics) {
-          y = para(docB, `${m.label}${m.unit ? ` (${m.unit})` : ''}: ${fmtVal(m, t.values[m.key])}`, y, { fontSize: 9 })
+          y = para(doc, `${m.label}${m.unit ? ` (${m.unit})` : ''}: ${fmtVal(m, t.values[m.key])}`, y, { fontSize: 9 })
         }
         y += 2
       }
-      addFooter(docB)
+      addFooter(doc)
     }
 
-    // Página final: ilustración de la Metodología Podium (escalera PODIO 1–5), ajustada
-    // a la caja respetando su proporción y centrada. La imagen ya lleva su propio título.
-    docB.addPage(); addHeader(docB)
+    // Página de metodología (escalera PODIO 1–5), cierre del cuerpo del informe.
+    doc.addPage(); addHeader(doc)
     const methImg = `data:image/jpeg;base64,${METODOLOGIA_JPEG_BASE64}`
     try {
-      const mp = docB.getImageProperties(methImg)
+      const mp = doc.getImageProperties(methImg)
       const ratio = mp.width / mp.height
       const maxW = CONTENT_WIDTH, maxH = 232
       let w = maxW, h = maxW / ratio
       if (h > maxH) { h = maxH; w = maxH * ratio }
-      docB.addImage(methImg, 'JPEG', PAGE_WIDTH / 2 - w / 2, 34, w, h)
+      doc.addImage(methImg, 'JPEG', PAGE_WIDTH / 2 - w / 2, 34, w, h)
     } catch (e) {
       console.error('No se pudo incrustar la metodología:', e)
     }
-    addFooter(docB)
-    const partB = Buffer.from(docB.output('arraybuffer'))
+    addFooter(doc)
 
-    // ===== FUSIÓN: A + gráficas VALD + B =====
+    // Portada del ANEXO VALD (solo si hay PDFs adjuntos), justo antes de las gráficas.
+    const valdPdfDocs = (documents || []).filter((d) => /\.pdf$/i.test(d.file_name || ''))
+    if (valdPdfDocs.length > 0) {
+      doc.addPage(); addHeader(doc); y = MARGIN_TOP + 20
+      y = sectionTitle(doc, 'Anexo · Informes VALD', y)
+      para(doc, 'A continuación se adjuntan las gráficas y resultados objetivos de la valoración funcional (VALD), tal como los genera el sistema de medición.', y, { fontSize: 10, color: [90, 90, 90] })
+      addFooter(doc)
+    }
+
+    const narrative = Buffer.from(doc.output('arraybuffer'))
+
+    // ===== FUSIÓN: cuerpo narrativo + páginas de VALD como anexo final =====
     const out = await PDFDocument.create()
-    const pdfA = await PDFDocument.load(partA)
-    ;(await out.copyPages(pdfA, pdfA.getPageIndices())).forEach((p) => out.addPage(p))
+    const pdfNarr = await PDFDocument.load(narrative)
+    ;(await out.copyPages(pdfNarr, pdfNarr.getPageIndices())).forEach((p) => out.addPage(p))
 
-    // Incrustar las páginas del/los PDF de VALD como punto 3
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    if (serviceRoleKey && supabaseUrl && (documents || []).length > 0) {
+    if (serviceRoleKey && supabaseUrl && valdPdfDocs.length > 0) {
       const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } })
-      for (const d of documents!) {
-        if (!/\.pdf$/i.test(d.file_name || '')) continue
+      for (const d of valdPdfDocs) {
         try {
           const { data: fileData, error } = await admin.storage.from('documents').download(d.storage_path)
           if (error || !fileData) continue
@@ -352,9 +323,6 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-
-    const pdfB = await PDFDocument.load(partB)
-    ;(await out.copyPages(pdfB, pdfB.getPageIndices())).forEach((p) => out.addPage(p))
 
     const bytes = await out.save()
     return new NextResponse(Buffer.from(bytes), {

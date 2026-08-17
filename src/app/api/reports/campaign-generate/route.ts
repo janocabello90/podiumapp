@@ -202,14 +202,15 @@ export async function POST(request: NextRequest) {
     context += `\n===== TITULARES POR JUGADOR (de sus informes individuales aprobados) =====\n`
     for (const p of cappedIncluded) {
       const rd = reportBySession.get(sessionByPatient.get(p.id)!)?.report_data || {}
-      const re = rd.resumen_ejecutivo || {}
-      const sem = rd.semaforo || {}
-      const prioritarias = Object.entries(sem).filter(([, v]) => v === 'prioritario').map(([k]) => k).join(', ')
+      const re = rd.resumen_ejecutivo || {} // compat. informes antiguos (ya no se genera)
       context += `--- ${tokenByPatient.get(p.id)} ---\n`
       if (rd.hallazgos) context += `Hallazgos: ${rd.hallazgos}\n`
-      if (re.aspectos_mejorar) context += `A mejorar: ${re.aspectos_mejorar}\n`
-      if (re.riesgo_funcional) context += `Riesgo funcional: ${re.riesgo_funcional}\n`
-      if (prioritarias) context += `Semáforo prioritario: ${prioritarias}\n`
+      // Los informes nuevos integran fortalezas/riesgo/objetivo en "conclusiones".
+      if (rd.conclusiones) context += `Conclusiones: ${rd.conclusiones}\n`
+      else {
+        if (re.aspectos_mejorar) context += `A mejorar: ${re.aspectos_mejorar}\n`
+        if (re.riesgo_funcional) context += `Riesgo funcional: ${re.riesgo_funcional}\n`
+      }
       context += `\n`
     }
 
