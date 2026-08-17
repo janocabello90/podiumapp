@@ -6,6 +6,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 import { METODOLOGIA_JPEG_BASE64 } from '@/lib/reports/metodologiaAsset'
 import { parseMetricsSchema, type MetricDef } from '@/lib/reports/metrics'
+import { formatDate } from '@/lib/format/datetime'
 
 // PDF del "Informe de Rendimiento y Prevención" (equipo). Estructura de 5 secciones
 // (perfil, anamnesis, valoración funcional, conclusiones, recomendaciones).
@@ -161,12 +162,8 @@ export async function POST(request: NextRequest) {
 
     // Tarjeta de datos del informe en la portada (deportista, deporte, equipo, estudio, fecha).
     y = y + 33
-    const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-    const fmtFecha = (iso?: string | null) => {
-      const d = iso ? new Date(iso) : new Date()
-      const dd = isNaN(d.getTime()) ? new Date() : d
-      return `${dd.getDate()} de ${MESES[dd.getMonth()]} de ${dd.getFullYear()}`
-    }
+    // Fecha en la zona horaria de la clínica (Zaragoza), no en la del servidor (UTC).
+    const fmtFecha = (iso?: string | null) => formatDate(iso ?? new Date())
     const coverRows: [string, string][] = [
       ['Deportista', String(perfil.nombre || patientName || '—')],
       ['Equipo', String(perfil.equipo || '—')],

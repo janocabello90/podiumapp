@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { FileText, Clock, CheckCircle, AlertCircle, Users } from 'lucide-react'
+import { formatDateTime } from '@/lib/format/datetime'
 
 export default async function ReportsPage() {
   const supabase = createServerSupabaseClient()
@@ -164,13 +165,7 @@ export default async function ReportsPage() {
                         {(report.patients as any)?.full_name || 'Paciente'}
                       </h3>
                       <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(report.created_at).toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {formatDateTime(report.created_at)}
                       </p>
 
                       {/* Physio traceability */}

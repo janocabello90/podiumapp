@@ -15,6 +15,7 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { computeStage } from '@/lib/clinical/stage'
+import { formatDate } from '@/lib/format/datetime'
 import { isAnamnesisExpired } from '@/lib/clinical/anamnesis'
 import { getRegionLabel, getPathologyLabel } from '@/lib/clinical/taxonomy'
 
@@ -179,7 +180,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
       <div className="flex items-end justify-between gap-3 mb-6 sm:mb-8 flex-wrap">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Hola, {firstName}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Panel de {scopeLabel.toLowerCase()} · {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <p className="text-sm text-gray-500 mt-0.5">Panel de {scopeLabel.toLowerCase()} · {formatDate(new Date(), { weekday: 'long', day: 'numeric', month: 'long' })}</p>
         </div>
         <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1">
           <Link href="/dashboard" className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${mineOnly ? 'bg-white text-clinical-navy shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Míos</Link>
@@ -297,7 +298,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: { 
                       <div className="min-w-0"><p className="text-sm font-medium text-gray-900 truncate">{name}</p><p className="text-xs text-gray-500 truncate">{type}{s.campaign_id ? ' · en estudio' : ''}</p></div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="text-xs text-gray-400 tabular-nums font-mono hidden sm:inline">{new Date(s.created_at).toLocaleDateString('es-ES')}</span>
+                      <span className="text-xs text-gray-400 tabular-nums font-mono hidden sm:inline">{formatDate(s.created_at, { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${done ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${done ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
                         <span className="hidden sm:inline">{done ? 'Completada' : 'En curso'}</span>

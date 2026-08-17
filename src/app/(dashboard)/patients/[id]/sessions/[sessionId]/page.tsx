@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield, CheckCircle2, Loader2 } from 'lucide-react'
+import { formatDateTime } from '@/lib/format/datetime'
 import AssessmentForm from '@/components/assessment/AssessmentForm'
 import SessionTestsPanel from '@/components/sessions/SessionTestsPanel'
 import SessionTestPicker from '@/components/sessions/SessionTestPicker'
@@ -222,7 +223,7 @@ export default async function SessionPage({ params }: { params: { id: string; se
               <span>
                 Informe <strong>{existingReport.status === 'approved' ? 'aprobado' : 'generado (borrador)'}</strong>
                 {' · '}
-                {new Date(existingReport.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {formatDateTime(existingReport.created_at)}
               </span>
             </div>
           ) : null}

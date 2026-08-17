@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { formatDate } from '@/lib/format/datetime'
 import { ArrowLeft, FileText, Shield, Megaphone } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import RefreshButton from '@/components/patients/RefreshButton'
@@ -168,7 +169,7 @@ export default async function PatientDetailPage({
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-1.5 tabular-nums">
-                {s.created_at ? new Date(s.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
+                {s.created_at ? formatDate(s.created_at) : '—'}
               </p>
               <div className="flex items-center gap-4 mt-2">
                 <Link href={`/patients/${patient.id}/sessions/${s.id}`} className="text-xs text-blue-600 font-medium hover:underline">Abrir consulta →</Link>
@@ -401,11 +402,7 @@ export default async function PatientDetailPage({
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
             <h3 className="text-sm font-semibold text-gray-900 mb-3">Actividad</h3>
             <p className="text-sm text-gray-400">
-              Creado el {new Date(patient.created_at).toLocaleDateString('es-ES', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
+              Creado el {formatDate(patient.created_at)}
             </p>
           </div>
         </div>
