@@ -206,14 +206,14 @@ export async function POST(request: NextRequest) {
     }
     addFooter(doc)
 
-    // Sección 2 — Anamnesis deportiva
-    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    // Sección 2 — Anamnesis deportiva (fluye tras el perfil; sin salto de página forzado)
+    y += 8
     y = sectionTitle(doc, '2. Anamnesis deportiva', y)
     y = para(doc, rd.resumen_anamnesis || '', y)
     addFooter(doc)
 
     // Sección 3 — Valoración funcional (intro + interpretación 3.1–3.5, seguida)
-    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y += 8
     y = sectionTitle(doc, '3. Valoración funcional', y)
     y = para(doc, vf.introduccion || '', y, { fontStyle: 'italic' })
     y += 1
@@ -228,19 +228,19 @@ export async function POST(request: NextRequest) {
     addFooter(doc)
 
     // Sección 4 — Hallazgos principales
-    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y += 8
     y = sectionTitle(doc, '4. Hallazgos principales', y)
     y = para(doc, rd.hallazgos || '', y)
     addFooter(doc)
 
     // Sección 5 — Conclusiones (incluye la síntesis final: fortalezas, riesgo y objetivo)
-    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y += 8
     y = sectionTitle(doc, '5. Conclusiones', y)
     y = para(doc, rd.conclusiones || '', y)
     addFooter(doc)
 
     // Sección 6 — Recomendaciones + descargo
-    doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10
+    y += 8
     y = sectionTitle(doc, '6. Recomendaciones', y)
     const recSub = (label: string, txt: string) => { y = subTitle(doc, label, y); y = para(doc, txt || '', y); y += 1 }
     recSub('Capacidades prioritarias a desarrollar', rec.capacidades_prioritarias)
