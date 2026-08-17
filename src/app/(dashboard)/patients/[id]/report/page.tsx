@@ -6,6 +6,8 @@ import ReportEditor from '@/components/report/ReportEditor'
 import TeamReportEditor from '@/components/report/TeamReportEditor'
 import ReportGenerateButton from '@/components/report/ReportGenerateButton'
 import ReportCostPanel from '@/components/report/ReportCostPanel'
+import GeneratingPanel from '@/components/report/GeneratingPanel'
+import { isGenerationStale } from '@/lib/reports/background'
 import { parseMetricsSchema } from '@/lib/reports/metrics'
 
 export default async function ReportPage({
@@ -54,6 +56,13 @@ export default async function ReportPage({
   const latestReport = [...(patient.reports || [])].sort(
     (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   )[0]
+  // Una fila 'generating' que lleva demasiado tiempo se trata como error (la función habrá muerto),
+  // para no mostrar el panel de "Generando…" indefinidamente ni entrar en bucle de refresco.
+  const genStale = latestReport?.status === 'generating' && isGenerationStale(latestReport.created_at)
+  const effStatus: string | undefined = genStale ? 'error' : latestReport?.status
+  const genErrorMsg = genStale
+    ? 'La generación tardó demasiado. Reinténtalo.'
+    : (latestReport?.report_data as any)?._error
   const documents = (patient.documents || []).map((d: any) => ({
     id: d.id,
     doc_type: d.doc_type,
@@ -111,7 +120,9 @@ export default async function ReportPage({
         />
       ) : null}
 
-      {latestReport ? (
+      {effStatus === 'generating' ? (
+        <GeneratingPanel reportId={latestReport.id} />
+      ) : latestReport && effStatus !== 'error' ? (
         (latestReport.report_data as any)?._template === 'team_performance' ? (
           <TeamReportEditor
             reportId={latestReport.id}
@@ -139,6 +150,11 @@ export default async function ReportPage({
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 text-center">
           <div className="max-w-md mx-auto space-y-4">
+            {effStatus === 'error' && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-left">
+                Falló la generación anterior{genErrorMsg ? `: ${genErrorMsg}` : ''}. Puedes intentarlo de nuevo.
+              </div>
+            )}
             <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto">
               <svg className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />

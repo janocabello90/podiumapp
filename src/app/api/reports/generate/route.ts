@@ -8,6 +8,10 @@ import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
 import { parseMetricsSchema, buildMetricsInstruction, metricsByTestName } from '@/lib/reports/metrics'
 import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
+import { runReportInBackground, activeSince } from '@/lib/reports/background'
+
+// Generación en SEGUNDO PLANO: el trabajo pesado corre tras responder (waitUntil), hasta este tope.
+export const maxDuration = 800
 
 // ESTRUCTURA FIJA del informe individual (el rol/instrucciones editables se anteponen).
 const STRUCTURE_INDIVIDUAL = `ESTRUCTURA DEL INFORME que debes generar (en formato JSON con las secciones):
@@ -175,6 +179,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sesión no encontrada para este paciente' }, { status: 404 })
     }
 
+    // Candado de concurrencia: no duplicar el informe de esta sesión si ya hay uno en curso.
+    if (session?.id) {
+      const { data: inFlight } = await supabase
+        .from('reports').select('id')
+        .eq('session_id', session.id).eq('status', 'generating')
+        .gte('created_at', activeSince()).limit(1).maybeSingle()
+      if (inFlight) return NextResponse.json({ error: 'Ya se está generando un informe para esta sesión' }, { status: 409 })
+    }
+
+    // Fila en 'generating' (coherente: individual ⇒ patient_id + session_id). Se responde 202 y el
+    // trabajo pesado (contexto + IA + guardado) va por detrás con waitUntil: el cliente puede cerrar.
+    const { data: pending, error: pendingErr } = await supabase
+      .from('reports')
+      .insert({
+        patient_id: patientId,
+        clinic_id: patient.clinic_id,
+        generated_by: user.id,
+        status: 'generating',
+        session_id: session?.id || null,
+        anamnesis_id: anamnesis?.id || null,
+        assessment_id: assessment?.id || null,
+      })
+      .select('id')
+      .single()
+    if (pendingErr || !pending) {
+      return NextResponse.json({ error: 'No se pudo iniciar la generación' }, { status: 500 })
+    }
+    const reportId = pending.id
+
+    runReportInBackground(reportId, async () => {
     const clinicalData = session?.clinical_data ?? assessment?.assessment_data
     const clinicalNotes = session?.notes ?? assessment?.notes
 
@@ -480,7 +514,7 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
       reportData = JSON.parse(jsonStr.trim())
     } catch {
       console.error('Failed to parse Claude response:', responseText.substring(0, 500))
-      return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
+      throw new Error('Error al procesar la respuesta de IA')
     }
 
     // PRIVACIDAD: restituir el nombre real (la IA solo vio el marcador «[[PACIENTE]]»).
@@ -511,47 +545,37 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
       reportData = { _template: 'team_performance', perfil: teamPerfil, ...reportData }
     }
 
-    // Save report to database
-    const { data: report, error: reportError } = await supabase
+    // Guardar el informe terminado: UPDATE de la fila 'generating' creada al inicio.
+    const { error: reportError } = await supabase
       .from('reports')
-      .insert({
-        patient_id: patientId,
-        clinic_id: patient.clinic_id,
-        generated_by: user.id,
+      .update({
         status: 'draft',
         anamnesis_id: anamnesis?.id || null,
         assessment_id: assessment?.id || null,
-        session_id: session?.id || null,
         report_data: reportData,
         ai_model: REPORT_MODEL,
         ai_prompt_tokens: message.usage?.input_tokens || null,
         ai_completion_tokens: message.usage?.output_tokens || null,
       })
-      .select()
-      .single()
+      .eq('id', reportId)
 
     if (reportError) {
       console.error('Report save error:', reportError)
-      return NextResponse.json({ error: 'Error al guardar el informe' }, { status: 500 })
+      throw new Error('Error al guardar el informe')
     }
 
     // Fire-and-forget: auto-classify patient using the new report as richest context.
-    // Skipped if patient already has a manual classification.
     try {
       const origin = request.nextUrl.origin
       fetch(`${origin}/api/patients/classify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          cookie: request.headers.get('cookie') || '',
-        },
+        headers: { 'Content-Type': 'application/json', cookie: request.headers.get('cookie') || '' },
         body: JSON.stringify({ patientId }),
       }).catch((e) => console.error('Auto-classify trigger failed:', e))
-    } catch (e) {
-      // non-blocking
-    }
+    } catch (e) { /* non-blocking */ }
+    })
 
-    return NextResponse.json({ report })
+    return NextResponse.json({ reportId, status: 'generating' }, { status: 202 })
   } catch (error: any) {
     console.error('Report generation error:', error)
     return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })

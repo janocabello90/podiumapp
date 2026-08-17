@@ -1,7 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, FileText, Megaphone, FolderKanban, Shield, CheckCircle2, Loader2 } from 'lucide-react'
 import AssessmentForm from '@/components/assessment/AssessmentForm'
 import SessionTestsPanel from '@/components/sessions/SessionTestsPanel'
 import SessionTestPicker from '@/components/sessions/SessionTestPicker'
@@ -206,7 +206,17 @@ export default async function SessionPage({ params }: { params: { id: string; se
         <h2 className="text-sm font-semibold text-gray-900 mb-2">{n()}. Informe</h2>
         <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
           {/* Indicador de informe ya generado para esta sesión */}
-          {existingReport && (
+          {existingReport && existingReport.status === 'generating' ? (
+            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 text-blue-800 rounded-xl px-3 py-2 text-sm">
+              <Loader2 className="w-4 h-4 flex-shrink-0 animate-spin" />
+              <span>Generando informe en segundo plano… Puedes cerrar la página; al volver estará listo.</span>
+            </div>
+          ) : existingReport && existingReport.status === 'error' ? (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 rounded-xl px-3 py-2 text-sm">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              <span>La última generación falló. Puedes volver a intentarlo.</span>
+            </div>
+          ) : existingReport ? (
             <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-800 rounded-xl px-3 py-2 text-sm">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
               <span>
@@ -215,7 +225,7 @@ export default async function SessionPage({ params }: { params: { id: string; se
                 {new Date(existingReport.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
-          )}
+          ) : null}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-sm text-gray-600">
               {existingReport

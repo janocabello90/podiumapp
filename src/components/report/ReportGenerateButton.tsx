@@ -54,17 +54,25 @@ export default function ReportGenerateButton({ patientId, sessionId, hasExisting
         body: JSON.stringify({ patientId, sessionId, referenceIds }),
       })
 
-      if (!response.ok) {
+      if (response.status === 409) {
+        toast('Ya se está generando un informe para esta sesión.')
+        router.refresh()
+        setGenerating(false)
+        return
+      }
+
+      if (!response.ok && response.status !== 202) {
         const err = await response.json()
         throw new Error(err.error || 'Error al generar')
       }
 
-      toast.success('Informe generado correctamente')
+      // 202: se genera en segundo plano. La página mostrará el panel de "Generando…".
+      toast.success('Generando en segundo plano; puedes cerrar la página.')
       router.refresh()
     } catch (err: any) {
       toast.error(err.message || 'Error al generar el informe')
+      setGenerating(false)
     }
-    setGenerating(false)
   }
 
   return (
@@ -104,7 +112,7 @@ export default function ReportGenerateButton({ patientId, sessionId, hasExisting
         {generating ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            Generando informe... (30-60s)
+            Iniciando…
           </>
         ) : (
           <>

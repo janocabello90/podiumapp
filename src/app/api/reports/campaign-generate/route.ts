@@ -6,6 +6,10 @@ import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
 import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
 import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
 import { parseMetricsSchema, computeTeamMetrics, TEAM_THRESHOLDS, type PlayerMetrics, type TeamMetricStat } from '@/lib/reports/metrics'
+import { runReportInBackground, activeSince } from '@/lib/reports/background'
+
+// Generación en SEGUNDO PLANO (waitUntil tras responder).
+export const maxDuration = 800
 
 // Informe de EQUIPO por RONDA (agregado). Cuantitativo CALCULADO en código (la IA no inventa
 // cifras) + síntesis CUALITATIVA por IA a partir de los informes individuales APROBADOS del equipo.
@@ -119,6 +123,30 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // Candado de concurrencia: no duplicar el informe de este (equipo, ronda) si ya hay uno en curso.
+    {
+      const { data: inFlight } = await supabase
+        .from('reports').select('id')
+        .eq('campaign_id', campaign.id).eq('team_id', teamId).eq('campaign_round', round)
+        .eq('status', 'generating').gte('created_at', activeSince()).limit(1).maybeSingle()
+      if (inFlight) return NextResponse.json({ error: 'Ya se está generando el informe de este equipo/ronda' }, { status: 409 })
+    }
+
+    // Fila en 'generating' (coherente: campaign ⇒ campaign_id + team_id + campaign_round). 202 + trabajo detrás.
+    const { data: pending, error: pendingErr } = await supabase
+      .from('reports')
+      .insert({
+        clinic_id: profile.clinic_id, scope: 'campaign',
+        campaign_id: campaign.id, team_id: teamId, campaign_round: round, patient_id: null,
+        generated_by: user.id, status: 'generating',
+      })
+      .select('id').single()
+    if (pendingErr || !pending) {
+      return NextResponse.json({ error: 'No se pudo iniciar la generación' }, { status: 500 })
+    }
+    const reportId = pending.id
+
+    runReportInBackground(reportId, async () => {
     const cappedIncluded = included.slice(0, MAX_PLAYERS)
 
     // Métricas por jugador (para el cálculo cuantitativo).
@@ -213,7 +241,7 @@ export async function POST(request: NextRequest) {
       ai = JSON.parse((m ? m[1] : responseText).trim())
     } catch {
       console.error('Failed to parse campaign response:', responseText.substring(0, 500))
-      return NextResponse.json({ error: 'Error al procesar la respuesta de IA' }, { status: 500 })
+      throw new Error('Error al procesar la respuesta de IA')
     }
     ai = restoreManyNames(ai, nameEntries)
 
@@ -247,31 +275,24 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const { data: report, error: reportError } = await supabase
+    const { error: reportError } = await supabase
       .from('reports')
-      .insert({
-        clinic_id: profile.clinic_id,
-        scope: 'campaign',
-        campaign_id: campaign.id,
-        team_id: teamId,
-        campaign_round: round,
-        patient_id: null,
-        generated_by: user.id,
+      .update({
         status: 'draft',
         report_data: reportData,
         ai_model: REPORT_MODEL,
         ai_prompt_tokens: message.usage?.input_tokens || null,
         ai_completion_tokens: message.usage?.output_tokens || null,
       })
-      .select()
-      .single()
+      .eq('id', reportId)
 
     if (reportError) {
       console.error('Team-round report save error:', reportError)
-      return NextResponse.json({ error: 'Error al guardar el informe de equipo' }, { status: 500 })
+      throw new Error('Error al guardar el informe de equipo')
     }
+    })
 
-    return NextResponse.json({ report })
+    return NextResponse.json({ reportId, status: 'generating' }, { status: 202 })
   } catch (error: any) {
     console.error('Team-round report generation error:', error)
     return NextResponse.json({ error: error.message || 'Error interno' }, { status: 500 })

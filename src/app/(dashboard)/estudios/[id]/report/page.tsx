@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import CampaignReportView from '@/components/report/CampaignReportView'
+import GeneratingPanel from '@/components/report/GeneratingPanel'
+import { isGenerationStale } from '@/lib/reports/background'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,7 +36,7 @@ export default async function CampaignReportPage({
   // Último informe de equipo para (estudio, equipo, ronda).
   let query = supabase
     .from('reports')
-    .select('id, status, report_data, team_id, campaign_round')
+    .select('id, status, report_data, team_id, campaign_round, created_at')
     .eq('campaign_id', campaign.id)
     .eq('scope', 'campaign')
     .eq('clinic_id', profile.clinic_id)
@@ -47,6 +49,10 @@ export default async function CampaignReportPage({
   const rd = (report?.report_data as any) || {}
   const equipo = rd?.portada?.equipo || rd?._meta?.equipo || 'Equipo'
   const ronda = rd?.portada?.ronda ?? rd?._meta?.ronda
+  // 'generating' atascado → error (evita panel infinito / bucle de refresco).
+  const genStale = report?.status === 'generating' && isGenerationStale((report as any).created_at)
+  const effStatus = genStale ? 'error' : report?.status
+  const genErrorMsg = genStale ? 'La generación tardó demasiado. Reinténtalo.' : rd?._error
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -67,6 +73,15 @@ export default async function CampaignReportPage({
           <p className="text-sm text-gray-500">
             No hay informe para este equipo/ronda todavía. Genéralo desde{' '}
             <Link href={`/estudios/${campaign.id}`} className="text-blue-600 hover:underline">la página del estudio</Link>.
+          </p>
+        </div>
+      ) : effStatus === 'generating' ? (
+        <GeneratingPanel reportId={report.id} />
+      ) : effStatus === 'error' ? (
+        <div className="bg-white rounded-2xl border border-red-200 px-4 py-10 text-center">
+          <p className="text-sm text-gray-700">Falló la generación{genErrorMsg ? `: ${genErrorMsg}` : ''}.</p>
+          <p className="text-xs text-gray-400 mt-2">
+            Vuelve a <Link href={`/estudios/${campaign.id}`} className="text-blue-600 hover:underline">la página del estudio</Link> para regenerarlo.
           </p>
         </div>
       ) : (

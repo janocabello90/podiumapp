@@ -52,8 +52,14 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaignId, teamId: team.id, round, excluded: Array.from(excluded) }),
       })
-      if (!res.ok) throw new Error((await res.json()).error || 'Error al generar')
-      toast.success('Informe de equipo generado')
+      if (res.status === 409) {
+        toast('Ya se está generando el informe de este equipo/ronda.')
+        router.push(`/estudios/${campaignId}/report?team=${team.id}&round=${round}`)
+        return
+      }
+      if (!res.ok && res.status !== 202) throw new Error((await res.json()).error || 'Error al generar')
+      // 202: se genera en segundo plano. La página de revisión mostrará el panel de "Generando…".
+      toast.success('Generando en segundo plano; puedes cerrar la página.')
       router.push(`/estudios/${campaignId}/report?team=${team.id}&round=${round}`)
     } catch (e: any) {
       toast.error(e.message || 'Error al generar el informe')
@@ -122,7 +128,7 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
                 disabled={!canGenerate || generating}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium rounded-xl transition-colors"
               >
-                {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Generando… (30-90s)</> : <><Sparkles className="w-4 h-4" /> {existing ? 'Regenerar' : 'Generar'} informe · Ronda {round}</>}
+                {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Iniciando…</> : <><Sparkles className="w-4 h-4" /> {existing ? 'Regenerar' : 'Generar'} informe · Ronda {round}</>}
               </button>
               {existing && (
                 <Link href={`/estudios/${campaignId}/report?team=${team.id}&round=${round}`} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg">
