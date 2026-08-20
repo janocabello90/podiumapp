@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 
 // PDF "Anamnesis + consentimientos (EN BLANCO)" para imprimir y rellenar a mano.
 // Se genera desde los mismos textos de consent_versions → nunca se descuadra con la app.
@@ -78,8 +79,8 @@ export async function GET(_req: NextRequest) {
     // Fila de tabla "Etiqueta | valor" (capa básica de Protección de datos).
     const LABEL_W = 44
     const tableRow = (label: string, value: string) => {
-      doc.setFontSize(8)
-      const lh = 8 * 0.46
+      doc.setFontSize(9)
+      const lh = 9 * 0.46
       const valLines = doc.splitTextToSize(value || '', CW - LABEL_W - 4)
       const labLines = doc.splitTextToSize(label, LABEL_W - 3)
       const rowH = Math.max(valLines.length, labLines.length) * lh + 3
@@ -96,6 +97,19 @@ export async function GET(_req: NextRequest) {
     }
     // Renderiza el texto de Protección de datos como tabla, leído de la BD: cada línea
     // "Etiqueta: valor" es una fila; el título va arriba y la frase final (sin etiqueta) debajo.
+    // Texto de un consentimiento: ancho completo (ML→margen dcho), 9pt, justificado.
+    const consentBody = (text: string) => {
+      const size = 9, lh = size * 0.46
+      const lines = doc.splitTextToSize(text || '', CW)
+      for (let i = 0; i < lines.length; i++) {
+        ensure(lh + 2)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(70, 70, 70)
+        const justify = i < lines.length - 1 && lines[i].trim() !== '' && (lines[i + 1] || '').trim() !== ''
+        if (justify) drawJustifiedLine(doc, lines[i], ML, y, CW)
+        else doc.text(lines[i], ML, y)
+        y += lh
+      }
+    }
     const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
     const renderDataProcessing = (body: string) => {
       const lines = body.split('\n').map((l) => l.trim()).filter(Boolean)
@@ -109,7 +123,7 @@ export async function GET(_req: NextRequest) {
         else { after.push(line) }
       }
       y += 2
-      for (const p of after) para(p, { size: 8.5, gap: 1 })
+      if (after.length) consentBody(after.join(' '))
     }
 
     // ===== Portada / cabecera =====
@@ -138,14 +152,7 @@ export async function GET(_req: NextRequest) {
         // Capa básica de Protección de datos: como tabla, leyendo el texto de la BD.
         renderDataProcessing(body)
       } else {
-        const lh = 8.5 * 0.46
-        const lines = doc.splitTextToSize(body, CW - 6)
-        for (const ln of lines) {
-          ensure(lh + 2)
-          // Reaplicar estilo cada línea: evita heredar el del pie tras un salto de página.
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70)
-          doc.text(ln, ML + 6, y); y += lh
-        }
+        consentBody(body)
       }
       y += 4
     }
