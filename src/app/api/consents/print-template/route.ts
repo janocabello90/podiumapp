@@ -43,6 +43,8 @@ export async function GET(_req: NextRequest) {
     }
     const header = () => {
       doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.4); doc.line(ML, MT - 4, PW - MR, MT - 4)
+      // Restaurar un estilo neutro tras el salto de página (addFooter deja fuente pequeña/gris).
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(55, 55, 55)
       y = MT
     }
     const ensure = (need: number) => {
@@ -94,6 +96,7 @@ export async function GET(_req: NextRequest) {
     }
     // Renderiza el texto de Protección de datos como tabla, leído de la BD: cada línea
     // "Etiqueta: valor" es una fila; el título va arriba y la frase final (sin etiqueta) debajo.
+    const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
     const renderDataProcessing = (body: string) => {
       const lines = body.split('\n').map((l) => l.trim()).filter(Boolean)
       let seenRow = false
@@ -101,7 +104,7 @@ export async function GET(_req: NextRequest) {
       for (const line of lines) {
         const idx = line.indexOf(':')
         const isRow = idx > 2 && idx < 46 && !line.slice(0, idx).includes('. ')
-        if (isRow) { tableRow(line.slice(0, idx).trim(), line.slice(idx + 1).trim()); seenRow = true }
+        if (isRow) { tableRow(line.slice(0, idx).trim(), cap(line.slice(idx + 1).trim())); seenRow = true }
         else if (!seenRow) { para(line, { size: 8.5, style: 'bold', color: [70, 70, 70], gap: 1 }) }
         else { after.push(line) }
       }
@@ -120,8 +123,35 @@ export async function GET(_req: NextRequest) {
     fieldLine('Fisioterapeuta:', ML, 95); fieldLine('Nº colegiado:', ML + 100, CW); y += 8
     fieldLine('Fecha:', ML, 60); y += 8
 
-    // ===== Datos del deportista (en blanco) =====
-    heading('1. Datos del deportista')
+    // ===== 1. Consentimientos (primero, como el documento original) =====
+    heading('1. Consentimientos')
+    para('Marca las casillas. Los marcados como obligatorios son necesarios para realizar la valoración.', { size: 8.5, color: [120, 120, 120] })
+    for (const c of CONSENT_ORDER) {
+      const body = texts.get(c.type)
+      if (!body) continue
+      ensure(16)
+      checkbox(y)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 40)
+      doc.text(`${c.label}${c.obligatorio ? '  (obligatorio)' : '  (opcional)'}`, ML + 6, y)
+      y += 6
+      if (c.type === 'data_processing') {
+        // Capa básica de Protección de datos: como tabla, leyendo el texto de la BD.
+        renderDataProcessing(body)
+      } else {
+        const lh = 8.5 * 0.46
+        const lines = doc.splitTextToSize(body, CW - 6)
+        for (const ln of lines) {
+          ensure(lh + 2)
+          // Reaplicar estilo cada línea: evita heredar el del pie tras un salto de página.
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70)
+          doc.text(ln, ML + 6, y); y += lh
+        }
+      }
+      y += 4
+    }
+
+    // ===== 2. Datos del deportista (en blanco) =====
+    heading('2. Datos del deportista')
     const rowsD: [string, number][][] = [
       [['Nombre y apellidos:', CW]],
       [['DNI / documento:', 85], ['Fecha de nacimiento:', 85]],
@@ -136,20 +166,19 @@ export async function GET(_req: NextRequest) {
       y += 9
     }
 
-    // ===== Historial de lesiones =====
-    heading('2. Historial de lesiones (últimos 24 meses)')
+    // ===== 3. Historial de lesiones =====
+    heading('3. Historial de lesiones (últimos 24 meses)')
     para('Indica zona, tipo de lesión, fecha aproximada y si requirió baja deportiva o cirugía.', { size: 8.5, color: [120, 120, 120] })
-    const colX = [ML, ML + 55, ML + 100, ML + 140]
     ensure(10)
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90)
-    doc.text('Zona', colX[0], y); doc.text('Tipo de lesión', colX[1], y); doc.text('Fecha aprox.', colX[2], y); doc.text('Baja / Cirugía', colX[3], y)
+    doc.text('Zona', ML, y); doc.text('Tipo de lesión', ML + 55, y); doc.text('Fecha aprox.', ML + 100, y); doc.text('Baja / Cirugía', ML + 140, y)
     y += 2
     doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.2)
     for (let i = 0; i < 4; i++) { ensure(9); doc.line(ML, y + 6, PW - MR, y + 6); y += 9 }
     y += 2
 
-    // ===== Estado actual =====
-    heading('3. Estado actual')
+    // ===== 4. Estado actual =====
+    heading('4. Estado actual')
     doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2)
     para('¿Tienes actualmente dolor o molestia en alguna zona? Indícalo:', { size: 9, gap: 1 })
     for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
@@ -158,30 +187,7 @@ export async function GET(_req: NextRequest) {
     for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
     y += 2
 
-    // ===== Consentimientos =====
-    heading('4. Consentimientos')
-    para('Marca las casillas. Los marcados como obligatorios son necesarios para realizar la valoración.', { size: 8.5, color: [120, 120, 120] })
-    for (const c of CONSENT_ORDER) {
-      const body = texts.get(c.type)
-      if (!body) continue
-      ensure(16)
-      checkbox(y)
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 40)
-      doc.text(`${c.label}${c.obligatorio ? '  (obligatorio)' : '  (opcional)'}`, ML + 6, y)
-      y += 6
-      if (c.type === 'data_processing') {
-        // Capa básica de Protección de datos: como tabla, leyendo el texto de la BD.
-        renderDataProcessing(body)
-      } else {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70)
-        const lines = doc.splitTextToSize(body, CW - 6)
-        const lh = 8.5 * 0.46
-        for (const ln of lines) { ensure(lh + 2); doc.text(ln, ML + 6, y); y += lh }
-      }
-      y += 4
-    }
-
-    // ===== Firmas =====
+    // ===== 5. Firma =====
     heading('5. Firma')
     para('Deportista mayor de edad:', { size: 9, style: 'bold', gap: 3 })
     ensure(16)
