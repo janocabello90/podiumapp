@@ -71,7 +71,9 @@ export async function GET(_req: NextRequest) {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(90, 90, 90)
       doc.text(label, x, y)
       const lx = x + doc.getTextWidth(label) + 2
-      doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.2); doc.line(lx, y + 0.5, x + w, y + 0.5)
+      // La línea nunca debe pasar del margen derecho, aunque w se pase de largo.
+      const rx = Math.min(x + w, PW - MR)
+      doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.2); doc.line(lx, y + 0.5, rx, y + 0.5)
     }
     const checkbox = (yy: number) => {
       doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.35); doc.rect(ML, yy - 3, 3.6, 3.6)
