@@ -7,6 +7,7 @@ export const CONSENT_TYPES: { type: ConsentType; label: string }[] = [
   { type: 'info_treatment', label: 'Tratamiento de la información' },
   { type: 'ai_analysis', label: 'Uso de inteligencia artificial' },
   { type: 'image_rights', label: 'Derechos de imagen' },
+  { type: 'report_sharing_club', label: 'Compartir informe con el club' },
 ]
 
 // Canales de difusión para el consentimiento de derechos de imagen (según el documento

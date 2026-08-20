@@ -25,7 +25,7 @@ export default function AvisoLegalPage() {
               El titular de esta plataforma es:
             </p>
             <p>
-              <strong>Denominación Social:</strong> FISIO ZARAGOZA, S.L.P.
+              <strong>Denominación Social:</strong> FISIO ZARAGOZA, S.L.
               <br />
               <strong>CIF:</strong> B99562720
               <br />
@@ -63,13 +63,13 @@ export default function AvisoLegalPage() {
             </p>
             <p>
               Todos los contenidos de la plataforma, incluyendo textos, gráficos, imágenes, diseño y derechos
-              de propiedad intelectual, son propiedad de FISIO ZARAGOZA, S.L.P. o de terceros que han autorizado
+              de propiedad intelectual, son propiedad de FISIO ZARAGOZA, S.L. o de terceros que han autorizado
               su uso. Queda prohibida su reproducción, distribución, comunicación pública, transformación o
-              cualquier otra forma de explotación sin la autorización expresa de FISIO ZARAGOZA, S.L.P.
+              cualquier otra forma de explotación sin la autorización expresa de FISIO ZARAGOZA, S.L.
             </p>
             <p>
-              FISIO ZARAGOZA, S.L.P. no garantiza la disponibilidad y continuidad del funcionamiento de la
-              plataforma, ni la ausencia de errores en sus contenidos. Asimismo, FISIO ZARAGOZA, S.L.P. no
+              FISIO ZARAGOZA, S.L. no garantiza la disponibilidad y continuidad del funcionamiento de la
+              plataforma, ni la ausencia de errores en sus contenidos. Asimismo, FISIO ZARAGOZA, S.L. no
               será responsable de los daños o perjuicios de cualquier naturaleza que puedan derivarse del
               acceso o uso de la plataforma.
             </p>
@@ -85,7 +85,7 @@ export default function AvisoLegalPage() {
             </p>
             <p>
               La persona usuaria será responsable de los daños y perjuicios de cualquier naturaleza que FISIO
-              ZARAGOZA, S.L.P. pueda sufrir como consecuencia del incumplimiento de cualquiera de las obligaciones
+              ZARAGOZA, S.L. pueda sufrir como consecuencia del incumplimiento de cualquiera de las obligaciones
               a las que queda sometida por este Aviso Legal.
             </p>
           </section>
@@ -95,33 +95,33 @@ export default function AvisoLegalPage() {
             <p>
               Todos los contenidos, elementos y productos que se encuentran en esta plataforma, incluyendo,
               pero no limitándose a, textos, gráficos, logotipos, iconos, imágenes, clips de audio, descargas
-              digitales, compilaciones de datos y software, son propiedad de FISIO ZARAGOZA, S.L.P. o de sus
+              digitales, compilaciones de datos y software, son propiedad de FISIO ZARAGOZA, S.L. o de sus
               proveedores de contenido y están protegidos por las leyes de propiedad intelectual e industrial
               de España y otras leyes internacionales.
             </p>
             <p>
               La persona usuaria se compromete a respetar los derechos de Propiedad Intelectual e Industrial
-              titularidad de FISIO ZARAGOZA, S.L.P. Podrá visualizar los elementos del portal e incluso
+              titularidad de FISIO ZARAGOZA, S.L. Podrá visualizar los elementos del portal e incluso
               imprimirlos, copiarlos y almacenarlos en el disco duro de su ordenador o en cualquier otro soporte
               físico siempre y cuando sea, única y exclusivamente, para su uso personal y privado. La persona
               usuaria deberá abstenerse de suprimir, alterar, eludir o manipular cualquier dispositivo de
-              protección o sistema de seguridad que estuviera instalado en las páginas de FISIO ZARAGOZA, S.L.P.
+              protección o sistema de seguridad que estuviera instalado en las páginas de FISIO ZARAGOZA, S.L.
               Quedan expresamente prohibidas la reproducción, la distribución y la comunicación pública, incluida
               su modalidad de puesta a disposición, de la totalidad o parte de los contenidos de esta plataforma,
               con fines comerciales, en cualquier soporte y por cualquier medio técnico, sin la autorización
-              de FISIO ZARAGOZA, S.L.P.
+              de FISIO ZARAGOZA, S.L.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-gray-900">Derecho de exclusión</h2>
             <p>
-              FISIO ZARAGOZA, S.L.P. se reserva el derecho a denegar o retirar el acceso al portal y/o los
+              FISIO ZARAGOZA, S.L. se reserva el derecho a denegar o retirar el acceso al portal y/o los
               servicios ofrecidos sin necesidad de preaviso, a instancia propia o de un tercero, a aquellas
               personas usuarias que incumplan con las condiciones del presente Aviso Legal.
             </p>
             <p>
-              FISIO ZARAGOZA, S.L.P. perseguirá el incumplimiento del Aviso Legal, así como cualquier
+              FISIO ZARAGOZA, S.L. perseguirá el incumplimiento del Aviso Legal, así como cualquier
               utilización indebida de su portal ejerciendo todas las acciones civiles y penales que le puedan
               corresponder en derecho.
             </p>
@@ -130,7 +130,7 @@ export default function AvisoLegalPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-gray-900">Modificaciones y enlaces</h2>
             <p>
-              FISIO ZARAGOZA, S.L.P. se reserva el derecho de modificar, en cualquier momento y sin previo aviso,
+              FISIO ZARAGOZA, S.L. se reserva el derecho de modificar, en cualquier momento y sin previo aviso,
               el contenido, diseño, estructura, servicios y condiciones de acceso y/o uso de la plataforma,
               con el fin de adaptarse a cambios legislativos, tecnológicos o de cualquier otra índole que
               considere pertinentes. Por tanto, se recomienda a la persona usuaria revisar periódicamente este
@@ -138,7 +138,7 @@ export default function AvisoLegalPage() {
             </p>
             <p>
               Esta plataforma puede contener enlaces o hipervínculos a otros sitios web gestionados por
-              terceros. FISIO ZARAGOZA, S.L.P. no se responsabiliza del contenido ni de la disponibilidad de
+              terceros. FISIO ZARAGOZA, S.L. no se responsabiliza del contenido ni de la disponibilidad de
               dichos sitios, ni de los daños o perjuicios que puedan derivarse del acceso o uso de los mismos.
             </p>
           </section>
@@ -147,16 +147,16 @@ export default function AvisoLegalPage() {
             <h2 className="text-lg font-semibold text-gray-900">Ley aplicable y jurisdicción competente</h2>
             <p>
               Las condiciones de uso de la plataforma contenidas en este Aviso Legal, así como las relaciones
-              entre la persona usuaria y FISIO ZARAGOZA, S.L.P., se regirán e interpretarán de acuerdo con las
+              entre la persona usuaria y FISIO ZARAGOZA, S.L., se regirán e interpretarán de acuerdo con las
               leyes españolas. Para la solución de cualquier conflicto que pudiera suscitarse, la persona
-              usuaria y FISIO ZARAGOZA, S.L.P. se someten expresamente a la competencia y jurisdicción de los
+              usuaria y FISIO ZARAGOZA, S.L. se someten expresamente a la competencia y jurisdicción de los
               juzgados y tribunales de la ciudad del domicilio de la persona usuaria.
             </p>
           </section>
 
           <div className="border-t border-gray-200 pt-6 text-xs text-gray-400">
             <p>
-              FISIO ZARAGOZA, S.L.P. — CIF B99562720 — c/ Almagro, nº 16, Local, 50004 Zaragoza.
+              FISIO ZARAGOZA, S.L. — CIF B99562720 — c/ Almagro, nº 16, Local, 50004 Zaragoza.
             </p>
           </div>
         </div>

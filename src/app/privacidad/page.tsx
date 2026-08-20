@@ -19,13 +19,13 @@ export default function PrivacidadPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-gray-900">1. Responsable del tratamiento</h2>
             <p>
-              FISIO ZARAGOZA, S.L.P. (en adelante, &ldquo;la Clínica&rdquo;), en cumplimiento de lo establecido
+              FISIO ZARAGOZA, S.L. (en adelante, &ldquo;la Clínica&rdquo;), en cumplimiento de lo establecido
               en el Reglamento General de Protección de Datos (RGPD 2016/679) y la Ley Orgánica 3/2018
               de Protección de Datos Personales y garantía de los derechos digitales (LOPDGDD), informa
               a los usuarios de esta plataforma:
             </p>
             <p>
-              <strong>Denominación:</strong> FISIO ZARAGOZA, S.L.P.
+              <strong>Denominación:</strong> FISIO ZARAGOZA, S.L.
               <br />
               <strong>CIF:</strong> B99562720
               <br />
@@ -43,7 +43,7 @@ export default function PrivacidadPage() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-gray-900">2. Delegado de Protección de Datos</h2>
             <p>
-              FISIO ZARAGOZA, S.L.P. ha nombrado como Delegado de Protección de Datos a
+              FISIO ZARAGOZA, S.L. ha nombrado como Delegado de Protección de Datos a
               EXPLOTACIÓN DE SOFTWARE INTEGRAL S.L. En caso de cualquier duda o consulta sobre el tratamiento
               de sus datos de carácter personal, puede contactar con el Delegado a través del email{' '}
               <a href="mailto:rgpd@fisiozaragoza.com" className="text-blue-600 hover:text-blue-800">
@@ -137,8 +137,13 @@ export default function PrivacidadPage() {
               mercantil y sanitaria, así como en aquellos casos en los que una autoridad judicial lo requiera.
             </p>
             <p>
-              FISIO ZARAGOZA, S.L.P. puede compartir datos personales con los siguientes encargados de
+              FISIO ZARAGOZA, S.L. puede compartir datos personales con los siguientes encargados de
               tratamiento, con los que se ha formalizado el correspondiente contrato conforme al art. 28 del RGPD:
+            </p>
+            <p>
+              <strong>VALD Hub</strong> (titularidad de [RAZÓN SOCIAL VALD]): plataforma de medición y normalización
+              de los resultados de fuerza y salto de la valoración funcional. Los datos tratados en VALD Hub se alojan
+              en [PAÍS/REGIÓN] y, en caso de transferencia internacional, se aplican [MECANISMO DE TRANSFERENCIA].
             </p>
             <p>
               <strong>Anthropic PBC</strong> (proveedor de IA): procesamiento de datos para generación de informes,
@@ -200,7 +205,7 @@ export default function PrivacidadPage() {
               sin que ello afecte a la licitud del tratamiento basado en el consentimiento previo a su retirada.
             </p>
             <p>
-              Para ejercer estos derechos, el paciente puede dirigirse a FISIO ZARAGOZA, S.L.P. mediante
+              Para ejercer estos derechos, el paciente puede dirigirse a FISIO ZARAGOZA, S.L. mediante
               email a{' '}
               <a href="mailto:rgpd@fisiozaragoza.com" className="text-blue-600 hover:text-blue-800">
                 rgpd@fisiozaragoza.com
@@ -246,7 +251,7 @@ export default function PrivacidadPage() {
 
           <div className="border-t border-gray-200 pt-6 text-xs text-gray-400">
             <p>
-              FISIO ZARAGOZA, S.L.P. — CIF B99562720 — c/ Almagro, nº 16, Local, 50004 Zaragoza.
+              FISIO ZARAGOZA, S.L. — CIF B99562720 — c/ Almagro, nº 16, Local, 50004 Zaragoza.
               Esta política de privacidad se actualiza periódicamente para reflejar cambios en el tratamiento de datos.
             </p>
           </div>

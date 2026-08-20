@@ -12,7 +12,7 @@ interface Props {
   patientName: string
   existingData: Record<string, any>
   existingConsents?: { dataProcessing: boolean; ai: boolean }
-  consentTexts?: { data_processing?: string | null; info_treatment?: string | null; ai_analysis?: string | null; image_rights?: string | null }
+  consentTexts?: { data_processing?: string | null; info_treatment?: string | null; ai_analysis?: string | null; image_rights?: string | null; report_sharing_club?: string | null }
   // Plantilla (según el tipo de paciente). Si no llega, se usa la del código.
   blocks?: AnamnesisBlock[]
   // Audiencia: los de equipo (deportistas) ven además el consentimiento de imagen (opcional).
@@ -39,6 +39,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   const showImageConsent = audience === 'team'
   const [consentImageRights, setConsentImageRights] = useState(false)
   const [imageChannels, setImageChannels] = useState<string[]>([])
+  // Compartir informe con el club (solo equipos): OPCIONAL (no bloquea el envío).
+  const showClubConsent = audience === 'team'
+  const [consentReportSharingClub, setConsentReportSharingClub] = useState(false)
   // Menor de edad (Opción C): auto por fecha de nac. o auto-declarado. Datos del representante
   // legal en formData (con claves `_`, se autoguardan y sobreviven a recargas).
   const [isMinor, setIsMinor] = useState<boolean>(
@@ -117,6 +120,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           consent_info_treatment: consentInfoTreatment,
           consent_ai_analysis: consentAI,
           ...(showImageConsent ? { consent_image_rights: consentImageRights, image_channels: imageChannels } : {}),
+          ...(showClubConsent ? { consent_report_sharing_club: consentReportSharingClub } : {}),
           is_minor: isMinor,
           representative: isMinor ? { name: repName, dni: repDni, relation: repRelation } : null,
         }),
@@ -273,6 +277,24 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                 </span>
               </label>
             </div>
+
+            {/* Compartir con el club (solo equipos) — OPCIONAL */}
+            {showClubConsent && (
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <h3 className="font-medium text-gray-900 text-sm">Compartir con el club <span className="text-xs font-normal text-gray-400">· opcional</span></h3>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentReportSharingClub}
+                    onChange={(e) => setConsentReportSharingClub(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
+                  />
+                  <span className="text-xs text-gray-600 leading-relaxed">
+                    {consentTexts?.report_sharing_club || 'Autorizo que la Clínica comparta mi informe y/o los resultados de la valoración con mi club y su cuerpo técnico, con fines de seguimiento deportivo.'}
+                  </span>
+                </label>
+              </div>
+            )}
 
             {/* Derechos de imagen (solo deportistas de equipo) — OPCIONAL, no bloquea */}
             {showImageConsent && (

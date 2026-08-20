@@ -43,7 +43,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, image_channels, is_minor, representative } = body
+    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, consent_report_sharing_club, image_channels, is_minor, representative } = body
 
     const updatePayload: Record<string, any> = {}
 
@@ -140,6 +140,20 @@ export async function PATCH(
               if (consent_image_rights && Array.isArray(image_channels) && image_channels.length) m.channels = image_channels
               return Object.keys(m).length ? m : null
             })(),
+          })
+        }
+        // Compartir informe con el club (solo llega en anamnesis de equipo; bloqueante).
+        if (consent_report_sharing_club !== undefined) {
+          rows.push({
+            clinic_id: existing.clinic_id,
+            patient_id: existing.patient_id,
+            anamnesis_id: existing.id,
+            type: 'report_sharing_club',
+            granted: !!consent_report_sharing_club,
+            version_label: vmap.get('report_sharing_club')?.version_label ?? null,
+            version_body: vmap.get('report_sharing_club')?.body ?? null,
+            granted_at: new Date().toISOString(),
+            metadata: repMeta,
           })
         }
         // Idempotente: borrar los de esta anamnesis antes de reinsertar.

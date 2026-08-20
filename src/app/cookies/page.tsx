@@ -147,7 +147,7 @@ export default function CookiesPage() {
 
           <div className="border-t border-gray-200 pt-6 text-xs text-gray-400">
             <p>
-              FISIO ZARAGOZA, S.L.P. — CIF B99562720 — c/ Almagro, nº 16, Local, 50004 Zaragoza.
+              FISIO ZARAGOZA, S.L. — CIF B99562720 — c/ Almagro, nº 16, Local, 50004 Zaragoza.
             </p>
           </div>
         </div>

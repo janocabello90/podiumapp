@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { ConsentVersion } from '@/types/database'
 import { CONSENT_TYPES } from '@/lib/clinical/consents'
-import { Save, Loader2 } from 'lucide-react'
+import { Save, Loader2, FileDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type Props = { clinicId: string; initialVersions: ConsentVersion[] }
@@ -64,6 +64,13 @@ export default function ConsentsManager({ clinicId, initialVersions }: Props) {
         Textos de los consentimientos que el paciente acepta en la anamnesis. Al aceptarlos queda registrada
         una copia con fecha (trazabilidad); cambiar el texto aquí no altera los consentimientos ya registrados.
       </p>
+
+      <a
+        href="/api/consents/print-template"
+        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+      >
+        <FileDown className="w-4 h-4" /> Descargar plantilla en blanco (PDF) — para rellenar a mano
+      </a>
 
       {CONSENT_TYPES.map(({ type, label }) => {
         const f = forms[type]

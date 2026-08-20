@@ -13,6 +13,7 @@ export type ConsentTexts = {
   info_treatment?: string | null
   ai_analysis?: string | null
   image_rights?: string | null
+  report_sharing_club?: string | null
 }
 
 export type PublicAnamnesis = {
