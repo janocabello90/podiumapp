@@ -73,6 +73,41 @@ export async function GET(_req: NextRequest) {
     const checkbox = (yy: number) => {
       doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.35); doc.rect(ML, yy - 3, 3.6, 3.6)
     }
+    // Fila de tabla "Etiqueta | valor" (capa básica de Protección de datos).
+    const LABEL_W = 44
+    const tableRow = (label: string, value: string) => {
+      doc.setFontSize(8)
+      const lh = 8 * 0.46
+      const valLines = doc.splitTextToSize(value || '', CW - LABEL_W - 4)
+      const labLines = doc.splitTextToSize(label, LABEL_W - 3)
+      const rowH = Math.max(valLines.length, labLines.length) * lh + 3
+      ensure(rowH)
+      const top = y
+      doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2)
+      doc.rect(ML, top, CW, rowH)
+      doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(70, 70, 70)
+      labLines.forEach((l: string, i: number) => doc.text(l, ML + 2, top + 3 + i * lh))
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
+      valLines.forEach((l: string, i: number) => doc.text(l, ML + LABEL_W + 2, top + 3 + i * lh))
+      y = top + rowH
+    }
+    // Renderiza el texto de Protección de datos como tabla, leído de la BD: cada línea
+    // "Etiqueta: valor" es una fila; el título va arriba y la frase final (sin etiqueta) debajo.
+    const renderDataProcessing = (body: string) => {
+      const lines = body.split('\n').map((l) => l.trim()).filter(Boolean)
+      let seenRow = false
+      const after: string[] = []
+      for (const line of lines) {
+        const idx = line.indexOf(':')
+        const isRow = idx > 2 && idx < 46 && !line.slice(0, idx).includes('. ')
+        if (isRow) { tableRow(line.slice(0, idx).trim(), line.slice(idx + 1).trim()); seenRow = true }
+        else if (!seenRow) { para(line, { size: 8.5, style: 'bold', color: [70, 70, 70], gap: 1 }) }
+        else { after.push(line) }
+      }
+      y += 2
+      for (const p of after) para(p, { size: 8.5, gap: 1 })
+    }
 
     // ===== Portada / cabecera =====
     header()
@@ -130,17 +165,19 @@ export async function GET(_req: NextRequest) {
       const body = texts.get(c.type)
       if (!body) continue
       ensure(16)
-      const cbY = y
-      checkbox(cbY)
+      checkbox(y)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 40)
       doc.text(`${c.label}${c.obligatorio ? '  (obligatorio)' : '  (opcional)'}`, ML + 6, y)
-      y += 5
-      const prevML = ML
-      // Texto del consentimiento, indentado bajo la casilla.
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70)
-      const lines = doc.splitTextToSize(body, CW - 6)
-      const lh = 8.5 * 0.46
-      for (const ln of lines) { ensure(lh + 2); doc.text(ln, prevML + 6, y); y += lh }
+      y += 6
+      if (c.type === 'data_processing') {
+        // Capa básica de Protección de datos: como tabla, leyendo el texto de la BD.
+        renderDataProcessing(body)
+      } else {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(70, 70, 70)
+        const lines = doc.splitTextToSize(body, CW - 6)
+        const lh = 8.5 * 0.46
+        for (const ln of lines) { ensure(lh + 2); doc.text(ln, ML + 6, y); y += lh }
+      }
       y += 4
     }
 
