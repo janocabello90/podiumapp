@@ -141,9 +141,12 @@ export default function PrivacidadPage() {
               tratamiento, con los que se ha formalizado el correspondiente contrato conforme al art. 28 del RGPD:
             </p>
             <p>
-              <strong>VALD Hub</strong> (titularidad de [RAZÓN SOCIAL VALD]): plataforma de medición y normalización
-              de los resultados de fuerza y salto de la valoración funcional. Los datos tratados en VALD Hub se alojan
-              en [PAÍS/REGIÓN] y, en caso de transferencia internacional, se aplican [MECANISMO DE TRANSFERENCIA].
+              <strong>VALD Hub</strong> (titularidad de VALD Performance (Intl) Pty Ltd, del grupo VALD; Newstead,
+              Queensland, Australia): plataforma de medición y normalización de los resultados de fuerza y salto de la
+              valoración funcional. VALD utiliza infraestructura en la nube y puede transferir, almacenar o permitir el
+              acceso a los datos desde Australia, Estados Unidos, Reino Unido y países del Espacio Económico Europeo;
+              para las transferencias fuera del EEE a países sin decisión de adecuación se aplican las Cláusulas
+              Contractuales Tipo de la UE u otras garantías equivalentes.
             </p>
             <p>
               <strong>Anthropic PBC</strong> (proveedor de IA): procesamiento de datos para generación de informes,

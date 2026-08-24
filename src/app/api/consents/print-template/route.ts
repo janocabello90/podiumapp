@@ -134,7 +134,7 @@ export async function GET(_req: NextRequest) {
     doc.text('ANAMNESIS Y CONSENTIMIENTOS', PW / 2, y + 4, { align: 'center' }); y += 10
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(120, 120, 120)
     doc.text('Valoración funcional · Metodología Podium®', PW / 2, y, { align: 'center' }); y += 8
-    para(`Centro sanitario: FISIO ZARAGOZA, S.L. — CIF B99562720 — Nº de registro sanitario [Nº REGISTRO SANITARIO] — C/ Almagro 16, 50004 Zaragoza.`, { size: 8.5, color: [110, 110, 110] })
+    para(`Centro sanitario: FISIO ZARAGOZA, S.L. — CIF B99562720 — Nº de registro sanitario 5024226 — C/ Almagro 16, 50004 Zaragoza.`, { size: 8.5, color: [110, 110, 110] })
     y += 2
     fieldLine('Fisioterapeuta:', ML, 95); fieldLine('Nº colegiado:', ML + 100, CW); y += 8
     fieldLine('Fecha:', ML, 60); y += 8
