@@ -143,10 +143,12 @@ export default function PrivacidadPage() {
             <p>
               <strong>VALD Hub</strong> (titularidad de VALD Performance (Intl) Pty Ltd, del grupo VALD; Newstead,
               Queensland, Australia): plataforma de medición y normalización de los resultados de fuerza y salto de la
-              valoración funcional. VALD utiliza infraestructura en la nube y puede transferir, almacenar o permitir el
-              acceso a los datos desde Australia, Estados Unidos, Reino Unido y países del Espacio Económico Europeo;
-              para las transferencias fuera del EEE a países sin decisión de adecuación se aplican las Cláusulas
-              Contractuales Tipo de la UE u otras garantías equivalentes.
+              valoración funcional. Los datos de la clínica se alojan en la Unión Europea (Microsoft Azure, región West
+              Europe: Países Bajos como centro primario e Irlanda como secundario); la autenticación se gestiona
+              mediante Auth0, con datos en Europa. De forma excepcional, para tareas de soporte técnico avanzado,
+              personal de VALD en Australia podría acceder a los datos bajo controles de acceso restringido; dichas
+              transferencias se amparan en las garantías de transferencia internacional previstas en su contrato
+              conforme al RGPD.
             </p>
             <p>
               <strong>Anthropic PBC</strong> (proveedor de IA): procesamiento de datos para generación de informes,
