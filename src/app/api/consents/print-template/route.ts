@@ -75,8 +75,8 @@ export async function GET(_req: NextRequest) {
       const rx = Math.min(x + w, PW - MR)
       doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.2); doc.line(lx, y + 0.5, rx, y + 0.5)
     }
-    const checkbox = (yy: number) => {
-      doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.35); doc.rect(ML, yy - 3, 3.6, 3.6)
+    const checkboxAt = (x: number, yy: number) => {
+      doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.35); doc.rect(x, yy - 3, 3.6, 3.6)
     }
     // Fila de tabla "Etiqueta | valor" (capa básica de Protección de datos).
     const LABEL_W = 44
@@ -127,6 +127,41 @@ export async function GET(_req: NextRequest) {
       y += 2
       if (after.length) consentBody(after.join(' '))
     }
+    // Línea de decisión bajo cada consentimiento: obligatorio → "SÍ presto"; voluntario → Autorizo/No autorizo.
+    const decisionLine = (obligatorio: boolean) => {
+      ensure(8)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+      if (obligatorio) {
+        checkboxAt(ML, y); doc.text('SÍ, presto mi consentimiento.', ML + 6, y)
+      } else {
+        checkboxAt(ML, y); doc.text('Autorizo', ML + 6, y)
+        checkboxAt(ML + 42, y); doc.text('No autorizo', ML + 48, y)
+      }
+      y += 7
+    }
+    // Renderiza un consentimiento: título en negrita + cuerpo (tabla si es protección de datos) + decisión.
+    const renderConsent = (c: { type: string; label: string; obligatorio: boolean }, body: string) => {
+      ensure(16)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 40)
+      doc.text(c.label, ML, y); y += 6
+      if (c.type === 'data_processing') renderDataProcessing(body)
+      else consentBody(body)
+      y += 2
+      decisionLine(c.obligatorio)
+      y += 3
+    }
+    // Bloque de firma reutilizable (deportista mayor + representante legal si es menor).
+    const signatureBlock = (title: string) => {
+      ensure(40)
+      para(title, { size: 9.5, style: 'bold', gap: 2 })
+      para('Firma del deportista (mayor de edad):', { size: 9, gap: 2 })
+      ensure(14); fieldLine('Firma:', ML, 90); fieldLine('Fecha:', ML + 100, CW); y += 12
+      para('Si el deportista es menor de edad, firma el/la representante legal, que presta el consentimiento en su nombre:', { size: 8.5, color: [90, 90, 90], gap: 2 })
+      ensure(22)
+      fieldLine('Nombre:', ML, 90); fieldLine('DNI:', ML + 100, CW); y += 9
+      fieldLine('Relación (padre/madre/tutor):', ML, 90); y += 9
+      fieldLine('Firma:', ML, 90); fieldLine('Fecha:', ML + 100, CW); y += 10
+    }
 
     // ===== Portada / cabecera =====
     header()
@@ -139,28 +174,8 @@ export async function GET(_req: NextRequest) {
     fieldLine('Fisioterapeuta:', ML, 95); fieldLine('Nº colegiado:', ML + 100, CW); y += 8
     fieldLine('Fecha:', ML, 60); y += 8
 
-    // ===== 1. Consentimientos (primero, como el documento original) =====
-    heading('1. Consentimientos')
-    para('Marca las casillas. Los marcados como obligatorios son necesarios para realizar la valoración.', { size: 8.5, color: [120, 120, 120] })
-    for (const c of CONSENT_ORDER) {
-      const body = texts.get(c.type)
-      if (!body) continue
-      ensure(16)
-      checkbox(y)
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(40, 40, 40)
-      doc.text(`${c.label}${c.obligatorio ? '  (obligatorio)' : '  (opcional)'}`, ML + 6, y)
-      y += 6
-      if (c.type === 'data_processing') {
-        // Capa básica de Protección de datos: como tabla, leyendo el texto de la BD.
-        renderDataProcessing(body)
-      } else {
-        consentBody(body)
-      }
-      y += 4
-    }
-
-    // ===== 2. Datos del deportista (en blanco) =====
-    heading('2. Datos del deportista')
+    // ===== 1. Datos del deportista (identificación antes de firmar) =====
+    heading('1. Datos del deportista')
     const rowsD: [string, number][][] = [
       [['Nombre y apellidos:', CW]],
       [['DNI / documento:', 85], ['Fecha de nacimiento:', 85]],
@@ -175,8 +190,26 @@ export async function GET(_req: NextRequest) {
       y += 9
     }
 
-    // ===== 3. Historial de lesiones =====
-    heading('3. Historial de lesiones (últimos 24 meses)')
+    // ===== 2. Consentimientos obligatorios (asistencial) + firma del bloque =====
+    heading('2. Consentimiento informado y tratamiento de datos')
+    para('Necesarios para realizar la valoración. Lea cada apartado y marque la casilla.', { size: 8.5, color: [120, 120, 120] })
+    for (const c of CONSENT_ORDER.filter((o) => o.obligatorio)) {
+      const body = texts.get(c.type)
+      if (body) renderConsent(c, body)
+    }
+    signatureBlock('Firma del consentimiento asistencial y de datos')
+
+    // ===== 3. Autorizaciones voluntarias e independientes + firma del bloque =====
+    heading('3. Autorizaciones voluntarias e independientes')
+    para('Opcionales. Puede aceptarlas o rechazarlas por separado; no condicionan la valoración.', { size: 8.5, color: [120, 120, 120] })
+    for (const c of CONSENT_ORDER.filter((o) => !o.obligatorio)) {
+      const body = texts.get(c.type)
+      if (body) renderConsent(c, body)
+    }
+    signatureBlock('Firma de las autorizaciones voluntarias')
+
+    // ===== 4. Historial de lesiones =====
+    heading('4. Historial de lesiones (últimos 24 meses)')
     para('Indica zona, tipo de lesión, fecha aproximada y si requirió baja deportiva o cirugía.', { size: 8.5, color: [120, 120, 120] })
     ensure(10)
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90)
@@ -186,8 +219,8 @@ export async function GET(_req: NextRequest) {
     for (let i = 0; i < 4; i++) { ensure(9); doc.line(ML, y + 6, PW - MR, y + 6); y += 9 }
     y += 2
 
-    // ===== 4. Estado actual =====
-    heading('4. Estado actual')
+    // ===== 5. Estado actual =====
+    heading('5. Estado actual')
     doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2)
     para('¿Tienes actualmente dolor o molestia en alguna zona? Indícalo:', { size: 9, gap: 1 })
     for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
@@ -195,17 +228,6 @@ export async function GET(_req: NextRequest) {
     para('¿Tomas alguna medicación, tienes alguna patología, embarazo o intervención reciente relevante?', { size: 9, gap: 1 })
     for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
     y += 2
-
-    // ===== 5. Firma =====
-    heading('5. Firma')
-    para('Deportista mayor de edad:', { size: 9, style: 'bold', gap: 3 })
-    ensure(16)
-    fieldLine('Firma:', ML, 90); fieldLine('Fecha:', ML + 100, CW); y += 14
-    para('Representante legal (si el deportista es menor de edad):', { size: 9, style: 'bold', gap: 3 })
-    ensure(20)
-    fieldLine('Nombre:', ML, 90); fieldLine('DNI:', ML + 100, CW); y += 9
-    fieldLine('Relación (padre/madre/tutor):', ML, 90); y += 9
-    fieldLine('Firma:', ML, 90); fieldLine('Fecha:', ML + 100, CW); y += 6
     addFooter()
 
     const bytes = Buffer.from(doc.output('arraybuffer'))
