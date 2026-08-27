@@ -81,7 +81,7 @@ export async function GET(_req: NextRequest) {
       y += o?.gap ?? 2
     }
     const heading = (t: string) => {
-      y += 3
+      y += 7
       ensure(18)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(30, 30, 30)
       doc.text(t, ML, y); y += 2
@@ -180,7 +180,7 @@ export async function GET(_req: NextRequest) {
         else if (!seenRow) { para(line, { size: 8.5, style: 'bold', color: [70, 70, 70], gap: 1 }) }
         else { after.push(line) }
       }
-      y += 2
+      y += 6
       if (after.length) consentBody(after.join(' '))
     }
     // Línea de decisión bajo cada consentimiento: obligatorio → "SÍ presto"; voluntario → Autorizo/No autorizo.
@@ -327,8 +327,14 @@ export async function GET(_req: NextRequest) {
     runningHeader()
     doc.setFont('times', 'bold'); doc.setFontSize(24); doc.setTextColor(35, 35, 35)
     doc.text('PODIUM', PW / 2, 24, { align: 'center' })
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(180, 140, 45); doc.setCharSpace(1.4)
-    doc.text('FISIOTERAPIA DE PRECISIÓN · ZARAGOZA', PW / 2, 30, { align: 'center' }); doc.setCharSpace(0)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(180, 140, 45)
+    // Centrado manual: jsPDF no cuenta el letter-spacing al centrar, y el subtítulo se iba a la derecha.
+    const subtitle = 'FISIOTERAPIA DE PRECISIÓN · ZARAGOZA'
+    const subCharSpace = 1.4
+    const subW = doc.getTextWidth(subtitle) + subCharSpace * (subtitle.length - 1)
+    doc.setCharSpace(subCharSpace)
+    doc.text(subtitle, (PW - subW) / 2, 30)
+    doc.setCharSpace(0)
     doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.5); doc.line(ML, 34, PW - MR, 34)
     doc.setFont('times', 'bold'); doc.setFontSize(17); doc.setTextColor(30, 30, 30)
     doc.text('DOCUMENTACIÓN DEL DEPORTISTA', PW / 2, 44, { align: 'center' })
