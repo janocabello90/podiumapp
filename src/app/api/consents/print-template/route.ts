@@ -99,68 +99,113 @@ export async function GET(_req: NextRequest) {
     const checkboxAt = (x: number, yy: number) => {
       doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.35); doc.rect(x, yy - 3, 3.6, 3.6)
     }
-    // Fila de tabla "Etiqueta | valor" con la columna de etiqueta sombreada (estilo del documento del club).
+    // ===== Motor de texto enriquecido (justificado + negritas por palabra) para tablas y consentimientos =====
     const LABEL_W = 52
+    const RPAD = 4 // margen derecho dentro de las celdas de tabla
+    // Detecta un "lead-in" ("Etiqueta: resto") al inicio para poder ponerlo en negrita.
+    const splitLeadIn = (text: string, maxLen = 66) => {
+      const idx = text.indexOf(': ')
+      if (idx > 1 && idx <= maxLen) return { lead: text.slice(0, idx + 1), rest: text.slice(idx + 2) }
+      return { lead: '', rest: text }
+    }
+    type RW = { t: string; bold: boolean; w: number }
+    const wordsFrom = (text: string, size: number): RW[] => {
+      const mk = (s: string, bold: boolean): RW[] => s.split(/\s+/).filter(Boolean).map((t) => {
+        doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size)
+        return { t, bold, w: doc.getTextWidth(t) }
+      })
+      const { lead, rest } = splitLeadIn(text)
+      return lead ? [...mk(lead, true), ...mk(rest, false)] : mk(text, false)
+    }
+    // Reparte palabras en líneas para un ancho dado.
+    const layoutRich = (words: RW[], maxWidth: number, size: number): RW[][] => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(size)
+      const sp = doc.getTextWidth(' ')
+      const lines: RW[][] = []
+      let cur: RW[] = [], curW = 0
+      for (const w of words) {
+        const add = cur.length ? sp + w.w : w.w
+        if (curW + add > maxWidth && cur.length) { lines.push(cur); cur = [w]; curW = w.w }
+        else { cur.push(w); curW += add }
+      }
+      if (cur.length) lines.push(cur)
+      return lines
+    }
+    // Dibuja líneas ya maquetadas desde x; justifica todas menos la última.
+    const drawRichLines = (lines: RW[][], x: number, maxWidth: number, size: number, color: number[], justify: boolean) => {
+      const lh = size * 0.46
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(size)
+      const sp = doc.getTextWidth(' ')
+      lines.forEach((ln, li) => {
+        ensure(lh + 2)
+        const wordsW = ln.reduce((s, w) => s + w.w, 0)
+        const gaps = ln.length - 1
+        let gap = sp
+        if (justify && li < lines.length - 1 && gaps > 0) {
+          const g = (maxWidth - wordsW) / gaps
+          if (g > 0 && g < sp * 6) gap = g
+        }
+        let cx = x
+        for (const w of ln) {
+          doc.setFont('helvetica', w.bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(color[0], color[1], color[2])
+          doc.text(w.t, cx, y); cx += w.w + gap
+        }
+        y += lh
+      })
+    }
+    // Fila de tabla "Etiqueta | valor" con etiqueta sombreada y valor justificado.
     const tableRow = (label: string, value: string) => {
-      doc.setFontSize(9)
-      const lh = 9 * 0.46
-      const valLines = doc.splitTextToSize(value || '', CW - LABEL_W - 5)
+      const size = 9, lh = size * 0.46
+      const valX = ML + LABEL_W + 3
+      const valW = ML + CW - RPAD - valX
+      const valLines = layoutRich(wordsFrom(value || '', size), valW, size)
       const labLines = doc.splitTextToSize(label, LABEL_W - 5)
       const rowH = Math.max(valLines.length, labLines.length) * lh + 4
       ensure(rowH)
       const top = y
       doc.setFillColor(241, 236, 226); doc.rect(ML, top, LABEL_W, rowH, 'F')
       doc.setDrawColor(223, 216, 202); doc.setLineWidth(0.2)
-      doc.rect(ML, top, CW, rowH)
-      doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(85, 72, 50)
+      doc.rect(ML, top, CW, rowH); doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(size); doc.setTextColor(85, 72, 50)
       labLines.forEach((l: string, i: number) => doc.text(l, ML + 2.5, top + 4 + i * lh))
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
-      valLines.forEach((l: string, i: number) => doc.text(l, ML + LABEL_W + 2.5, top + 4 + i * lh))
+      y = top + 4
+      drawRichLines(valLines, valX, valW, size, [60, 60, 60], true)
       y = top + rowH
     }
-    // Igual que tableRow pero la columna de valor es una lista de viñetas (separadas por " • " en la BD).
+    // Como tableRow pero el valor es una lista de viñetas (separadas por " • "), con lead-in en negrita.
     const tableRowBullets = (label: string, items: string[]) => {
-      doc.setFontSize(9)
-      const lh = 9 * 0.46
-      const valW = CW - LABEL_W - 5
-      const bulletIndent = 4
-      const wrapped = items.map((it) => doc.splitTextToSize(it, valW - bulletIndent))
+      const size = 9, lh = size * 0.46
+      const bulletX = ML + LABEL_W + 3
+      const textX = bulletX + 4.5
+      const valW = ML + CW - RPAD - textX
+      const laid = items.map((it) => layoutRich(wordsFrom(it, size), valW, size))
       const labLines = doc.splitTextToSize(label, LABEL_W - 5)
-      const gapBetween = 1.2
-      const totalValH = wrapped.reduce((s, w) => s + w.length * lh, 0) + (items.length - 1) * gapBetween
+      const gapBetween = 1.4
+      const totalValH = laid.reduce((s, l) => s + l.length * lh, 0) + (items.length - 1) * gapBetween
       const rowH = Math.max(totalValH, labLines.length * lh) + 4
       ensure(rowH)
       const top = y
       doc.setFillColor(241, 236, 226); doc.rect(ML, top, LABEL_W, rowH, 'F')
       doc.setDrawColor(223, 216, 202); doc.setLineWidth(0.2)
-      doc.rect(ML, top, CW, rowH)
-      doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(85, 72, 50)
+      doc.rect(ML, top, CW, rowH); doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(size); doc.setTextColor(85, 72, 50)
       labLines.forEach((l: string, i: number) => doc.text(l, ML + 2.5, top + 4 + i * lh))
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
-      const vx = ML + LABEL_W + 2.5
-      let ty = top + 4
-      for (const w of wrapped) {
-        doc.text('•', vx, ty)
-        w.forEach((l: string, i: number) => doc.text(l, vx + bulletIndent, ty + i * lh))
-        ty += w.length * lh + gapBetween
-      }
+      y = top + 4
+      laid.forEach((lines, bi) => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(60, 60, 60)
+        doc.text('•', bulletX, y)
+        drawRichLines(lines, textX, valW, size, [60, 60, 60], true)
+        if (bi < laid.length - 1) y += gapBetween
+      })
       y = top + rowH
     }
-    // Renderiza el texto de Protección de datos como tabla, leído de la BD: cada línea
-    // "Etiqueta: valor" es una fila; el título va arriba y la frase final (sin etiqueta) debajo.
-    // Texto de un consentimiento: ancho completo (ML→margen dcho), 9pt, justificado.
+    // Texto de un consentimiento a ancho completo, justificado, con lead-ins de párrafo en negrita.
     const consentBody = (text: string) => {
-      const size = 9, lh = size * 0.46
-      const lines = doc.splitTextToSize(text || '', CW)
-      for (let i = 0; i < lines.length; i++) {
-        ensure(lh + 2)
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(size); doc.setTextColor(70, 70, 70)
-        const justify = i < lines.length - 1 && lines[i].trim() !== '' && (lines[i + 1] || '').trim() !== ''
-        if (justify) drawJustifiedLine(doc, lines[i], ML, y, CW)
-        else doc.text(lines[i], ML, y)
-        y += lh
+      const size = 9
+      for (const p of (text || '').split('\n')) {
+        if (p.trim() === '') { y += size * 0.46 * 0.6; continue }
+        drawRichLines(layoutRich(wordsFrom(p, size), CW, size), ML, CW, size, [70, 70, 70], true)
+        y += 1.2
       }
     }
     const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
