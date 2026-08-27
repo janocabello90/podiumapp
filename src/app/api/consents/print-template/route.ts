@@ -37,13 +37,21 @@ export async function GET(_req: NextRequest) {
     const doc = new jsPDF('portrait', 'mm', 'a4')
     let y = 0
 
+    // Cabecerilla superior en todas las páginas (marca + descriptor).
+    const runningHeader = () => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(120, 120, 120)
+      doc.text('PODIUM', ML, 12)
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(150, 150, 150)
+      doc.text('Documentación del deportista · Valoración funcional', PW - MR, 12, { align: 'right' })
+    }
     const addFooter = () => {
       const h = doc.internal.pageSize.getHeight()
       doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(150, 150, 150)
       doc.text(FOOTER, PW / 2, h - 10, { align: 'center' })
     }
     const header = () => {
-      doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.4); doc.line(ML, MT - 4, PW - MR, MT - 4)
+      runningHeader()
+      doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.3); doc.line(ML, MT - 4, PW - MR, MT - 4)
       // Restaurar un estilo neutro tras el salto de página (addFooter deja fuente pequeña/gris).
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(55, 55, 55)
       y = MT
@@ -61,7 +69,8 @@ export async function GET(_req: NextRequest) {
       y += o?.gap ?? 2
     }
     const heading = (t: string) => {
-      ensure(14)
+      y += 3
+      ensure(18)
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(30, 30, 30)
       doc.text(t, ML, y); y += 2
       doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.3); doc.line(ML, y, PW - MR, y); y += 6
@@ -78,23 +87,24 @@ export async function GET(_req: NextRequest) {
     const checkboxAt = (x: number, yy: number) => {
       doc.setDrawColor(90, 90, 90); doc.setLineWidth(0.35); doc.rect(x, yy - 3, 3.6, 3.6)
     }
-    // Fila de tabla "Etiqueta | valor" (capa básica de Protección de datos).
-    const LABEL_W = 44
+    // Fila de tabla "Etiqueta | valor" con la columna de etiqueta sombreada (estilo del documento del club).
+    const LABEL_W = 52
     const tableRow = (label: string, value: string) => {
       doc.setFontSize(9)
       const lh = 9 * 0.46
-      const valLines = doc.splitTextToSize(value || '', CW - LABEL_W - 4)
-      const labLines = doc.splitTextToSize(label, LABEL_W - 3)
-      const rowH = Math.max(valLines.length, labLines.length) * lh + 3
+      const valLines = doc.splitTextToSize(value || '', CW - LABEL_W - 5)
+      const labLines = doc.splitTextToSize(label, LABEL_W - 5)
+      const rowH = Math.max(valLines.length, labLines.length) * lh + 4
       ensure(rowH)
       const top = y
-      doc.setDrawColor(215, 215, 215); doc.setLineWidth(0.2)
+      doc.setFillColor(241, 236, 226); doc.rect(ML, top, LABEL_W, rowH, 'F')
+      doc.setDrawColor(223, 216, 202); doc.setLineWidth(0.2)
       doc.rect(ML, top, CW, rowH)
       doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(70, 70, 70)
-      labLines.forEach((l: string, i: number) => doc.text(l, ML + 2, top + 3 + i * lh))
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(85, 72, 50)
+      labLines.forEach((l: string, i: number) => doc.text(l, ML + 2.5, top + 4 + i * lh))
       doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
-      valLines.forEach((l: string, i: number) => doc.text(l, ML + LABEL_W + 2, top + 3 + i * lh))
+      valLines.forEach((l: string, i: number) => doc.text(l, ML + LABEL_W + 2.5, top + 4 + i * lh))
       y = top + rowH
     }
     // Renderiza el texto de Protección de datos como tabla, leído de la BD: cada línea
@@ -162,20 +172,36 @@ export async function GET(_req: NextRequest) {
       fieldLine('Relación (padre/madre/tutor):', ML, 90); y += 9
       fieldLine('Firma:', ML, 90); fieldLine('Fecha:', ML + 100, CW); y += 10
     }
+    // Recuadro sombreado de introducción ("Cómo funciona este documento").
+    const introBox = (text: string) => {
+      const size = 9, lh = size * 0.5
+      doc.setFontSize(size)
+      const lines = doc.splitTextToSize(text, CW - 10)
+      const boxH = (lines.length + 1) * lh + 9
+      ensure(boxH)
+      doc.setFillColor(244, 241, 233); doc.rect(ML, y, CW, boxH, 'F')
+      doc.setDrawColor(228, 220, 205); doc.setLineWidth(0.2); doc.rect(ML, y, CW, boxH)
+      let ty = y + 6
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(size); doc.setTextColor(70, 60, 40)
+      doc.text('Cómo funciona este documento', ML + 5, ty); ty += lh + 1.5
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70)
+      for (const ln of lines) { doc.text(ln, ML + 5, ty); ty += lh }
+      y += boxH + 3
+    }
 
-    // ===== Portada / cabecera =====
-    header()
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(30, 30, 30)
-    doc.text('ANAMNESIS Y CONSENTIMIENTOS', PW / 2, y + 4, { align: 'center' }); y += 10
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(120, 120, 120)
-    doc.text('Valoración funcional · Metodología Podium®', PW / 2, y, { align: 'center' }); y += 8
-    para(`Centro sanitario: FISIO ZARAGOZA, S.L. — CIF B99562720 — Nº de registro sanitario 5024226 — C/ Almagro 16, 50004 Zaragoza.`, { size: 8.5, color: [110, 110, 110] })
-    y += 2
-    fieldLine('Fisioterapeuta:', ML, 95); fieldLine('Nº colegiado:', ML + 100, CW); y += 8
-    fieldLine('Fecha:', ML, 60); y += 8
-
-    // Texto de introducción (explica la estructura del documento).
-    para('Este documento recoge, de forma separada e independiente: (1) la información sobre el tratamiento de sus datos; (2) el consentimiento informado para la evaluación funcional y el tratamiento de datos de salud asociado, necesario para poder realizarla; y (3) autorizaciones voluntarias (comunicación del informe al club y uso de imagen), que puede aceptar o rechazar por separado sin que ello condicione la valoración. Cada bloque se firma por separado. Si el deportista es menor de edad, firma en su nombre el representante legal.', { size: 9, color: [70, 70, 70], gap: 5 })
+    // ===== Portada (página 1): marca + título + introducción =====
+    runningHeader()
+    doc.setFont('times', 'bold'); doc.setFontSize(24); doc.setTextColor(35, 35, 35)
+    doc.text('PODIUM', PW / 2, 24, { align: 'center' })
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(180, 140, 45); doc.setCharSpace(1.4)
+    doc.text('FISIOTERAPIA DE PRECISIÓN · ZARAGOZA', PW / 2, 30, { align: 'center' }); doc.setCharSpace(0)
+    doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.5); doc.line(ML, 34, PW - MR, 34)
+    doc.setFont('times', 'bold'); doc.setFontSize(17); doc.setTextColor(30, 30, 30)
+    doc.text('DOCUMENTACIÓN DEL DEPORTISTA', PW / 2, 44, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(120, 120, 120)
+    doc.text('Valoración funcional · Clínica Podium', PW / 2, 50, { align: 'center' })
+    y = 58
+    introBox('Recoge, de forma separada e independiente, tres decisiones distintas: (1) el consentimiento informado asistencial para realizar la valoración; (2) el tratamiento de datos de salud asociado; y (3) las autorizaciones voluntarias de comunicación de informes al club y de uso de imagen. Cada autorización voluntaria puede aceptarse o rechazarse por separado y no condiciona la realización de la valoración. Debe firmarse de forma individual por cada deportista; si es menor de edad, firma su representante legal.')
 
     // ===== 1. Información sobre protección de datos (capa informativa, como tabla) =====
     heading('1. Información sobre protección de datos')
@@ -185,7 +211,14 @@ export async function GET(_req: NextRequest) {
       y += 1
       ensure(8)
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
-      checkboxAt(ML, y); doc.text('SÍ, consiento el tratamiento de mis datos de salud descrito.', ML + 6, y); y += 7
+      checkboxAt(ML, y); doc.text('SÍ, consiento el tratamiento de mis datos de salud descrito.', ML + 6, y); y += 8
+      // Identificación del centro y del profesional responsable (centro pre-rellenado; profesional a mano).
+      para('Identificación del centro y del profesional responsable', { size: 9.5, style: 'bold', color: [40, 40, 40], gap: 2 })
+      tableRow('Centro', 'FISIO ZARAGOZA, S.L.')
+      tableRow('Fisioterapeuta responsable (nombre)', '')
+      tableRow('Nº de colegiado/a', '')
+      tableRow('Autorización / registro sanitario del centro', '5024226')
+      tableRow('Fecha de la valoración', '')
     }
 
     // ===== 2. Consentimiento informado asistencial (+ IA) + firma del bloque =====
