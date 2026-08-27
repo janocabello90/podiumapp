@@ -249,12 +249,12 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                   onChange={(e) => setConsentDataProcessing(e.target.checked)}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  {consentTexts?.data_processing || (
+                <div className="text-xs text-gray-600 leading-relaxed">
+                  {consentTexts?.data_processing ? <ConsentText text={consentTexts.data_processing} /> : (
                     <>Consiento el tratamiento de mis datos de salud por parte de la clínica con la finalidad de realizar mi valoración fisioterapéutica, elaborar un informe clínico y gestionar mi proceso terapéutico. Estos datos se conservarán durante el tiempo necesario para la prestación asistencial y el cumplimiento de obligaciones legales. Puedo ejercer mis derechos de acceso, rectificación, supresión, portabilidad y oposición contactando con la clínica. Más información en la{' '}
                     <a href="/privacidad" target="_blank" className="text-blue-600 underline">política de privacidad</a>.</>
                   )}
-                </span>
+                </div>
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer">
@@ -264,9 +264,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                   onChange={(e) => setConsentInfoTreatment(e.target.checked)}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  {consentTexts?.info_treatment || 'Consiento el tratamiento y la conservación de la información clínica recogida (anamnesis, exploración y pruebas) para el seguimiento de mi proceso asistencial y su uso con fines asistenciales por parte de la clínica.'}
-                </span>
+                <div className="text-xs text-gray-600 leading-relaxed">
+                  {consentTexts?.info_treatment ? <ConsentText text={consentTexts.info_treatment} /> : 'Consiento el tratamiento y la conservación de la información clínica recogida (anamnesis, exploración y pruebas) para el seguimiento de mi proceso asistencial y su uso con fines asistenciales por parte de la clínica.'}
+                </div>
               </label>
 
               <label className="flex items-start gap-3 cursor-pointer">
@@ -276,9 +276,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                   onChange={(e) => setConsentAI(e.target.checked)}
                   className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                 />
-                <span className="text-xs text-gray-600 leading-relaxed">
-                  {consentTexts?.ai_analysis || 'Consiento que mis datos sean procesados por un sistema de inteligencia artificial (Anthropic Claude, vía API) para generar un borrador de informe clínico. Este borrador será siempre revisado y aprobado por un fisioterapeuta antes de su emisión. El proveedor de IA no almacena ni reutiliza mis datos para entrenar sus modelos.'}
-                </span>
+                <div className="text-xs text-gray-600 leading-relaxed">
+                  {consentTexts?.ai_analysis ? <ConsentText text={consentTexts.ai_analysis} /> : 'Consiento que mis datos sean procesados por un sistema de inteligencia artificial (Anthropic Claude, vía API) para generar un borrador de informe clínico. Este borrador será siempre revisado y aprobado por un fisioterapeuta antes de su emisión. El proveedor de IA no almacena ni reutiliza mis datos para entrenar sus modelos.'}
+                </div>
               </label>
             </div>
 
@@ -293,9 +293,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                     onChange={(e) => setConsentReportSharingClub(e.target.checked)}
                     className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                   />
-                  <span className="text-xs text-gray-600 leading-relaxed">
-                    {consentTexts?.report_sharing_club || 'Autorizo que la Clínica comparta mi informe y/o los resultados de la valoración con mi club y su cuerpo técnico, con fines de seguimiento deportivo.'}
-                  </span>
+                  <div className="text-xs text-gray-600 leading-relaxed">
+                    {consentTexts?.report_sharing_club ? <ConsentText text={consentTexts.report_sharing_club} /> : 'Autorizo que la Clínica comparta mi informe y/o los resultados de la valoración con mi club y su cuerpo técnico, con fines de seguimiento deportivo.'}
+                  </div>
                 </label>
                 {consentReportSharingClub && (
                   <div className="pl-7">
@@ -321,9 +321,9 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                     onChange={(e) => { setConsentImageRights(e.target.checked); if (!e.target.checked) setImageChannels([]) }}
                     className="w-4 h-4 mt-0.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 flex-shrink-0"
                   />
-                  <span className="text-xs text-gray-600 leading-relaxed">
-                    {consentTexts?.image_rights || 'Autorizo a la clínica a captar, reproducir y difundir mi imagen y/o voz (fotografía, vídeo, testimonio) con fines divulgativos y promocionales. Puedo revocar esta autorización en cualquier momento, con efectos hacia el futuro.'}
-                  </span>
+                  <div className="text-xs text-gray-600 leading-relaxed">
+                    {consentTexts?.image_rights ? <ConsentText text={consentTexts.image_rights} /> : 'Autorizo a la clínica a captar, reproducir y difundir mi imagen y/o voz (fotografía, vídeo, testimonio) con fines divulgativos y promocionales. Puedo revocar esta autorización en cualquier momento, con efectos hacia el futuro.'}
+                  </div>
                 </label>
                 {consentImageRights && (
                   <div className="pl-7">
@@ -793,4 +793,59 @@ function FieldRenderer({
     default:
       return null
   }
+}
+
+// ============================================
+// Consent text renderer — formats a consent body (from consent_versions) nicely:
+// heading, "Etiqueta:" en negrita, viñetas reales (separadas por " • ") y párrafos.
+// Mismo contenido que el PDF, legible en la app (evita el muro de texto con "•" en línea).
+// ============================================
+function boldLeadIn(text: string) {
+  const idx = text.indexOf(': ')
+  if (idx > 1 && idx <= 70) {
+    return (
+      <>
+        <span className="font-semibold text-gray-700">{text.slice(0, idx + 1)}</span>{' '}
+        {text.slice(idx + 2)}
+      </>
+    )
+  }
+  return text
+}
+
+function ConsentText({ text }: { text: string }) {
+  const nodes: JSX.Element[] = []
+  text.split('\n').forEach((raw, i) => {
+    const line = raw.trim()
+    if (!line) return
+    const idx = line.indexOf(': ')
+    const isLabel = idx > 1 && idx <= 66
+    if (isLabel) {
+      const label = line.slice(0, idx)
+      const value = line.slice(idx + 2)
+      if (value.includes(' • ')) {
+        nodes.push(
+          <div key={i}>
+            <span className="font-semibold text-gray-700">{label}:</span>
+            <ul className="list-disc pl-4 mt-1 space-y-1">
+              {value.split(' • ').map((p, j) => (
+                <li key={j}>{boldLeadIn(p.trim())}</li>
+              ))}
+            </ul>
+          </div>
+        )
+      } else {
+        nodes.push(
+          <p key={i}>
+            <span className="font-semibold text-gray-700">{label}:</span> {value}
+          </p>
+        )
+      }
+    } else if (!line.includes(':') && line === line.toUpperCase() && line.length > 8) {
+      nodes.push(<p key={i} className="font-semibold text-gray-800">{line}</p>)
+    } else {
+      nodes.push(<p key={i}>{boldLeadIn(line)}</p>)
+    }
+  })
+  return <div className="space-y-1.5">{nodes}</div>
 }
