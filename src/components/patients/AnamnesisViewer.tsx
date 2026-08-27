@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from 'react'
 import { X, ChevronDown, ChevronUp, Check, Pencil, Save, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react'
-import { ANAMNESIS_BLOCKS, type AnamnesisBlock } from '@/components/anamnesis/anamnesisFields'
+import { ANAMNESIS_BLOCKS, type AnamnesisBlock, type AnamnesisField } from '@/components/anamnesis/anamnesisFields'
 import { createClient } from '@/lib/supabase/client'
 import toast from 'react-hot-toast'
 
@@ -19,9 +19,44 @@ function formatValue(value: any): string {
   if (value === null || value === undefined || value === '') return '—'
   if (value === true) return 'Sí'
   if (value === false) return 'No'
-  if (Array.isArray(value)) return value.join(', ')
+  if (Array.isArray(value)) {
+    // Un array de objetos (campo `table`) no se resuelve aquí (lo pinta TableValue);
+    // esto cubre multiselect (array de strings) y evita "[object Object]".
+    return value.map((v) => (v && typeof v === 'object' ? Object.values(v).filter(Boolean).join(' · ') : String(v))).join(', ')
+  }
   if (typeof value === 'number') return String(value)
   return String(value)
+}
+
+// Render de un campo `table` (p. ej. historial de lesiones) como tabla legible.
+function TableValue({ field, rows }: { field: AnamnesisField; rows: any }) {
+  const cols = field.columns || []
+  const data: Record<string, any>[] = Array.isArray(rows)
+    ? rows.filter((r) => r && typeof r === 'object' && Object.values(r).some((v) => String(v ?? '').trim() !== ''))
+    : []
+  if (!data.length) return <span className="text-gray-400">—</span>
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs border-collapse">
+        <thead>
+          <tr>
+            {cols.map((c) => (
+              <th key={c.key} className="text-left font-medium text-gray-400 pr-3 pb-1">{c.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((r, i) => (
+            <tr key={i} className="border-t border-gray-100">
+              {cols.map((c) => (
+                <td key={c.key} className="pr-3 py-1 text-gray-800 align-top">{String(r[c.key] ?? '').trim() || '—'}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 export default function AnamnesisViewer({ formData: initialFormData, patientName, completedAt, anamnesisId, blocks }: Props) {
@@ -282,6 +317,8 @@ export default function AnamnesisViewer({ formData: initialFormData, patientName
                                     <span className="font-bold text-blue-600">{formData[field.key]}</span>
                                     <span className="text-xs text-gray-400">/ 10</span>
                                   </span>
+                                ) : field.type === 'table' ? (
+                                  <TableValue field={field} rows={formData[field.key]} />
                                 ) : (
                                   formatValue(formData[field.key])
                                 )}
@@ -289,8 +326,8 @@ export default function AnamnesisViewer({ formData: initialFormData, patientName
                             )}
                           </div>
 
-                          {/* Edit button */}
-                          {!isEditing && (
+                          {/* Edit button (no en tablas: se editan desde la anamnesis, no como texto) */}
+                          {!isEditing && field.type !== 'table' && (
                             <button
                               onClick={() => startEdit(field.key)}
                               className="mt-0.5 flex-shrink-0 p-1 text-gray-300 hover:text-blue-500 transition-colors"
