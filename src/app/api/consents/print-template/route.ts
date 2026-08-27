@@ -174,8 +174,41 @@ export async function GET(_req: NextRequest) {
     fieldLine('Fisioterapeuta:', ML, 95); fieldLine('Nº colegiado:', ML + 100, CW); y += 8
     fieldLine('Fecha:', ML, 60); y += 8
 
-    // ===== 1. Datos del deportista (identificación antes de firmar) =====
-    heading('1. Datos del deportista')
+    // Texto de introducción (explica la estructura del documento).
+    para('Este documento recoge, de forma separada e independiente: (1) la información sobre el tratamiento de sus datos; (2) el consentimiento informado para la evaluación funcional y el tratamiento de datos de salud asociado, necesario para poder realizarla; y (3) autorizaciones voluntarias (comunicación del informe al club y uso de imagen), que puede aceptar o rechazar por separado sin que ello condicione la valoración. Cada bloque se firma por separado. Si el deportista es menor de edad, firma en su nombre el representante legal.', { size: 9, color: [70, 70, 70], gap: 5 })
+
+    // ===== 1. Información sobre protección de datos (capa informativa, como tabla) =====
+    heading('1. Información sobre protección de datos')
+    const dp = texts.get('data_processing')
+    if (dp) {
+      renderDataProcessing(dp)
+      y += 1
+      ensure(8)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+      checkboxAt(ML, y); doc.text('SÍ, consiento el tratamiento de mis datos de salud descrito.', ML + 6, y); y += 7
+    }
+
+    // ===== 2. Consentimiento informado asistencial (+ IA) + firma del bloque =====
+    heading('2. Consentimiento informado asistencial')
+    para('Necesario para realizar la valoración. Lea cada apartado y marque la casilla.', { size: 8.5, color: [120, 120, 120] })
+    for (const type of ['info_treatment', 'ai_analysis']) {
+      const c = CONSENT_ORDER.find((o) => o.type === type)
+      const body = texts.get(type)
+      if (c && body) renderConsent(c, body)
+    }
+    signatureBlock('Firma del consentimiento asistencial y de datos')
+
+    // ===== 3. Autorizaciones voluntarias e independientes + firma del bloque =====
+    heading('3. Autorizaciones voluntarias e independientes')
+    para('Opcionales. Puede aceptarlas o rechazarlas por separado; no condicionan la valoración.', { size: 8.5, color: [120, 120, 120] })
+    for (const c of CONSENT_ORDER.filter((o) => !o.obligatorio)) {
+      const body = texts.get(c.type)
+      if (body) renderConsent(c, body)
+    }
+    signatureBlock('Firma de las autorizaciones voluntarias')
+
+    // ===== 4. Ficha del deportista (datos + lesiones + estado, al final) =====
+    heading('4. Ficha del deportista')
     const rowsD: [string, number][][] = [
       [['Nombre y apellidos:', CW]],
       [['DNI / documento:', 85], ['Fecha de nacimiento:', 85]],
@@ -189,27 +222,9 @@ export async function GET(_req: NextRequest) {
       for (const [label, w] of row) { fieldLine(label, x, w); x += w + 6 }
       y += 9
     }
-
-    // ===== 2. Consentimientos obligatorios (asistencial) + firma del bloque =====
-    heading('2. Consentimiento informado y tratamiento de datos')
-    para('Necesarios para realizar la valoración. Lea cada apartado y marque la casilla.', { size: 8.5, color: [120, 120, 120] })
-    for (const c of CONSENT_ORDER.filter((o) => o.obligatorio)) {
-      const body = texts.get(c.type)
-      if (body) renderConsent(c, body)
-    }
-    signatureBlock('Firma del consentimiento asistencial y de datos')
-
-    // ===== 3. Autorizaciones voluntarias e independientes + firma del bloque =====
-    heading('3. Autorizaciones voluntarias e independientes')
-    para('Opcionales. Puede aceptarlas o rechazarlas por separado; no condicionan la valoración.', { size: 8.5, color: [120, 120, 120] })
-    for (const c of CONSENT_ORDER.filter((o) => !o.obligatorio)) {
-      const body = texts.get(c.type)
-      if (body) renderConsent(c, body)
-    }
-    signatureBlock('Firma de las autorizaciones voluntarias')
-
-    // ===== 4. Historial de lesiones =====
-    heading('4. Historial de lesiones (últimos 24 meses)')
+    y += 2
+    // Subsección: historial de lesiones
+    para('Historial de lesiones (últimos 24 meses)', { size: 10, style: 'bold', color: [40, 40, 40], gap: 1 })
     para('Indica zona, tipo de lesión, fecha aproximada y si requirió baja deportiva o cirugía.', { size: 8.5, color: [120, 120, 120] })
     ensure(10)
     doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90)
@@ -217,10 +232,9 @@ export async function GET(_req: NextRequest) {
     y += 2
     doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.2)
     for (let i = 0; i < 4; i++) { ensure(9); doc.line(ML, y + 6, PW - MR, y + 6); y += 9 }
-    y += 2
-
-    // ===== 5. Estado actual =====
-    heading('5. Estado actual')
+    y += 3
+    // Subsección: estado actual
+    para('Estado actual', { size: 10, style: 'bold', color: [40, 40, 40], gap: 1 })
     doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2)
     para('¿Tienes actualmente dolor o molestia en alguna zona? Indícalo:', { size: 9, gap: 1 })
     for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
