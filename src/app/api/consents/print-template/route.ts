@@ -10,6 +10,11 @@ const ML = 20, MR = 20, MT = 22, MB = 18, PW = 210
 const CW = PW - ML - MR
 const FOOTER = 'www.clinicapodium.com  -  608392019  -  C/ Almagro 16 50004 Zaragoza'
 
+// Profesional responsable fijo (según el documento oficial del club), hardcodeado para la
+// variante "con el fisioterapeuta prerrellenado". NO se consulta la BD ni el usuario que imprime.
+const FISIO_NOMBRE = 'Félix Lorente Sánchez'
+const FISIO_COLEGIADO = '1884'
+
 // Orden y etiqueta de los consentimientos en el documento.
 const CONSENT_ORDER: { type: string; label: string; obligatorio: boolean }[] = [
   { type: 'info_treatment', label: 'Consentimiento informado (evaluación funcional)', obligatorio: true },
@@ -25,7 +30,7 @@ export async function GET(_req: NextRequest) {
     const supabase = createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-    const { data: profile } = await supabase.from('users').select('clinic_id, full_name').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
     if (!profile) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     const todayMadrid = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date())
 
@@ -251,8 +256,8 @@ export async function GET(_req: NextRequest) {
       // Identificación del centro y del profesional responsable (centro pre-rellenado; profesional a mano).
       para('Identificación del centro y del profesional responsable', { size: 9.5, style: 'bold', color: [40, 40, 40], gap: 2 })
       tableRow('Centro', 'FISIO ZARAGOZA, S.L.')
-      tableRow('Fisioterapeuta responsable (nombre)', prefillFisio ? (profile.full_name || '') : '')
-      tableRow('Nº de colegiado/a', '')
+      tableRow('Fisioterapeuta responsable (nombre)', prefillFisio ? FISIO_NOMBRE : '')
+      tableRow('Nº de colegiado/a', prefillFisio ? FISIO_COLEGIADO : '')
       tableRow('Autorización / registro sanitario del centro', '5024226')
       tableRow('Fecha de la valoración', prefillFisio ? todayMadrid : '')
     }
