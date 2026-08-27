@@ -42,6 +42,10 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
   // Compartir informe con el club (solo equipos): OPCIONAL (no bloquea el envío).
   const showClubConsent = audience === 'team'
   const [consentReportSharingClub, setConsentReportSharingClub] = useState(false)
+  // Nombre del club destinatario (P17), solo equipo. Se guarda en formData con prefijo `_`
+  // (autoguardado, sobrevive a recargas). La declaración de veracidad ya es un campo de la
+  // plantilla de equipo (bloque "Declaración"), no se duplica aquí.
+  const clubRecipient = String(formData._club_recipient || '')
   // Menor de edad (Opción C): auto por fecha de nac. o auto-declarado. Datos del representante
   // legal en formData (con claves `_`, se autoguardan y sobreviven a recargas).
   const [isMinor, setIsMinor] = useState<boolean>(
@@ -120,7 +124,7 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
           consent_info_treatment: consentInfoTreatment,
           consent_ai_analysis: consentAI,
           ...(showImageConsent ? { consent_image_rights: consentImageRights, image_channels: imageChannels } : {}),
-          ...(showClubConsent ? { consent_report_sharing_club: consentReportSharingClub } : {}),
+          ...(showClubConsent ? { consent_report_sharing_club: consentReportSharingClub, club_recipient: clubRecipient } : {}),
           is_minor: isMinor,
           representative: isMinor ? { name: repName, dni: repDni, relation: repRelation } : null,
         }),
@@ -293,6 +297,16 @@ export default function AnamnesisFormClient({ anamnesisId, token, patientName, e
                     {consentTexts?.report_sharing_club || 'Autorizo que la Clínica comparta mi informe y/o los resultados de la valoración con mi club y su cuerpo técnico, con fines de seguimiento deportivo.'}
                   </span>
                 </label>
+                {consentReportSharingClub && (
+                  <div className="pl-7">
+                    <input
+                      value={clubRecipient}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, _club_recipient: e.target.value }))}
+                      placeholder="Club / entidad destinataria"
+                      className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -730,6 +744,51 @@ function FieldRenderer({
           />
         </div>
       )
+
+    case 'table': {
+      const cols = field.columns || []
+      const rowsData: Record<string, string>[] = Array.isArray(value) ? value : []
+      const rowCount = Math.max(field.rows || 3, rowsData.length + 1)
+      const setCell = (r: number, ck: string, v: string) => {
+        const next = Array.from({ length: rowCount }, (_, i) => ({ ...(rowsData[i] || {}) }))
+        next[r] = { ...next[r], [ck]: v }
+        // Descartar filas totalmente vacías al final para no guardar ruido.
+        const trimmed = next.filter((row) => Object.values(row).some((x) => String(x || '').trim() !== ''))
+        onChange(trimmed)
+      }
+      return (
+        <div>
+          <label className="block text-sm font-medium text-gray-900 mb-1.5">{field.label}</label>
+          {field.description && <p className="text-xs text-gray-500 mb-3">{field.description}</p>}
+          <div className="overflow-x-auto -mx-1">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  {cols.map((c) => (
+                    <th key={c.key} className="text-left text-xs font-medium text-gray-500 px-1 pb-1">{c.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {Array.from({ length: rowCount }).map((_, r) => (
+                  <tr key={r}>
+                    {cols.map((c) => (
+                      <td key={c.key} className="px-1 py-1 align-top">
+                        <input
+                          value={rowsData[r]?.[c.key] || ''}
+                          onChange={(e) => setCell(r, c.key, e.target.value)}
+                          className="w-full min-w-[84px] px-2 py-1.5 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )
+    }
 
     default:
       return null

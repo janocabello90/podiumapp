@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
+import { getAnamnesisTemplateBlocks } from '@/lib/anamnesis/template'
+import { IMAGE_CHANNELS } from '@/lib/clinical/consents'
+import type { AnamnesisField } from '@/components/anamnesis/anamnesisFields'
 
 // PDF "Anamnesis + consentimientos (EN BLANCO)" para imprimir y rellenar a mano.
 // Se genera desde los mismos textos de consent_versions → nunca se descuadra con la app.
@@ -40,6 +43,8 @@ export async function GET(_req: NextRequest) {
     ])
     const texts = new Map((versions || []).map((v: any) => [v.type, v.body as string]))
     const clinicName = clinic?.name || 'Clínica Podium'
+    // Fuente única: la ficha/anamnesis del PDF sale de la MISMA plantilla de equipo que usa el digital.
+    const teamBlocks = await getAnamnesisTemplateBlocks(supabase, profile.clinic_id, 'team')
 
     const doc = new jsPDF('portrait', 'mm', 'a4')
     let y = 0
@@ -199,6 +204,24 @@ export async function GET(_req: NextRequest) {
       else consentBody(body)
       y += 2
       decisionLine(c.obligatorio)
+      // Extras por tipo: destinatario del club (P17) y soportes de imagen (P18).
+      if (c.type === 'report_sharing_club') {
+        ensure(9); fieldLine('Club / entidad destinataria:', ML, CW); y += 9
+      } else if (c.type === 'image_rights') {
+        ensure(6)
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90)
+        doc.text('Soportes autorizados:', ML, y); y += 5
+        doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+        let cx = ML
+        for (const ch of IMAGE_CHANNELS) {
+          const w = doc.getTextWidth(ch) + 12
+          if (cx + w > PW - MR) { cx = ML; y += 6; ensure(6) }
+          checkboxAt(cx, y); doc.text(ch, cx + 6, y)
+          cx += w + 4
+        }
+        y += 6
+        ensure(8); checkboxAt(ML, y); fieldLine('Otros:', ML + 6, 150); y += 7
+      }
       y += 3
     }
     // Bloque de firma reutilizable (deportista mayor + representante legal si es menor).
@@ -228,6 +251,76 @@ export async function GET(_req: NextRequest) {
       doc.setFont('helvetica', 'normal'); doc.setTextColor(70, 70, 70)
       for (const ln of lines) { doc.text(ln, ML + 5, ty); ty += lh }
       y += boxH + 3
+    }
+
+    // ===== Renderers genéricos de la anamnesis (bloques→PDF, fuente única con el digital) =====
+    const blockHeadingPdf = (title: string, desc?: string) => {
+      y += 3
+      ensure(14)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(35, 35, 35)
+      doc.text(title, ML, y); y += 1.5
+      doc.setDrawColor(225, 225, 225); doc.setLineWidth(0.2); doc.line(ML, y, PW - MR, y); y += 5
+      if (desc) para(desc, { size: 8, color: [130, 130, 130], gap: 1 })
+    }
+    // Casillas ☐ opción, con salto de línea cuando no caben.
+    const optionBoxesPdf = (options: string[]) => {
+      ensure(6)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(40, 40, 40)
+      let cx = ML
+      for (const opt of options) {
+        const w = doc.getTextWidth(opt) + 11
+        if (cx + w > PW - MR) { cx = ML; y += 6; ensure(6) }
+        checkboxAt(cx, y); doc.text(opt, cx + 6, y)
+        cx += w + 3
+      }
+      y += 7
+    }
+    const blankLinesPdf = (n: number) => {
+      doc.setDrawColor(205, 205, 205); doc.setLineWidth(0.2)
+      for (let i = 0; i < n; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
+      y += 1
+    }
+    const renderTablePdf = (f: AnamnesisField) => {
+      const cols = f.columns || []
+      const n = Math.max(cols.length, 1)
+      const colW = CW / n
+      const rows = f.rows || 4
+      const headH = 6, rowH = 8
+      const totalH = headH + rows * rowH
+      ensure(totalH + 2)
+      const top = y
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(90, 90, 90)
+      cols.forEach((c, i) => {
+        const lns = doc.splitTextToSize(c.label, colW - 2)
+        lns.slice(0, 2).forEach((l: string, li: number) => doc.text(l, ML + i * colW + 1.5, top + 3 + li * 3))
+      })
+      doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.2)
+      for (let r = 0; r <= rows; r++) { const yy = top + headH + r * rowH; doc.line(ML, yy, PW - MR, yy) }
+      for (let i = 0; i <= n; i++) { const x = ML + i * colW; doc.line(x, top + headH, x, top + headH + rows * rowH) }
+      doc.line(ML, top, ML, top + headH); doc.line(PW - MR, top, PW - MR, top + headH); doc.line(ML, top, PW - MR, top)
+      y = top + totalH + 2
+    }
+    // Un campo de la plantilla, rellenable a mano según su tipo.
+    const renderFieldPdf = (f: AnamnesisField) => {
+      para(f.label, { size: 9, color: [55, 55, 55], gap: f.description ? 0 : 1 })
+      if (f.description) para(f.description, { size: 8, color: [130, 130, 130], gap: 1 })
+      switch (f.type) {
+        case 'select':
+        case 'multiselect':
+          if (f.options && f.options.length) optionBoxesPdf(f.options); else blankLinesPdf(1); break
+        case 'boolean':
+          optionBoxesPdf(['Sí', 'No']); break
+        case 'scale':
+          ensure(7); doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90)
+          doc.text('1   2   3   4   5   6   7   8   9   10      (rodea una)', ML, y); y += 7; break
+        case 'textarea':
+          blankLinesPdf(2); break
+        case 'table':
+          renderTablePdf(f); break
+        default:
+          blankLinesPdf(1); break
+      }
+      y += 1
     }
 
     // ===== Portada (página 1): marca + título + introducción =====
@@ -281,41 +374,19 @@ export async function GET(_req: NextRequest) {
     }
     signatureBlock('Firma de las autorizaciones voluntarias')
 
-    // ===== 4. Ficha del deportista (datos + lesiones + estado, al final) =====
-    heading('4. Ficha del deportista')
-    const rowsD: [string, number][][] = [
-      [['Nombre y apellidos:', CW]],
-      [['DNI / documento:', 85], ['Fecha de nacimiento:', 85]],
-      [['Sexo:', 55], ['Equipo / club:', 115]],
-      [['Posición:', 55], ['Lateralidad (pierna/brazo):', 115]],
-      [['Altura (cm):', 55], ['Peso (kg):', 55]],
-    ]
-    for (const row of rowsD) {
-      ensure(9)
-      let x = ML
-      for (const [label, w] of row) { fieldLine(label, x, w); x += w + 6 }
-      y += 9
+    // ===== 4. Ficha del deportista y anamnesis (desde la plantilla de EQUIPO — fuente única con el digital) =====
+    heading('4. Ficha del deportista y anamnesis')
+    para('El deportista (o su representante legal, si es menor) rellena sus datos y responde a las siguientes preguntas.', { size: 8.5, color: [120, 120, 120] })
+    for (const block of teamBlocks) {
+      blockHeadingPdf(block.title, block.description)
+      for (const f of (block.fields || [])) renderFieldPdf(f)
     }
+    // Firma de la ficha (la declaración de veracidad ya es un campo de la plantilla: bloque "Declaración").
     y += 2
-    // Subsección: historial de lesiones
-    para('Historial de lesiones (últimos 24 meses)', { size: 10, style: 'bold', color: [40, 40, 40], gap: 1 })
-    para('Indica zona, tipo de lesión, fecha aproximada y si requirió baja deportiva o cirugía.', { size: 8.5, color: [120, 120, 120] })
-    ensure(10)
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90)
-    doc.text('Zona', ML, y); doc.text('Tipo de lesión', ML + 55, y); doc.text('Fecha aprox.', ML + 100, y); doc.text('Baja / Cirugía', ML + 140, y)
-    y += 2
-    doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.2)
-    for (let i = 0; i < 4; i++) { ensure(9); doc.line(ML, y + 6, PW - MR, y + 6); y += 9 }
-    y += 3
-    // Subsección: estado actual
-    para('Estado actual', { size: 10, style: 'bold', color: [40, 40, 40], gap: 1 })
-    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2)
-    para('¿Tienes actualmente dolor o molestia en alguna zona? Indícalo:', { size: 9, gap: 1 })
-    for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
-    y += 1
-    para('¿Tomas alguna medicación, tienes alguna patología, embarazo o intervención reciente relevante?', { size: 9, gap: 1 })
-    for (let i = 0; i < 2; i++) { ensure(8); doc.line(ML, y + 4, PW - MR, y + 4); y += 8 }
-    y += 2
+    para('Firma del deportista (o representante legal, si es menor):', { size: 9, style: 'bold', gap: 3 })
+    ensure(16)
+    fieldLine('Nombre:', ML, 90); fieldLine('Fecha:', ML + 100, CW); y += 10
+    fieldLine('Firma:', ML, 90); y += 8
     addFooter()
 
     const bytes = Buffer.from(doc.output('arraybuffer'))

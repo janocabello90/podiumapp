@@ -5,12 +5,16 @@
 // ============================================
 
 // Tipos de campo soportados por el formulario de anamnesis.
-export const ANAMNESIS_FIELD_TYPES = ['text', 'textarea', 'email', 'tel', 'number', 'select', 'multiselect', 'scale', 'boolean', 'date'] as const
+export const ANAMNESIS_FIELD_TYPES = ['text', 'textarea', 'email', 'tel', 'number', 'select', 'multiselect', 'scale', 'boolean', 'date', 'table'] as const
 export type AnamnesisFieldType = (typeof ANAMNESIS_FIELD_TYPES)[number]
 
 // Condición serializable (para poder guardarla en JSON en las plantillas editables).
 // El campo se muestra si la respuesta de `field` cumple `in`/`notIn`.
 export type AnamnesisCondition = { field: string; in?: string[]; notIn?: string[] }
+
+// Columna de un campo `table` (historial de lesiones). El valor del campo es un array de
+// objetos { [colKey]: string }. En el PDF a mano se pintan filas en blanco.
+export type AnamnesisTableColumn = { key: string; label: string }
 
 export interface AnamnesisField {
   key: string
@@ -22,6 +26,9 @@ export interface AnamnesisField {
   required?: boolean
   condition?: AnamnesisCondition
   scaleLabels?: { min: string; max: string }
+  // Solo para type='table':
+  columns?: AnamnesisTableColumn[]
+  rows?: number
 }
 
 export interface AnamnesisBlock {

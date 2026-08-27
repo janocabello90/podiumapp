@@ -43,7 +43,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, consent_report_sharing_club, image_channels, is_minor, representative } = body
+    const { action, form_data, consent_data_processing, consent_info_treatment, consent_ai_analysis, consent_image_rights, consent_report_sharing_club, image_channels, club_recipient, is_minor, representative } = body
 
     const updatePayload: Record<string, any> = {}
 
@@ -153,7 +153,11 @@ export async function PATCH(
             version_label: vmap.get('report_sharing_club')?.version_label ?? null,
             version_body: vmap.get('report_sharing_club')?.body ?? null,
             granted_at: new Date().toISOString(),
-            metadata: repMeta,
+            metadata: (() => {
+              const m: any = { ...(repMeta || {}) }
+              if (consent_report_sharing_club && club_recipient) m.club_recipient = String(club_recipient)
+              return Object.keys(m).length ? m : null
+            })(),
           })
         }
         // Idempotente: borrar los de esta anamnesis antes de reinsertar.

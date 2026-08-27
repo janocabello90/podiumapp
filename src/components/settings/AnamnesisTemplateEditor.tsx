@@ -20,6 +20,7 @@ const TYPE_LABELS: Record<AnamnesisFieldType, string> = {
   scale: 'Escala 1–10',
   boolean: 'Sí / No',
   date: 'Fecha',
+  table: 'Tabla (p. ej. historial de lesiones)',
 }
 
 const HAS_OPTIONS: AnamnesisFieldType[] = ['select', 'multiselect']
