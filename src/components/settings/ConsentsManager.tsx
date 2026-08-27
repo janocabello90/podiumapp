@@ -65,12 +65,20 @@ export default function ConsentsManager({ clinicId, initialVersions }: Props) {
         una copia con fecha (trazabilidad); cambiar el texto aquí no altera los consentimientos ya registrados.
       </p>
 
-      <a
-        href="/api/consents/print-template"
-        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
-      >
-        <FileDown className="w-4 h-4" /> Descargar plantilla en blanco (PDF) — para rellenar a mano
-      </a>
+      <div className="flex flex-wrap gap-2">
+        <a
+          href="/api/consents/print-template"
+          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+        >
+          <FileDown className="w-4 h-4" /> Plantilla en blanco (PDF)
+        </a>
+        <a
+          href="/api/consents/print-template?fisio=1"
+          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition-colors"
+        >
+          <FileDown className="w-4 h-4" /> Plantilla con el fisioterapeuta prerrellenado
+        </a>
+      </div>
 
       {CONSENT_TYPES.map(({ type, label }) => {
         const f = forms[type]

@@ -21,11 +21,13 @@ const CONSENT_ORDER: { type: string; label: string; obligatorio: boolean }[] = [
 
 export async function GET(_req: NextRequest) {
   try {
+    const prefillFisio = new URL(_req.url).searchParams.get('fisio') === '1'
     const supabase = createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
-    const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('users').select('clinic_id, full_name').eq('id', user.id).single()
     if (!profile) return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
+    const todayMadrid = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date())
 
     const [{ data: clinic }, { data: versions }] = await Promise.all([
       supabase.from('clinics').select('name').eq('id', profile.clinic_id).single(),
@@ -107,6 +109,35 @@ export async function GET(_req: NextRequest) {
       valLines.forEach((l: string, i: number) => doc.text(l, ML + LABEL_W + 2.5, top + 4 + i * lh))
       y = top + rowH
     }
+    // Igual que tableRow pero la columna de valor es una lista de viñetas (separadas por " • " en la BD).
+    const tableRowBullets = (label: string, items: string[]) => {
+      doc.setFontSize(9)
+      const lh = 9 * 0.46
+      const valW = CW - LABEL_W - 5
+      const bulletIndent = 4
+      const wrapped = items.map((it) => doc.splitTextToSize(it, valW - bulletIndent))
+      const labLines = doc.splitTextToSize(label, LABEL_W - 5)
+      const gapBetween = 1.2
+      const totalValH = wrapped.reduce((s, w) => s + w.length * lh, 0) + (items.length - 1) * gapBetween
+      const rowH = Math.max(totalValH, labLines.length * lh) + 4
+      ensure(rowH)
+      const top = y
+      doc.setFillColor(241, 236, 226); doc.rect(ML, top, LABEL_W, rowH, 'F')
+      doc.setDrawColor(223, 216, 202); doc.setLineWidth(0.2)
+      doc.rect(ML, top, CW, rowH)
+      doc.line(ML + LABEL_W, top, ML + LABEL_W, top + rowH)
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(85, 72, 50)
+      labLines.forEach((l: string, i: number) => doc.text(l, ML + 2.5, top + 4 + i * lh))
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 60, 60)
+      const vx = ML + LABEL_W + 2.5
+      let ty = top + 4
+      for (const w of wrapped) {
+        doc.text('•', vx, ty)
+        w.forEach((l: string, i: number) => doc.text(l, vx + bulletIndent, ty + i * lh))
+        ty += w.length * lh + gapBetween
+      }
+      y = top + rowH
+    }
     // Renderiza el texto de Protección de datos como tabla, leído de la BD: cada línea
     // "Etiqueta: valor" es una fila; el título va arriba y la frase final (sin etiqueta) debajo.
     // Texto de un consentimiento: ancho completo (ML→margen dcho), 9pt, justificado.
@@ -130,7 +161,12 @@ export async function GET(_req: NextRequest) {
       for (const line of lines) {
         const idx = line.indexOf(':')
         const isRow = idx > 2 && idx < 46 && !line.slice(0, idx).includes('. ')
-        if (isRow) { tableRow(line.slice(0, idx).trim(), cap(line.slice(idx + 1).trim())); seenRow = true }
+        if (isRow) {
+          const lbl = line.slice(0, idx).trim(); const val = line.slice(idx + 1).trim()
+          if (val.includes(' • ')) tableRowBullets(lbl, val.split(' • ').map((s) => cap(s.trim())).filter(Boolean))
+          else tableRow(lbl, cap(val))
+          seenRow = true
+        }
         else if (!seenRow) { para(line, { size: 8.5, style: 'bold', color: [70, 70, 70], gap: 1 }) }
         else { after.push(line) }
       }
@@ -215,10 +251,10 @@ export async function GET(_req: NextRequest) {
       // Identificación del centro y del profesional responsable (centro pre-rellenado; profesional a mano).
       para('Identificación del centro y del profesional responsable', { size: 9.5, style: 'bold', color: [40, 40, 40], gap: 2 })
       tableRow('Centro', 'FISIO ZARAGOZA, S.L.')
-      tableRow('Fisioterapeuta responsable (nombre)', '')
+      tableRow('Fisioterapeuta responsable (nombre)', prefillFisio ? (profile.full_name || '') : '')
       tableRow('Nº de colegiado/a', '')
       tableRow('Autorización / registro sanitario del centro', '5024226')
-      tableRow('Fecha de la valoración', '')
+      tableRow('Fecha de la valoración', prefillFisio ? todayMadrid : '')
     }
 
     // ===== 2. Consentimiento informado asistencial (+ IA) + firma del bloque =====
