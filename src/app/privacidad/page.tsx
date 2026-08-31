@@ -141,15 +141,15 @@ export default function PrivacidadPage() {
               tratamiento, con los que se ha formalizado el correspondiente contrato conforme al art. 28 del RGPD:
             </p>
             <p>
-              <strong>VALD Hub</strong> (titularidad de VALD Pty Ltd; 115 Breakfast Creek Road, Newstead QLD 4006,
-              Australia): plataforma de medición y normalización de los resultados de fuerza y salto de la
-              valoración funcional. Los datos de la clínica se alojan en la Unión Europea (Microsoft Azure, región West
-              Europe: Países Bajos como centro primario e Irlanda como secundario); la autenticación se gestiona
+              <strong>VALD Hub</strong> (titularidad de VALD Performance (Intl) Pty Ltd; 115 Breakfast Creek Road,
+              Newstead QLD 4006, Australia): plataforma de medición y normalización de los resultados de fuerza y salto
+              de la valoración funcional. Los datos de la clínica se alojan en la Unión Europea (Microsoft Azure, región
+              West Europe: Países Bajos como centro primario e Irlanda como secundario); la autenticación se gestiona
               mediante Auth0, con datos en Europa. De forma excepcional, para tareas de soporte técnico avanzado,
               personal de VALD en Australia podría acceder a los datos bajo controles de acceso restringido; estas
               transferencias a Australia (y, en su caso, a otros países donde VALD opera: EE. UU., Reino Unido, EEE) se
-              amparan en las Cláusulas Contractuales Tipo de la UE (CCT/SCC) u otras medidas equivalentes que declara
-              aplicar VALD (información sobre las garantías: DPO@vald.com).
+              amparan en las Cláusulas Contractuales Tipo de la Comisión Europea (Decisión (UE) 2021/914), Módulo 2
+              (responsable a encargado), con ley y jurisdicción de Irlanda (información: DPO@vald.com).
             </p>
             <p>
               <strong>Anthropic PBC</strong> (proveedor de IA): procesamiento de datos para generación de informes,
