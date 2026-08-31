@@ -240,6 +240,15 @@ export default function PrivacidadPage() {
               políticas de seguridad a nivel de fila (RLS) en la base de datos que garantizan que cada
               clínica solo puede acceder a los datos de sus propios pacientes.
             </p>
+            <p>
+              En la cadena de tratamiento, los encargados —en particular la plataforma <strong>VALD Hub</strong>—
+              aplican, conforme a su contrato de encargo, medidas como: cifrado en tránsito mediante HTTPS
+              (TLS 1.2/1.3); cifrado en reposo mediante tecnologías del proveedor de infraestructura cloud, con
+              gestión de claves en la región donde residen los datos; seudonimización cuando procede; accesos
+              privilegiados bajo control <em>Just-In-Time</em>, registrados y limitados según el rol; y notificación
+              de incidentes de seguridad al responsable del tratamiento sin demora indebida y, como máximo, en un
+              plazo de 72 horas desde que se tenga conocimiento del incidente.
+            </p>
           </section>
 
           <section className="space-y-3">
