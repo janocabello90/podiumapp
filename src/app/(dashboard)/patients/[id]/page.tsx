@@ -6,6 +6,7 @@ import { ArrowLeft, FileText, Shield, Megaphone } from 'lucide-react'
 import AnamnesisActions from '@/components/patients/AnamnesisActions'
 import RefreshButton from '@/components/patients/RefreshButton'
 import DeletePatientButton from '@/components/patients/DeletePatientButton'
+import EditPatientButton from '@/components/patients/EditPatientButton'
 import SportSelect from '@/components/sports/SportSelect'
 import { isAnamnesisExpired } from '@/lib/clinical/anamnesis'
 import { getAnamnesisTemplateBlocks } from '@/lib/anamnesis/template'
@@ -226,6 +227,15 @@ export default async function PatientDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
+          <EditPatientButton patient={{
+            id: patient.id,
+            full_name: patient.full_name,
+            email: patient.email,
+            phone: patient.phone,
+            date_of_birth: patient.date_of_birth,
+            gender: patient.gender,
+            notes: patient.notes,
+          }} />
           {isAdmin && <DeletePatientButton patientId={patient.id} patientName={patient.full_name} />}
           <RefreshButton />
         </div>
