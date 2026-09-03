@@ -4,6 +4,18 @@ import { useState, useRef } from 'react'
 import { Upload, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { Document } from '@/types/database'
+import { createClient } from '@/lib/supabase/client'
+
+// Lee un error de una respuesta que puede NO ser JSON (p. ej. 413 de la plataforma).
+async function readError(res: Response): Promise<string> {
+  try {
+    const j = await res.clone().json()
+    if (j?.error) return j.error
+  } catch { /* no era JSON */ }
+  if (res.status === 413) return 'El archivo es demasiado grande.'
+  const t = await res.text().catch(() => '')
+  return t?.trim()?.slice(0, 140) || `Error ${res.status}`
+}
 
 interface Props {
   patientId: string
@@ -18,25 +30,40 @@ export default function DocumentUploader({ patientId, clinicId, onUploaded, onDo
   const [uploading, setUploading] = useState(false)
   const [uploadQueue, setUploadQueue] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const supabase = createClient()
 
+  // Subida DIRECTA a Storage (evita el tope de ~4,5 MB del body de Vercel):
+  // 1) pedir signed URL, 2) subir el archivo a Supabase, 3) registrar metadatos.
   async function uploadFile(file: File): Promise<Document> {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('patient_id', patientId)
-    formData.append('doc_type', 'vald_report')
-    if (sessionId) formData.append('session_id', sessionId)
+    if (file.size > 50 * 1024 * 1024) throw new Error('El archivo supera los 50 MB.')
 
-    const response = await fetch('/api/documents', {
+    const urlRes = await fetch('/api/documents/upload-url', {
       method: 'POST',
-      body: formData,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ patient_id: patientId, file_name: file.name, session_id: sessionId }),
     })
+    if (!urlRes.ok) throw new Error(await readError(urlRes))
+    const { path, token } = await urlRes.json()
 
-    if (!response.ok) {
-      const err = await response.json()
-      throw new Error(err.error || 'Error al subir')
-    }
+    const { error: upErr } = await supabase.storage
+      .from('documents')
+      .uploadToSignedUrl(path, token, file, { contentType: file.type })
+    if (upErr) throw new Error(upErr.message || 'Error al subir el archivo')
 
-    const { document } = await response.json()
+    const finRes = await fetch('/api/documents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        storage_path: path,
+        file_name: file.name,
+        patient_id: patientId,
+        doc_type: 'vald_report',
+        content_type: file.type,
+        ...(sessionId ? { session_id: sessionId } : {}),
+      }),
+    })
+    if (!finRes.ok) throw new Error(await readError(finRes))
+    const { document } = await finRes.json()
     return document
   }
 

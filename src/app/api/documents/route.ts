@@ -22,6 +22,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Perfil no encontrado' }, { status: 404 })
     }
 
+    // Flujo directo: el archivo ya se subió a Storage vía signed URL; aquí solo se registran
+    // los metadatos (JSON, sin límite de tamaño). Evita el tope de body de Vercel (~4,5 MB).
+    if ((request.headers.get('content-type') || '').includes('application/json')) {
+      const body = await request.json()
+      const { storage_path, file_name, patient_id, doc_type, session_id, session_test_id, content_type } = body
+      if (!storage_path || !file_name || !patient_id) {
+        return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
+      }
+      const { data: pc } = await supabase.from('patients').select('id, clinic_id').eq('id', patient_id).single()
+      if (!pc || pc.clinic_id !== profile.clinic_id) {
+        return NextResponse.json({ error: 'Paciente no encontrado' }, { status: 404 })
+      }
+      if (session_id) {
+        const { data: sc } = await supabase.from('sessions').select('id, patient_id, clinic_id').eq('id', session_id).single()
+        if (!sc || sc.clinic_id !== profile.clinic_id || sc.patient_id !== patient_id) {
+          return NextResponse.json({ error: 'Sesión no válida para este paciente' }, { status: 404 })
+        }
+      }
+      const isImg = typeof content_type === 'string' && content_type.startsWith('image/')
+      const { data: document, error: docError } = await supabase.from('documents').insert({
+        patient_id,
+        clinic_id: profile.clinic_id,
+        uploaded_by: user.id,
+        doc_type: doc_type || 'vald_report',
+        file_name,
+        storage_path,
+        extraction_status: isImg ? 'completed' : 'pending',
+        session_id: session_id || null,
+        session_test_id: session_test_id || null,
+      }).select().single()
+      if (docError) {
+        console.error('Document record error:', docError)
+        return NextResponse.json({ error: 'Error al registrar documento' }, { status: 500 })
+      }
+      return NextResponse.json({ document })
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File | null
     const patientId = formData.get('patient_id') as string
