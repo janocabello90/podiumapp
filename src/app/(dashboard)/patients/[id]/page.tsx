@@ -360,7 +360,7 @@ export default async function PatientDetailPage({
           )}
 
           {/* Consentimientos (trazabilidad + revocación) */}
-          <ConsentsCard consents={consents as any} representative={consentRepresentative} />
+          <ConsentsCard consents={consents as any} representative={consentRepresentative} patientId={patient.id} isTeam={isTeamPatient} />
 
           {/* Patient info card */}
           <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
