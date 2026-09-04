@@ -72,6 +72,28 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
     router.refresh()
   }
 
+  // Recuperar GRATIS: repara la respuesta ya guardada (sin llamar a la IA).
+  const [recovering, setRecovering] = useState(false)
+  async function recoverFree() {
+    setRecovering(true)
+    try {
+      const res = await fetch('/api/reports/recover-failed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo recuperar')
+      if ((data.recovered ?? 0) > 0) toast.success(`Recuperados ${data.recovered} informe(s) sin gastar créditos.`)
+      else toast(`No había informes recuperables (${data.candidates ?? 0} con respuesta guardada). Regenera los que fallaron por saldo.`)
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo recuperar')
+    } finally {
+      setRecovering(false)
+    }
+  }
+
   async function generate() {
     setGenerating(true)
     try {
@@ -152,15 +174,27 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
             )}
 
             {failed.length > 0 && (
-              <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
-                <span className="text-[11px] text-red-700">{failed.length} informe(s) fallaron al generar.</span>
-                <button
-                  onClick={regenerateFailed}
-                  disabled={regenerating}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
-                >
-                  {regenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Regenerando {regenProgress}…</> : <>Regenerar los que fallaron</>}
-                </button>
+              <div className="mb-3 rounded-lg bg-red-50 border border-red-100 px-3 py-2.5 space-y-2">
+                <span className="text-[11px] text-red-700 block">{failed.length} informe(s) fallaron al generar.</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={recoverFree}
+                    disabled={recovering || regenerating}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                  >
+                    {recovering ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Recuperando…</> : <>Recuperar sin regenerar (gratis)</>}
+                  </button>
+                  <button
+                    onClick={regenerateFailed}
+                    disabled={regenerating || recovering}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 text-red-700 hover:bg-red-100 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                  >
+                    {regenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Regenerando {regenProgress}…</> : <>Regenerar con IA (usa créditos)</>}
+                  </button>
+                </div>
+                <p className="text-[10px] text-red-500 leading-snug">
+                  «Recuperar» arregla la respuesta que ya se guardó (sin coste). «Regenerar» pide un informe nuevo a la IA (consume créditos); úsalo para los que fallaron por falta de saldo.
+                </p>
               </div>
             )}
 
