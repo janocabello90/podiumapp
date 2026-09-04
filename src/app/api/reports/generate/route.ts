@@ -7,8 +7,8 @@ import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/repo
 import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
 import { parseMetricsSchema, buildMetricsInstruction, metricsByTestName } from '@/lib/reports/metrics'
-import { parseReportJson } from '@/lib/reports/parseReportJson'
-import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
+import { callReportModel } from '@/lib/reports/callReportModel'
+import { REPORT_MODEL } from '@/lib/reports/aiConfig'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
 // Generación en SEGUNDO PLANO: el trabajo pesado corre tras responder (waitUntil), hasta este tope.
@@ -480,44 +480,31 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
 
     // Streaming: con max_tokens alto (16k) evita timeouts HTTP. finalMessage() devuelve
     // el mensaje completo, con la misma forma que create() (parseo posterior sin cambios).
-    const stream = anthropic.messages.stream({
-      model: REPORT_MODEL,
-      max_tokens: REPORT_MAX_TOKENS,
-      thinking: REPORT_THINKING,
-      output_config: REPORT_EFFORT,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content: [...docBlocks, { type: 'text', text: userText }] as any,
-        }
-      ],
-    } as any)
-    const message = await stream.finalMessage()
-
-    // Extract text from response
-    const responseText = message.content
-      .filter((block: any) => block.type === 'text')
-      .map((block: any) => block.text)
-      .join('')
-
-    // Parse JSON (tolerante a preámbulo / valla sin cerrar por truncado). Si falla,
-    // guardamos la respuesta CRUDA de la IA + stop_reason en la propia fila, para poder
-    // diagnosticar el fallo desde la BD (no solo un mensaje genérico).
-    const stopReason = (message as any).stop_reason
-    let reportData
+    // Generar + parsear con robustez: parser tolerante + reparación de JSON + REINTENTO
+    // automático si la respuesta no se puede parsear (fallos de formato intermitentes).
+    // Si aun así falla, guardamos la respuesta CRUDA + stop_reason para diagnóstico.
+    let reportData: any
+    let stopReason: string | null = null
+    let usage: any = null
     try {
-      reportData = parseReportJson(responseText)
-    } catch {
-      console.error('Failed to parse Claude response. stop_reason=', stopReason, '\n', responseText.substring(0, 800))
+      const r = await callReportModel(anthropic, {
+        system: systemPrompt,
+        messages: [{ role: 'user', content: [...docBlocks, { type: 'text', text: userText }] as any }],
+      })
+      reportData = r.reportData
+      stopReason = r.stopReason
+      usage = r.usage
+    } catch (e: any) {
+      stopReason = e?.stopReason ?? null
+      console.error('Failed to parse Claude response (tras reintento). stop_reason=', stopReason)
       await supabase.from('reports').update({
         status: 'error',
         report_data: {
           _error: stopReason === 'max_tokens'
             ? 'La respuesta de la IA se cortó por longitud (max_tokens). Reinténtalo.'
-            : 'No se pudo parsear el JSON de la respuesta de la IA.',
+            : 'No se pudo parsear el JSON de la respuesta de la IA (tras un reintento).',
           _stop_reason: stopReason ?? null,
-          _raw_response: (responseText || '').slice(0, 24000),
+          _raw_response: (e?.raw || '').slice(0, 24000),
         },
       }).eq('id', reportId)
       return
@@ -563,8 +550,8 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
         assessment_id: assessment?.id || null,
         report_data: reportData,
         ai_model: REPORT_MODEL,
-        ai_prompt_tokens: message.usage?.input_tokens || null,
-        ai_completion_tokens: message.usage?.output_tokens || null,
+        ai_prompt_tokens: usage?.input_tokens || null,
+        ai_completion_tokens: usage?.output_tokens || null,
       })
       .eq('id', reportId)
 

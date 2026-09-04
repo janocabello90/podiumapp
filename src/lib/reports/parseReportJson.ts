@@ -1,9 +1,13 @@
+import { jsonrepair } from 'jsonrepair'
+
 // Extrae y parsea el JSON del informe desde la respuesta del modelo, tolerando:
 // - preámbulo/epílogo en prosa alrededor del JSON,
 // - valla de código ```json … ``` (bien cerrada o SIN cerrar por truncado),
-// - texto sin valla (primer "{" … último "}").
+// - texto sin valla (primer "{" … último "}"),
+// - y, como último recurso, JSON con pequeños defectos de formato del propio modelo
+//   (comillas sin escapar, saltos de línea dentro de strings, comas colgantes) → jsonrepair.
 // Prueba varios candidatos en orden y devuelve el primero que parsea.
-// Lanza 'NO_JSON' si ninguno es JSON válido (p. ej. respuesta truncada a medias).
+// Lanza 'NO_JSON' si ninguno es JSON válido ni reparable.
 export function parseReportJson(responseText: string): any {
   const text = (responseText || '').trim()
   const candidates: string[] = []
@@ -24,6 +28,7 @@ export function parseReportJson(responseText: string): any {
   // 4) El texto tal cual.
   candidates.push(text)
 
+  // Primera pasada: JSON.parse estricto (rápido, caso normal).
   for (const c of candidates) {
     const s = c.trim()
     if (!s) continue
@@ -33,5 +38,19 @@ export function parseReportJson(responseText: string): any {
       /* siguiente candidato */
     }
   }
+
+  // Segunda pasada: reparar defectos de formato del modelo y reintentar el parseo.
+  // Esto recupera los fallos típicos ("comilla sin escapar", salto de línea en un string,
+  // coma colgante) que antes acababan en "No se pudo parsear el JSON".
+  for (const c of candidates) {
+    const s = c.trim()
+    if (!s) continue
+    try {
+      return JSON.parse(jsonrepair(s))
+    } catch {
+      /* siguiente candidato */
+    }
+  }
+
   throw new Error('NO_JSON')
 }

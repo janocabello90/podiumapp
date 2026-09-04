@@ -4,9 +4,9 @@ import Anthropic from '@anthropic-ai/sdk'
 import { getReportInstructions } from '@/lib/reports/prompt'
 import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
 import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
-import { REPORT_MODEL, REPORT_MAX_TOKENS, REPORT_THINKING, REPORT_EFFORT } from '@/lib/reports/aiConfig'
+import { REPORT_MODEL } from '@/lib/reports/aiConfig'
+import { callReportModel } from '@/lib/reports/callReportModel'
 import { parseMetricsSchema, computeTeamMetrics, TEAM_THRESHOLDS, type PlayerMetrics, type TeamMetricStat } from '@/lib/reports/metrics'
-import { parseReportJson } from '@/lib/reports/parseReportJson'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
 // Generación en SEGUNDO PLANO (waitUntil tras responder).
@@ -227,31 +227,27 @@ export async function POST(request: NextRequest) {
     const systemPrompt = `${reportInstructions}\n\n${STRUCTURE_TEAM_ROUND}`
 
     const anthropic = new Anthropic({ apiKey })
-    const stream = anthropic.messages.stream({
-      model: REPORT_MODEL,
-      max_tokens: REPORT_MAX_TOKENS,
-      thinking: REPORT_THINKING,
-      output_config: REPORT_EFFORT,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: `Genera el informe de equipo de la ronda. Responde SOLO con JSON válido.\n\nPRIVACIDAD: NO se facilitan nombres reales; cada jugador está identificado por «[[JUGADOR_n]]»; úsala TAL CUAL.\n\n${context}` }],
-    } as any)
-    const message = await stream.finalMessage()
-
-    const responseText = message.content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
-    const stopReason = (message as any).stop_reason
+    // Generar + parsear con robustez (parser tolerante + reparación + reintento automático).
     let ai: any
+    let usage: any = null
     try {
-      ai = parseReportJson(responseText)
-    } catch {
-      console.error('Failed to parse campaign response. stop_reason=', stopReason, '\n', responseText.substring(0, 800))
+      const r = await callReportModel(anthropic, {
+        system: systemPrompt,
+        messages: [{ role: 'user', content: `Genera el informe de equipo de la ronda. Responde SOLO con JSON válido.\n\nPRIVACIDAD: NO se facilitan nombres reales; cada jugador está identificado por «[[JUGADOR_n]]»; úsala TAL CUAL.\n\n${context}` }],
+      })
+      ai = r.reportData
+      usage = r.usage
+    } catch (e: any) {
+      const stopReason = e?.stopReason ?? null
+      console.error('Failed to parse campaign response (tras reintento). stop_reason=', stopReason)
       await supabase.from('reports').update({
         status: 'error',
         report_data: {
           _error: stopReason === 'max_tokens'
             ? 'La respuesta de la IA se cortó por longitud (max_tokens). Reinténtalo.'
-            : 'No se pudo parsear el JSON de la respuesta de la IA.',
+            : 'No se pudo parsear el JSON de la respuesta de la IA (tras un reintento).',
           _stop_reason: stopReason ?? null,
-          _raw_response: (responseText || '').slice(0, 24000),
+          _raw_response: (e?.raw || '').slice(0, 24000),
         },
       }).eq('id', reportId)
       return
@@ -297,8 +293,8 @@ export async function POST(request: NextRequest) {
         status: 'draft',
         report_data: reportData,
         ai_model: REPORT_MODEL,
-        ai_prompt_tokens: message.usage?.input_tokens || null,
-        ai_completion_tokens: message.usage?.output_tokens || null,
+        ai_prompt_tokens: usage?.input_tokens || null,
+        ai_completion_tokens: usage?.output_tokens || null,
       })
       .eq('id', reportId)
 
