@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 export interface RoundPlayer {
   id: string
   full_name: string
-  status: 'approved' | 'draft' | 'none' // estado del informe individual de esa ronda
+  status: 'approved' | 'draft' | 'error' | 'none' // estado del informe individual de esa ronda
 }
 interface Props {
   campaignId: string
@@ -69,8 +69,9 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
 
   const statusChip = (s: RoundPlayer['status']) =>
     s === 'approved' ? <span className="text-[11px] text-green-600">✅ Aprobado</span>
-      : s === 'draft' ? <span className="text-[11px] text-amber-600">📝 Pendiente</span>
-        : <span className="text-[11px] text-gray-400">— Sin valorar</span>
+      : s === 'error' ? <span className="text-[11px] font-medium text-red-600">⚠️ Error al generar · regenerar</span>
+        : s === 'draft' ? <span className="text-[11px] text-amber-600">📝 Pendiente</span>
+          : <span className="text-[11px] text-gray-400">— Sin valorar</span>
 
   const existing = reportsByRound[round]
 

@@ -48,8 +48,9 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     for (const s of sessions) sessionsByPatient.set(s.patient_id, (sessionsByPatient.get(s.patient_id) || 0) + 1)
   }
 
-  // Estado del informe INDIVIDUAL por sesión (aprobado prevalece).
-  const statusBySession = new Map<string, 'approved' | 'draft'>()
+  // Estado del informe INDIVIDUAL por sesión. Precedencia: aprobado > borrador > error.
+  // (Si una sesión solo tiene informes en error, se marca 'error' para avisar en la UI.)
+  const statusBySession = new Map<string, 'approved' | 'draft' | 'error'>()
   const sessionIds = sessions.map((s) => s.id)
   if (sessionIds.length > 0) {
     const { data: ind } = await supabase
@@ -58,9 +59,13 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       .eq('scope', 'individual')
       .eq('clinic_id', profile.clinic_id)
       .in('session_id', sessionIds)
+    const rank = (v?: string) => (v === 'approved' ? 3 : v === 'draft' ? 2 : v === 'error' ? 1 : 0)
     for (const r of ind || []) {
+      const cur: 'approved' | 'draft' | 'error' =
+        r.status === 'approved' || r.status === 'delivered' ? 'approved'
+          : r.status === 'error' ? 'error' : 'draft'
       const prev = statusBySession.get(r.session_id)
-      if (r.status === 'approved' || !prev) statusBySession.set(r.session_id, r.status === 'approved' ? 'approved' : 'draft')
+      if (rank(cur) > rank(prev)) statusBySession.set(r.session_id, cur)
     }
   }
 
@@ -106,7 +111,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     for (const r of rounds) {
       playersByRound[r] = teamPlayers.map((p) => {
         const sid = sessionByPatientRound.get(`${p.id}_${r}`)
-        const status: RoundPlayer['status'] = !sid ? 'none' : (statusBySession.get(sid) === 'approved' ? 'approved' : 'draft')
+        const status: RoundPlayer['status'] = !sid ? 'none' : (statusBySession.get(sid) || 'draft')
         return { id: p.id, full_name: p.full_name, status }
       })
     }
