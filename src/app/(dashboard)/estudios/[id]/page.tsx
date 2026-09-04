@@ -112,7 +112,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       playersByRound[r] = teamPlayers.map((p) => {
         const sid = sessionByPatientRound.get(`${p.id}_${r}`)
         const status: RoundPlayer['status'] = !sid ? 'none' : (statusBySession.get(sid) || 'draft')
-        return { id: p.id, full_name: p.full_name, status }
+        return { id: p.id, full_name: p.full_name, status, sessionId: sid || null }
       })
     }
     const reportsByRound: Record<number, { id: string; status: string; created_at: string } | undefined> = {}

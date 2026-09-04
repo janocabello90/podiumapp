@@ -10,6 +10,7 @@ export interface RoundPlayer {
   id: string
   full_name: string
   status: 'approved' | 'draft' | 'error' | 'none' // estado del informe individual de esa ronda
+  sessionId?: string | null // sesión de esa ronda (para poder regenerar el informe)
 }
 interface Props {
   campaignId: string
@@ -43,6 +44,33 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
   const included = players.filter((p) => !excluded.has(p.id))
   const includedNotApproved = included.filter((p) => p.status !== 'approved')
   const canGenerate = hasRounds && included.length > 0 && includedNotApproved.length === 0
+
+  // Regenerar en lote los informes individuales que fallaron (status 'error').
+  const failed = players.filter((p) => p.status === 'error' && p.sessionId)
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenProgress, setRegenProgress] = useState('')
+  async function regenerateFailed() {
+    if (!failed.length) return
+    setRegenerating(true)
+    let ok = 0
+    for (let i = 0; i < failed.length; i++) {
+      setRegenProgress(`${i + 1}/${failed.length}`)
+      try {
+        const res = await fetch('/api/reports/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ patientId: failed[i].id, sessionId: failed[i].sessionId }),
+        })
+        if (res.ok || res.status === 202 || res.status === 409) ok++
+      } catch { /* seguir con el resto */ }
+      // Escalonar para no saturar la API (los informes corren en segundo plano).
+      if (i < failed.length - 1) await new Promise((r) => setTimeout(r, 3000))
+    }
+    setRegenerating(false)
+    setRegenProgress('')
+    toast.success(`Regenerando ${ok} informe(s) en segundo plano. Refresca en un par de minutos.`)
+    router.refresh()
+  }
 
   async function generate() {
     setGenerating(true)
@@ -121,6 +149,19 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
               <p className="text-[11px] text-amber-700 mb-2">
                 Hay {includedNotApproved.length} jugador(es) incluidos sin aprobar. Apruébalos o desmárcalos para poder generar.
               </p>
+            )}
+
+            {failed.length > 0 && (
+              <div className="mb-3 flex items-center justify-between gap-2 rounded-lg bg-red-50 border border-red-100 px-3 py-2">
+                <span className="text-[11px] text-red-700">{failed.length} informe(s) fallaron al generar.</span>
+                <button
+                  onClick={regenerateFailed}
+                  disabled={regenerating}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
+                >
+                  {regenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Regenerando {regenProgress}…</> : <>Regenerar los que fallaron</>}
+                </button>
+              </div>
             )}
 
             <div className="flex items-center gap-3">
