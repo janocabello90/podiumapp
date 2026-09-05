@@ -5,7 +5,7 @@ import { getReportInstructions } from '@/lib/reports/prompt'
 import { redactManyNames, restoreManyNames } from '@/lib/reports/redact'
 import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
 import { REPORT_MODEL } from '@/lib/reports/aiConfig'
-import { callReportModel } from '@/lib/reports/callReportModel'
+import { callReportModel, describeModelError } from '@/lib/reports/callReportModel'
 import { parseMetricsSchema, computeTeamMetrics, TEAM_THRESHOLDS, type PlayerMetrics, type TeamMetricStat } from '@/lib/reports/metrics'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
@@ -238,6 +238,16 @@ export async function POST(request: NextRequest) {
       ai = r.reportData
       usage = r.usage
     } catch (e: any) {
+      if (!e?.isParseFailure) {
+        // Error de API (sin créditos, sobrecarga, red): guardar la causa REAL, no "parseo".
+        const desc = describeModelError(e)
+        console.error('Campaign model API error:', desc.message)
+        await supabase.from('reports').update({
+          status: 'error',
+          report_data: { _error: desc.message, _api_error: true, _credit_error: desc.isCredit },
+        }).eq('id', reportId)
+        return
+      }
       const stopReason = e?.stopReason ?? null
       console.error('Failed to parse campaign response (tras reintento). stop_reason=', stopReason)
       await supabase.from('reports').update({

@@ -40,7 +40,31 @@ export async function callReportModel(anthropic: any, params: { system: string; 
     }
   }
   const err: any = new Error('NO_JSON')
+  err.isParseFailure = true // distingue fallo de PARSEO de un error de API (créditos/sobrecarga)
   err.stopReason = last.stopReason
   err.raw = last.text
   throw err
+}
+
+// Traduce un error del modelo (que NO es fallo de parseo) a un mensaje claro para el fisio.
+// Los errores de API (sin créditos, sobrecarga, rate limit) fallan en milisegundos y antes se
+// guardaban con el mensaje engañoso de "No se pudo parsear el JSON"; aquí se identifica la causa real.
+export function describeModelError(e: any): { message: string; isCredit: boolean } {
+  const status = e?.status ?? e?.error?.status
+  let raw = ''
+  try {
+    raw = e?.error?.error?.message || e?.error?.message || e?.message || ''
+    if (!raw && e?.error) raw = JSON.stringify(e.error)
+  } catch { raw = String(e?.message || '') }
+  const lc = (raw || '').toLowerCase()
+  if (lc.includes('credit balance') || lc.includes('plans & billing') || lc.includes('billing')) {
+    return { message: 'Sin créditos de IA. Recarga el saldo de Anthropic (Plans & Billing) y reinténtalo. No se ha gastado nada en este intento.', isCredit: true }
+  }
+  if (status === 529 || lc.includes('overloaded')) {
+    return { message: 'La IA está sobrecargada ahora mismo. Espera un par de minutos y reinténtalo.', isCredit: false }
+  }
+  if (status === 429 || lc.includes('rate limit')) {
+    return { message: 'Se alcanzó el límite de peticiones de la IA. Espera un minuto y reinténtalo.', isCredit: false }
+  }
+  return { message: `Error de la IA al generar${raw ? `: ${raw.slice(0, 300)}` : ''}. Reinténtalo.`, isCredit: false }
 }

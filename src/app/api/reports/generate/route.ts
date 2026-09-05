@@ -7,7 +7,7 @@ import { PATIENT_TOKEN, redactPatientName, restorePatientName } from '@/lib/repo
 import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
 import { parseMetricsSchema, buildMetricsInstruction, metricsByTestName } from '@/lib/reports/metrics'
-import { callReportModel } from '@/lib/reports/callReportModel'
+import { callReportModel, describeModelError } from '@/lib/reports/callReportModel'
 import { buildTeamPerfil } from '@/lib/reports/teamPerfil'
 import { REPORT_MODEL } from '@/lib/reports/aiConfig'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
@@ -459,6 +459,16 @@ ${patientContext}${referencesBlock ? `\n\n${referencesBlock}` : ''}`
       stopReason = r.stopReason
       usage = r.usage
     } catch (e: any) {
+      if (!e?.isParseFailure) {
+        // Error de API (sin créditos, sobrecarga, red): guardar la causa REAL, no "parseo".
+        const desc = describeModelError(e)
+        console.error('Report model API error:', desc.message)
+        await supabase.from('reports').update({
+          status: 'error',
+          report_data: { _error: desc.message, _api_error: true, _credit_error: desc.isCredit },
+        }).eq('id', reportId)
+        return
+      }
       stopReason = e?.stopReason ?? null
       console.error('Failed to parse Claude response (tras reintento). stop_reason=', stopReason)
       await supabase.from('reports').update({
