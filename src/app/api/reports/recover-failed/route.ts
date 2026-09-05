@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { parseReportJson } from '@/lib/reports/parseReportJson'
 import { restorePatientName } from '@/lib/reports/redact'
 import { buildTeamPerfil } from '@/lib/reports/teamPerfil'
+import { metricsByTestName } from '@/lib/reports/metrics'
 import { DESCARGO_TEAM, DESCARGO_INDIVIDUAL } from '@/lib/reports/descargo'
 
 // Recupera informes individuales SIN volver a llamar a la IA (coste 0):
@@ -57,6 +58,25 @@ export async function POST(request: NextRequest) {
       if (isError) {
         try { data = parseReportJson(rd._raw_response) } catch { continue } // ni reparando: regenerar
         data = restorePatientName(data, (r.patients as any)?.full_name || '')
+        // Datos objetivos (VALD): si la respuesta cruda traía _metricas, persistirlas en
+        // session_tests.result_data (igual que la generación). Sin esto el informe recuperado
+        // sale sin el bloque de "Datos objetivos". No pisa valores ya validados por el fisio.
+        if (r.session_id && (data as any)._metricas) {
+          const byName = metricsByTestName((data as any)._metricas)
+          if (byName.size > 0) {
+            const { data: sts } = await supabase
+              .from('session_tests').select('id, test_name, result_data').eq('session_id', r.session_id)
+            for (const st of (sts || []) as any[]) {
+              const valores = byName.get(String(st.test_name).trim())
+              const yaTiene = st.result_data && Object.keys(st.result_data).some((k) => k !== '_meta')
+              if (valores && st.id && !yaTiene) {
+                await supabase.from('session_tests')
+                  .update({ result_data: { ...valores, _meta: { fuente: 'ia', revisado: false } } })
+                  .eq('id', st.id)
+              }
+            }
+          }
+        }
       } else {
         data = { ...rd } // ya parseado; solo hay que re-envolver
       }
