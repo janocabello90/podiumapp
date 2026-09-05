@@ -5,6 +5,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react'
 import CloseCampaignButton from '@/components/teams/CloseCampaignButton'
 import StudyRoster from '@/components/teams/StudyRoster'
 import TeamStudyCard, { type RoundPlayer } from '@/components/teams/TeamStudyCard'
+import { parseMetricsSchema } from '@/lib/reports/metrics'
 
 export const dynamic = 'force-dynamic'
 
@@ -69,6 +70,26 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     }
   }
 
+  // ¿Le faltan DATOS OBJETIVOS (VALD) a la sesión? Un informe de equipo sin métricas de VALD
+  // no está completo (p. ej. recuperados sin regenerar) → se marca para regenerar.
+  // "Falta" = la sesión TIENE pruebas con métricas definidas pero NINGUNA tiene valores.
+  const missingMetricsBySession = new Map<string, boolean>()
+  if (sessionIds.length > 0) {
+    const { data: sts } = await supabase
+      .from('session_tests')
+      .select('session_id, result_data, tests(result_schema)')
+      .in('session_id', sessionIds)
+    const bySession = new Map<string, { expects: boolean; has: boolean }>()
+    for (const st of sts || []) {
+      const cur = bySession.get(st.session_id) || { expects: false, has: false }
+      if (parseMetricsSchema((st as any).tests?.result_schema).length > 0) cur.expects = true
+      const rd = (st as any).result_data
+      if (rd && typeof rd === 'object' && Object.keys(rd).some((k) => k !== '_meta')) cur.has = true
+      bySession.set(st.session_id, cur)
+    }
+    bySession.forEach((v, sid) => missingMetricsBySession.set(sid, v.expects && !v.has))
+  }
+
   // Informes de EQUIPO existentes (scope=campaign), por (team, round).
   const { data: teamReports } = await supabase
     .from('reports')
@@ -112,7 +133,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       playersByRound[r] = teamPlayers.map((p) => {
         const sid = sessionByPatientRound.get(`${p.id}_${r}`)
         const status: RoundPlayer['status'] = !sid ? 'none' : (statusBySession.get(sid) || 'draft')
-        return { id: p.id, full_name: p.full_name, status, sessionId: sid || null }
+        const missingMetrics = sid ? (missingMetricsBySession.get(sid) ?? false) : false
+        return { id: p.id, full_name: p.full_name, status, sessionId: sid || null, missingMetrics }
       })
     }
     const reportsByRound: Record<number, { id: string; status: string; created_at: string } | undefined> = {}

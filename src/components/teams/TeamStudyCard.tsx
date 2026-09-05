@@ -11,6 +11,7 @@ export interface RoundPlayer {
   full_name: string
   status: 'approved' | 'draft' | 'error' | 'none' // estado del informe individual de esa ronda
   sessionId?: string | null // sesión de esa ronda (para poder regenerar el informe)
+  missingMetrics?: boolean // el informe existe pero le faltan los datos objetivos de VALD
 }
 interface Props {
   campaignId: string
@@ -45,26 +46,38 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
   const includedNotApproved = included.filter((p) => p.status !== 'approved')
   const canGenerate = hasRounds && included.length > 0 && includedNotApproved.length === 0
 
-  // Regenerar en lote los informes individuales que fallaron (status 'error').
-  const failed = players.filter((p) => p.status === 'error' && p.sessionId)
+  // Informes "por resolver" en esta ronda: fallidos (error) O incompletos sin datos de VALD
+  // (p. ej. recuperados sin regenerar). Un borrador sano con métricas NO entra (solo hay que revisarlo).
+  const needsRegen = useMemo(
+    () => players.filter((p) => p.sessionId && (p.status === 'error' || (p.status !== 'approved' && p.missingMetrics))),
+    [players]
+  )
+  const [regenSel, setRegenSel] = useState<Set<string>>(new Set())
+  // Por defecto, seleccionar todos los que hay que resolver.
+  useEffect(() => { setRegenSel(new Set(needsRegen.map((p) => p.id))) }, [needsRegen])
+  function toggleRegen(id: string) {
+    setRegenSel((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }
+  const regenChosen = needsRegen.filter((p) => regenSel.has(p.id))
+
   const [regenerating, setRegenerating] = useState(false)
   const [regenProgress, setRegenProgress] = useState('')
-  async function regenerateFailed() {
-    if (!failed.length) return
+  async function regenerateChosen() {
+    if (!regenChosen.length) return
     setRegenerating(true)
     let ok = 0
-    for (let i = 0; i < failed.length; i++) {
-      setRegenProgress(`${i + 1}/${failed.length}`)
+    for (let i = 0; i < regenChosen.length; i++) {
+      setRegenProgress(`${i + 1}/${regenChosen.length}`)
       try {
         const res = await fetch('/api/reports/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ patientId: failed[i].id, sessionId: failed[i].sessionId }),
+          body: JSON.stringify({ patientId: regenChosen[i].id, sessionId: regenChosen[i].sessionId }),
         })
         if (res.ok || res.status === 202 || res.status === 409) ok++
       } catch { /* seguir con el resto */ }
       // Escalonar para no saturar la API (los informes corren en segundo plano).
-      if (i < failed.length - 1) await new Promise((r) => setTimeout(r, 3000))
+      if (i < regenChosen.length - 1) await new Promise((r) => setTimeout(r, 3000))
     }
     setRegenerating(false)
     setRegenProgress('')
@@ -118,11 +131,12 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
     }
   }
 
-  const statusChip = (s: RoundPlayer['status']) =>
-    s === 'approved' ? <span className="text-[11px] text-green-600">✅ Aprobado</span>
-      : s === 'error' ? <span className="text-[11px] font-medium text-red-600">⚠️ Error al generar · regenerar</span>
-        : s === 'draft' ? <span className="text-[11px] text-amber-600">📝 Pendiente</span>
-          : <span className="text-[11px] text-gray-400">— Sin valorar</span>
+  const statusChip = (p: RoundPlayer) =>
+    p.status === 'approved' ? <span className="text-[11px] text-green-600">✅ Aprobado</span>
+      : p.status === 'error' ? <span className="text-[11px] font-medium text-red-600">⚠️ Error al generar · regenerar</span>
+        : p.missingMetrics ? <span className="text-[11px] font-medium text-red-600">⚠️ Sin datos VALD · regenerar</span>
+          : p.status === 'draft' ? <span className="text-[11px] text-amber-600">📝 Pendiente</span>
+            : <span className="text-[11px] text-gray-400">— Sin valorar</span>
 
   const existing = reportsByRound[round]
 
@@ -163,7 +177,7 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
                     <input type="checkbox" checked={!excluded.has(p.id)} onChange={() => toggle(p.id)} className="w-4 h-4 rounded border-gray-300 text-blue-600" />
                     <Link href={`/patients/${p.id}/report`} onClick={(e) => e.stopPropagation()} className="text-sm text-gray-800 hover:text-blue-600 truncate">{p.full_name}</Link>
                   </span>
-                  {statusChip(p.status)}
+                  {statusChip(p)}
                 </label>
               ))}
             </div>
@@ -174,9 +188,25 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
               </p>
             )}
 
-            {failed.length > 0 && (
+            {needsRegen.length > 0 && (
               <div className="mb-3 rounded-lg bg-red-50 border border-red-100 px-3 py-2.5 space-y-2">
-                <span className="text-[11px] text-red-700 block">{failed.length} informe(s) fallaron al generar.</span>
+                <span className="text-[11px] text-red-700 block">
+                  {needsRegen.length} informe(s) por resolver (fallidos o sin datos objetivos de VALD). Marca los que quieras regenerar:
+                </span>
+                <div className="rounded-md border border-red-100 bg-white/70 divide-y divide-red-50">
+                  {needsRegen.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={regenSel.has(p.id)}
+                        onChange={() => toggleRegen(p.id)}
+                        className="w-3.5 h-3.5 rounded border-gray-300 text-red-600"
+                      />
+                      <span className="text-xs text-gray-800 truncate flex-1">{p.full_name}</span>
+                      <span className="text-[10px] text-red-500 flex-shrink-0">{p.status === 'error' ? 'error' : 'sin VALD'}</span>
+                    </label>
+                  ))}
+                </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={recoverFree}
@@ -186,15 +216,15 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
                     {recovering ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Recuperando…</> : <>Recuperar sin regenerar (gratis)</>}
                   </button>
                   <button
-                    onClick={regenerateFailed}
-                    disabled={regenerating || recovering}
+                    onClick={regenerateChosen}
+                    disabled={regenerating || recovering || regenChosen.length === 0}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 text-red-700 hover:bg-red-100 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 flex-shrink-0"
                   >
-                    {regenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Regenerando {regenProgress}…</> : <>Regenerar con IA (usa créditos)</>}
+                    {regenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Regenerando {regenProgress}…</> : <>Regenerar seleccionados ({regenChosen.length})</>}
                   </button>
                 </div>
                 <p className="text-[10px] text-red-500 leading-snug">
-                  «Recuperar» arregla la respuesta que ya se guardó (sin coste). «Regenerar» pide un informe nuevo a la IA (consume créditos); úsalo para los que fallaron por falta de saldo.
+                  «Recuperar» arregla gratis los que fallaron por formato (si aún guardan la respuesta). «Regenerar» pide un informe nuevo a la IA (consume créditos) y es lo único que rellena los datos de VALD que faltan.
                 </p>
               </div>
             )}
