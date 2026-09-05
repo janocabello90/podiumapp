@@ -8,6 +8,7 @@ import { DESCARGO_INDIVIDUAL, DESCARGO_TEAM } from '@/lib/reports/descargo'
 import { buildReferencesContext } from '@/lib/reports/references'
 import { parseMetricsSchema, buildMetricsInstruction, metricsByTestName } from '@/lib/reports/metrics'
 import { callReportModel } from '@/lib/reports/callReportModel'
+import { buildTeamPerfil } from '@/lib/reports/teamPerfil'
 import { REPORT_MODEL } from '@/lib/reports/aiConfig'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
@@ -233,44 +234,7 @@ export async function POST(request: NextRequest) {
     // estudio (campaign_id), igual que el patrón de la consulta. Si no, informe individual clásico.
     const isTeamReport = !!(session && (session as any).campaign_id)
     let teamPerfil: any = null
-    if (isTeamReport) {
-      const fd = (anamnesis?.form_data as any) || {}
-      let teamName: string | null = null
-      let teamCategory: string | null = null
-      if ((patient as any).team_id) {
-        const { data: tm } = await supabase.from('teams').select('name, category').eq('id', (patient as any).team_id).single()
-        teamName = (tm as any)?.name ?? null
-        teamCategory = (tm as any)?.category ?? null
-      }
-      let sportName: string | null = null
-      const sportId = (session as any)?.sport_id ?? (patient as any).sport_id
-      if (sportId) {
-        const { data: sp } = await supabase.from('sports').select('name').eq('id', sportId).single()
-        sportName = (sp as any)?.name ?? null
-      }
-      // Estudio (campaña) al que pertenece la sesión — para la portada del informe.
-      let estudioName: string | null = null
-      const campaignId = (session as any)?.campaign_id
-      if (campaignId) {
-        const { data: cmp } = await supabase.from('campaigns').select('name').eq('id', campaignId).single()
-        estudioName = (cmp as any)?.name ?? null
-      }
-      const lateralidad = [fd.dominant_leg ? `Pierna ${fd.dominant_leg}` : null, fd.dominant_arm ? `Brazo ${fd.dominant_arm}` : null].filter(Boolean).join(' · ') || null
-      teamPerfil = {
-        nombre: patient.full_name,
-        edad: ageFromDob(patient.date_of_birth),
-        sexo: patient.gender === 'male' ? 'Hombre' : patient.gender === 'female' ? 'Mujer' : (fd.sex || null),
-        deporte: sportName,
-        posicion: fd.position || null,
-        categoria: teamCategory,
-        altura_cm: fd.height_cm ?? null,
-        peso_kg: fd.weight_kg ?? null,
-        lateralidad,
-        horas_entreno_semana: fd.training_hours_week ?? null,
-        equipo: teamName,
-        estudio: estudioName,
-      }
-    }
+    if (isTeamReport) teamPerfil = await buildTeamPerfil(supabase, patient, session, anamnesis)
 
     let patientContext = `DATOS DEL PACIENTE:
 - Nombre: ${patient.full_name}

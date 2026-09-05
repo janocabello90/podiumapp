@@ -84,8 +84,9 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data?.error || 'No se pudo recuperar')
-      if ((data.recovered ?? 0) > 0) toast.success(`Recuperados ${data.recovered} informe(s) sin gastar créditos.`)
-      else toast(`No había informes recuperables (${data.candidates ?? 0} con respuesta guardada). Regenera los que fallaron por saldo.`)
+      const fixed = (data.recovered ?? 0) + (data.refinalized ?? 0)
+      if (fixed > 0) toast.success(`Arreglados ${fixed} informe(s) sin gastar créditos.`)
+      else toast(`No había informes que arreglar aquí (${data.candidates ?? 0} revisados). Los que fallaron por saldo hay que regenerarlos.`)
       router.refresh()
     } catch (e: any) {
       toast.error(e.message || 'No se pudo recuperar')
