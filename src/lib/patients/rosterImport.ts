@@ -73,14 +73,32 @@ export function parseCsv(text: string): string[][] {
 // --- Parseo XLSX (primera hoja → matriz de strings). Carga `xlsx` bajo demanda. ---
 export async function parseXlsx(data: ArrayBuffer): Promise<string[][]> {
   const XLSX = await import('xlsx')
-  const wb = XLSX.read(data, { type: 'array' })
+  // cellDates: las celdas con formato de fecha vuelven como Date (no como nº de serie 40030
+  // ni como texto localizado tipo "8/5/09" en formato US), para NO depender del formato
+  // regional del Excel — que era lo que hacía fallar todas las fechas al importar.
+  const wb = XLSX.read(data, { type: 'array', cellDates: true })
   const sheetName = wb.SheetNames[0]
   if (!sheetName) return []
   const sheet = wb.Sheets[sheetName]
-  const rows = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, raw: false, defval: '' })
+  const rows = XLSX.utils.sheet_to_json<any[]>(sheet, { header: 1, raw: true, defval: '' })
   return (rows as any[][])
-    .map((r) => r.map((c) => (c == null ? '' : String(c))))
+    .map((r) => r.map(cellToString))
     .filter((r) => r.some((cell) => cell.trim() !== ''))
+}
+
+// Celda → string. Las fechas (Date) → ISO yyyy-mm-dd con componentes LOCALES: xlsx alinea la
+// fecha a medianoche local, así que year/month/date locales dan siempre el día de calendario
+// correcto sea cual sea la zona horaria del servidor (Vercel corre en UTC).
+function cellToString(c: any): string {
+  if (c == null) return ''
+  if (c instanceof Date) {
+    if (isNaN(c.getTime())) return ''
+    const y = c.getFullYear()
+    const m = String(c.getMonth() + 1).padStart(2, '0')
+    const d = String(c.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
+  return String(c)
 }
 
 // Mapea la fila de cabeceras a índices de columna por campo.
@@ -110,6 +128,14 @@ function parseDate(value: string): { iso: string | null; ok: boolean } {
   m = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/)
   if (m) {
     const [, d, mo, y] = m
+    return { iso: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`, ok: true }
+  }
+  // dd/mm/yy (año de 2 dígitos): 00–69 → 2000–2069, 70–99 → 1970–1999 (regla POSIX).
+  // Asume día/mes (formato ES de la plantilla), NO mes/día.
+  m = v.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2})$/)
+  if (m) {
+    const [, d, mo, yy] = m
+    const y = Number(yy) <= 69 ? 2000 + Number(yy) : 1900 + Number(yy)
     return { iso: `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`, ok: true }
   }
   return { iso: null, ok: false }
