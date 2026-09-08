@@ -55,17 +55,54 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
     const nextNumber = ((last as any)?.session_number ?? 0) + 1
 
-    // Ronda de estudio (campaign_round): índice de consulta DENTRO del estudio, propio de él
-    // (independiente de session_number, que es el contador de por vida del jugador).
-    // = nº de sesiones de este jugador en este estudio + 1. Fuera de estudio → null.
+    // Ronda de estudio (campaign_round): ahora la ronda es una FASE del estudio POR EQUIPO
+    // (campaign_team_rounds), no un contador por jugador. La sesión se asocia a la ronda ABIERTA
+    // actual del equipo. Si no hay ninguna, se abre la ronda 1. Si la actual está CERRADA, hay que
+    // abrir una nueva ronda antes de seguir valorando. Fuera de estudio → null.
     let campaignRound: number | null = null
     if (campaignId) {
-      const { count } = await supabase
-        .from('sessions')
-        .select('id', { count: 'exact', head: true })
-        .eq('patient_id', patientId)
-        .eq('campaign_id', campaignId)
-      campaignRound = (count ?? 0) + 1
+      if (patient.team_id) {
+        const { data: cur } = await supabase
+          .from('campaign_team_rounds')
+          .select('round_number, status')
+          .eq('campaign_id', campaignId)
+          .eq('team_id', patient.team_id)
+          .eq('clinic_id', profile.clinic_id)
+          .order('round_number', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        if (!cur) {
+          // Primera valoración del estudio para este equipo → abrir la ronda 1.
+          const { data: created, error: crErr } = await supabase
+            .from('campaign_team_rounds')
+            .insert({ clinic_id: profile.clinic_id, campaign_id: campaignId, team_id: patient.team_id, round_number: 1, status: 'open', opened_by: profile.id })
+            .select('round_number')
+            .single()
+          if (crErr || !created) {
+            // Posible carrera: otra valoración creó la ronda 1 a la vez → re-leer.
+            const { data: again } = await supabase
+              .from('campaign_team_rounds')
+              .select('round_number')
+              .eq('campaign_id', campaignId).eq('team_id', patient.team_id).eq('clinic_id', profile.clinic_id)
+              .order('round_number', { ascending: false }).limit(1).maybeSingle()
+            campaignRound = (again as any)?.round_number ?? 1
+          } else {
+            campaignRound = 1
+          }
+        } else if ((cur as any).status === 'closed') {
+          return NextResponse.json({ error: 'La ronda actual está cerrada. Abre una nueva ronda para seguir valorando.' }, { status: 409 })
+        } else {
+          campaignRound = (cur as any).round_number
+        }
+      } else {
+        // Estudio sin equipo asignado (caso raro): comportamiento anterior (contador por jugador).
+        const { count } = await supabase
+          .from('sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('patient_id', patientId)
+          .eq('campaign_id', campaignId)
+        campaignRound = (count ?? 0) + 1
+      }
     }
 
     // Crear sesión

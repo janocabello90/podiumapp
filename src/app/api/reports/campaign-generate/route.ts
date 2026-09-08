@@ -74,6 +74,16 @@ export async function POST(request: NextRequest) {
     if (!ct) return NextResponse.json({ error: 'El equipo no pertenece a este estudio' }, { status: 400 })
     const teamName = (ct.teams as any)?.name || 'Equipo'
 
+    // Gate: la ronda debe estar CERRADA para poder generar el informe de equipo.
+    const { data: roundRow } = await supabase
+      .from('campaign_team_rounds')
+      .select('status')
+      .eq('campaign_id', campaignId).eq('team_id', teamId).eq('round_number', round)
+      .eq('clinic_id', profile.clinic_id).maybeSingle()
+    if (!roundRow || (roundRow as any).status !== 'closed') {
+      return NextResponse.json({ error: 'Cierra la ronda antes de generar el informe de equipo.' }, { status: 409 })
+    }
+
     // Roster del equipo.
     const { data: roster } = await supabase
       .from('patients')

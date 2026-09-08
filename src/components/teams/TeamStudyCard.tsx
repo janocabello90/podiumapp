@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Loader2, Sparkles, Shield, CheckCircle2, FileText } from 'lucide-react'
+import { Loader2, Sparkles, Shield, CheckCircle2, FileText, Lock, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export interface RoundPlayer {
@@ -19,15 +19,37 @@ interface Props {
   rounds: number[]
   playersByRound: Record<number, RoundPlayer[]>
   reportsByRound: Record<number, { id: string; status: string; created_at: string } | undefined>
+  roundStatus?: 'open' | 'closed' // estado de la ronda mostrada (por defecto 'open')
 }
 
-export default function TeamStudyCard({ campaignId, team, rounds, playersByRound, reportsByRound }: Props) {
+export default function TeamStudyCard({ campaignId, team, rounds, playersByRound, reportsByRound, roundStatus = 'open' }: Props) {
   const router = useRouter()
   const hasRounds = rounds.length > 0
   const [round, setRound] = useState<number>(hasRounds ? rounds[rounds.length - 1] : 1)
   const players = useMemo(() => playersByRound[round] || [], [playersByRound, round])
   const [excluded, setExcluded] = useState<Set<string>>(new Set())
   const [generating, setGenerating] = useState(false)
+  const isClosed = roundStatus === 'closed'
+  const approvedCount = players.filter((p) => p.status === 'approved').length
+
+  // Cerrar / abrir ronda.
+  const [roundBusy, setRoundBusy] = useState(false)
+  async function roundAction(action: 'close' | 'open') {
+    setRoundBusy(true)
+    try {
+      const res = await fetch('/api/campaigns/rounds', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaignId, teamId: team.id, action }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || 'No se pudo actualizar la ronda')
+      toast.success(action === 'close' ? 'Ronda cerrada. Ya puedes generar el informe de equipo.' : `Ronda ${data.round} abierta.`)
+      router.refresh()
+    } catch (e: any) {
+      toast.error(e.message || 'No se pudo actualizar la ronda')
+      setRoundBusy(false)
+    }
+  }
 
   // Al cambiar de ronda: excluir por defecto a quien no esté APROBADO.
   useEffect(() => {
@@ -44,7 +66,8 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
 
   const included = players.filter((p) => !excluded.has(p.id))
   const includedNotApproved = included.filter((p) => p.status !== 'approved')
-  const canGenerate = hasRounds && included.length > 0 && includedNotApproved.length === 0
+  // El informe de equipo solo se puede generar con la ronda CERRADA.
+  const canGenerate = hasRounds && isClosed && included.length > 0 && includedNotApproved.length === 0
 
   // Informes "por resolver" en esta ronda: fallidos (error) O incompletos sin datos de VALD
   // (p. ej. recuperados sin regenerar). Un borrador sano con métricas NO entra (solo hay que revisarlo).
@@ -147,10 +170,10 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
           <Shield className="w-4 h-4 text-blue-500 flex-shrink-0" />
           <h3 className="text-sm font-semibold text-gray-900 truncate">{team.name}</h3>
         </div>
-        {rounds.length > 1 && (
-          <select value={round} onChange={(e) => setRound(Number(e.target.value))} className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white">
-            {rounds.map((r) => <option key={r} value={r}>Ronda {r}</option>)}
-          </select>
+        {hasRounds && (
+          <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${isClosed ? 'bg-gray-100 text-gray-600' : 'bg-green-50 text-green-700'}`}>
+            {isClosed ? '🔒 Ronda cerrada' : '🟢 Ronda abierta'}
+          </span>
         )}
       </div>
 
@@ -229,20 +252,44 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
               </div>
             )}
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={generate}
-                disabled={!canGenerate || generating}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium rounded-xl transition-colors"
-              >
-                {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Iniciando…</> : <><Sparkles className="w-4 h-4" /> {existing ? 'Regenerar' : 'Generar'} informe · Ronda {round}</>}
-              </button>
-              {existing && (
-                <Link href={`/estudios/${campaignId}/report?team=${team.id}&round=${round}`} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Revisar
-                </Link>
-              )}
-            </div>
+            {isClosed ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={generate}
+                  disabled={!canGenerate || generating}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium rounded-xl transition-colors"
+                >
+                  {generating ? <><Loader2 className="w-4 h-4 animate-spin" /> Iniciando…</> : <><Sparkles className="w-4 h-4" /> {existing ? 'Regenerar' : 'Generar'} informe de equipo</>}
+                </button>
+                {existing && (
+                  <Link href={`/estudios/${campaignId}/report?team=${team.id}&round=${round}`} className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Revisar
+                  </Link>
+                )}
+                <button
+                  onClick={() => roundAction('open')}
+                  disabled={roundBusy}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-medium rounded-lg disabled:opacity-50 ml-auto"
+                >
+                  {roundBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />} Nueva ronda
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <button
+                  onClick={() => roundAction('close')}
+                  disabled={roundBusy || approvedCount < 1}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white text-sm font-medium rounded-xl transition-colors"
+                >
+                  {roundBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Cerrando…</> : <><Lock className="w-4 h-4" /> Cerrar ronda</>}
+                </button>
+                <p className="text-[11px] text-gray-500 leading-snug">
+                  {approvedCount < 1
+                    ? 'Aprueba al menos un informe individual de la ronda para poder cerrarla.'
+                    : 'Al cerrar la ronda se desbloquea el informe de equipo. Los jugadores sin informe aprobado quedarán fuera (cobertura parcial).'}
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>

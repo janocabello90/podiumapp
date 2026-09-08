@@ -99,6 +99,22 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     .eq('clinic_id', profile.clinic_id)
     .order('created_at', { ascending: false })
 
+  // Estado de las rondas por equipo (campaign_team_rounds): abierta/cerrada + lista de rondas
+  // (incluye rondas recién abiertas que aún no tienen sesiones).
+  const { data: teamRounds } = await supabase
+    .from('campaign_team_rounds')
+    .select('team_id, round_number, status')
+    .eq('campaign_id', campaign.id)
+    .eq('clinic_id', profile.clinic_id)
+  const roundStatusByKey = new Map<string, 'open' | 'closed'>() // `${team_id}_${round}` → status
+  const roundsByTeam = new Map<string, number[]>()
+  for (const r of teamRounds || []) {
+    roundStatusByKey.set(`${r.team_id}_${r.round_number}`, (r.status as 'open' | 'closed'))
+    const arr = roundsByTeam.get(r.team_id) || []
+    arr.push(r.round_number)
+    roundsByTeam.set(r.team_id, arr)
+  }
+
   // Índice sesión por (patient, round)
   const sessionByPatientRound = new Map<string, string>()
   for (const s of sessions) if (s.campaign_round != null) sessionByPatientRound.set(`${s.patient_id}_${s.campaign_round}`, s.id)
@@ -127,7 +143,13 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         if (s.patient_id === p.id && s.campaign_round != null) roundsSet.add(s.campaign_round)
       }
     }
+    // Incluir también las rondas declaradas (campaign_team_rounds), aunque aún no tengan sesiones
+    // (p. ej. una ronda recién abierta lista para valorar).
+    for (const r of roundsByTeam.get(team.id) || []) roundsSet.add(r)
     const rounds = Array.from(roundsSet).sort((a, b) => a - b)
+    // Estado (abierta/cerrada) por ronda. Por defecto 'open' si no hubiera fila (defensivo).
+    const roundStatusByRound: Record<number, 'open' | 'closed'> = {}
+    for (const r of rounds) roundStatusByRound[r] = roundStatusByKey.get(`${team.id}_${r}`) || 'open'
     const playersByRound: Record<number, RoundPlayer[]> = {}
     for (const r of rounds) {
       playersByRound[r] = teamPlayers.map((p) => {
@@ -142,7 +164,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
       const rep = (teamReports || []).find((x: any) => x.team_id === team.id && x.campaign_round === r)
       if (rep) reportsByRound[r] = { id: rep.id, status: rep.status || 'draft', created_at: rep.created_at as string }
     }
-    return { team, rounds, playersByRound, reportsByRound }
+    return { team, rounds, playersByRound, reportsByRound, roundStatusByRound }
   })
 
   return (

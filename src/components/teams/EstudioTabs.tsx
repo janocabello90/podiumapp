@@ -10,6 +10,7 @@ export interface TeamCard {
   rounds: number[]
   playersByRound: Record<number, RoundPlayer[]>
   reportsByRound: Record<number, { id: string; status: string; created_at: string } | undefined>
+  roundStatusByRound: Record<number, 'open' | 'closed'>
 }
 type RosterTeam = { id: string; name: string }
 type RosterPlayer = {
@@ -119,6 +120,7 @@ export default function EstudioTabs({
                     rounds={[activeRound as number]}
                     playersByRound={tc.playersByRound}
                     reportsByRound={tc.reportsByRound}
+                    roundStatus={tc.roundStatusByRound[activeRound as number] || 'open'}
                   />
                 ))}
               </div>
