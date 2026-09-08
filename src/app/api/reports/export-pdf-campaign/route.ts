@@ -60,17 +60,70 @@ function writeParagraph(doc: jsPDF, text: string, y: number, opts?: { fontSize?:
   return y + 3
 }
 
+const NAVY: [number, number, number] = [20, 40, 80]
+const GOLD: [number, number, number] = [218, 165, 32]
+
 function writeSectionTitle(doc: jsPDF, title: string, y: number): number {
   y = ensureSpace(doc, y, 30)
+  doc.setFillColor(NAVY[0], NAVY[1], NAVY[2]); doc.rect(MARGIN_LEFT, y - 3.6, 1.6, 4.6, 'F') // acento
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(13)
-  doc.setTextColor(30, 30, 30)
-  doc.text(title, MARGIN_LEFT, y)
+  doc.setTextColor(NAVY[0], NAVY[1], NAVY[2])
+  doc.text(title, MARGIN_LEFT + 4, y)
   y += 3
-  doc.setDrawColor(218, 165, 32)
+  doc.setDrawColor(GOLD[0], GOLD[1], GOLD[2])
   doc.setLineWidth(0.3)
   doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y)
   return y + 8
+}
+
+// Semáforo como fichas de color (pills) agrupadas por nivel de riesgo.
+function drawSemaphore(doc: jsPDF, groups: { label: string; bg: number[]; fg: number[]; items: string[] }[], y: number): number {
+  const pageH = doc.internal.pageSize.getHeight()
+  for (const g of groups) {
+    if (!g.items.length) continue
+    y = ensureSpace(doc, y, 14)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(g.fg[0], g.fg[1], g.fg[2])
+    doc.text(`${g.label.toUpperCase()}  ·  ${g.items.length}`, MARGIN_LEFT, y)
+    y += 5
+    let x = MARGIN_LEFT
+    const h = 6, padX = 2.4, gap = 2.2
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5)
+    for (const it of g.items) {
+      const w = doc.getTextWidth(it) + padX * 2
+      if (x + w > PAGE_WIDTH - MARGIN_RIGHT) { x = MARGIN_LEFT; y += h + gap }
+      if (y > pageH - MARGIN_BOTTOM - h) { addFooter(doc); doc.addPage(); addHeaderLine(doc); y = MARGIN_TOP + 10; x = MARGIN_LEFT }
+      doc.setFillColor(g.bg[0], g.bg[1], g.bg[2]); doc.roundedRect(x, y - 4, w, h, 1.6, 1.6, 'F')
+      doc.setTextColor(g.fg[0], g.fg[1], g.fg[2]); doc.text(it, x + padX, y)
+      x += w + gap
+    }
+    y += h + 4
+  }
+  return y
+}
+
+// Panel de métricas como TABLA (Prueba · métrica | Media | Rango | n).
+function drawPanelTable(doc: jsPDF, rows: { c1: string; c2: string; c3: string; c4: string }[], y: number): number {
+  const x1 = MARGIN_LEFT + 1, x2 = MARGIN_LEFT + 96, x3 = MARGIN_LEFT + 134, x4 = PAGE_WIDTH - MARGIN_RIGHT - 6
+  const header = () => {
+    doc.setFillColor(240, 242, 246); doc.rect(MARGIN_LEFT, y - 4, CONTENT_WIDTH, 6, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(110, 110, 110)
+    doc.text('Prueba · métrica', x1, y); doc.text('Media', x2, y); doc.text('Rango', x3, y); doc.text('n', x4, y)
+    y += 5
+  }
+  y = ensureSpace(doc, y, 16); header()
+  for (const r of rows) {
+    const prevY = y
+    y = ensureSpace(doc, y, 8)
+    if (y !== prevY) header()
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(55, 55, 55)
+    doc.text(String(doc.splitTextToSize(r.c1, 92)[0] || ''), x1, y)
+    doc.setTextColor(30, 30, 30); doc.text(r.c2, x2, y); doc.text(r.c3, x3, y); doc.text(r.c4, x4, y)
+    y += 2
+    doc.setDrawColor(232, 232, 232); doc.setLineWidth(0.2); doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y)
+    y += 3
+  }
+  return y + 3
 }
 
 function writeSubtitle(doc: jsPDF, title: string, y: number): number {
@@ -134,17 +187,23 @@ export async function POST(request: NextRequest) {
     const ronda = p.ronda ?? meta.ronda
     const cobertura = p.cobertura || (meta.cobertura_valorados != null && meta.roster_total != null ? `${meta.cobertura_valorados}/${meta.roster_total}` : '')
 
-    // Portada
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(20, 40, 80)
-    doc.text('Informe de Equipo', PAGE_WIDTH / 2, 58, { align: 'center' })
-    doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.8); doc.line(PAGE_WIDTH / 2 - 30, 64, PAGE_WIDTH / 2 + 30, 64)
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(30, 30, 30)
-    doc.text(String(equipo), PAGE_WIDTH / 2, 78, { align: 'center' })
+    // Portada — banda de marca
+    doc.setFillColor(20, 40, 80); doc.rect(0, 0, PAGE_WIDTH, 64, 'F')
+    doc.setFillColor(218, 165, 32); doc.rect(0, 64, PAGE_WIDTH, 1.6, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(218, 165, 32)
+    doc.text('MÉTODO PODIUM', PAGE_WIDTH / 2, 27, { align: 'center' })
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(21); doc.setTextColor(255, 255, 255)
+    doc.text('Informe de Rendimiento', PAGE_WIDTH / 2, 42, { align: 'center' })
+    doc.text('y Prevención de Equipo', PAGE_WIDTH / 2, 52, { align: 'center' })
+    // Datos del equipo
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(20, 40, 80)
+    doc.text(String(equipo), PAGE_WIDTH / 2, 88, { align: 'center' })
     doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90, 90, 90)
     const bits = [estudio, grupo, ronda != null ? `Ronda ${ronda}` : ''].filter(Boolean)
-    if (bits.length) doc.text(bits.join('  ·  '), PAGE_WIDTH / 2, 86, { align: 'center' })
-    if (cobertura) doc.text(`Cobertura: ${cobertura} jugadores`, PAGE_WIDTH / 2, 93, { align: 'center' })
-    doc.text('Método Podium™ — informe asistido por IA y revisado por fisioterapeuta colegiado', PAGE_WIDTH / 2, 107, { align: 'center', maxWidth: CONTENT_WIDTH })
+    if (bits.length) doc.text(bits.join('    ·    '), PAGE_WIDTH / 2, 97, { align: 'center' })
+    if (cobertura) doc.text(`Cobertura: ${cobertura} jugadores valorados`, PAGE_WIDTH / 2, 104, { align: 'center' })
+    doc.setFontSize(9); doc.setTextColor(140, 140, 140)
+    doc.text('Informe asistido por IA y revisado por fisioterapeuta colegiado', PAGE_WIDTH / 2, 122, { align: 'center', maxWidth: CONTENT_WIDTH })
 
     addFooter(doc)
     doc.addPage()
@@ -174,18 +233,11 @@ export async function POST(request: NextRequest) {
         const asim = r?.maxAsim != null ? ` (${Math.round(r.maxAsim)}%)` : ''
         if (byLvl[r?.nivel]) byLvl[r.nivel].push(`${r.nombre}${asim}`)
       }
-      const lvlMeta: [string, string, number[]][] = [
-        ['rojo', 'Riesgo alto', [201, 63, 63]],
-        ['ambar', 'Riesgo medio', [201, 145, 32]],
-        ['verde', 'Sin señales de riesgo', [52, 150, 82]],
-      ]
-      for (const [lvl, label, rgb] of lvlMeta) {
-        if (!byLvl[lvl].length) continue
-        y = ensureSpace(doc, y, 8)
-        doc.setFillColor(rgb[0], rgb[1], rgb[2]); doc.circle(MARGIN_LEFT - 3, y - 1.3, 1.1, 'F')
-        y = writeParagraph(doc, `${label}: ${byLvl[lvl].join(', ')}`, y, { fontSize: 9 })
-        y += 0.5
-      }
+      y = drawSemaphore(doc, [
+        { label: 'Riesgo alto', bg: [250, 232, 232], fg: [176, 42, 42], items: byLvl.rojo },
+        { label: 'Riesgo medio', bg: [252, 244, 227], fg: [162, 110, 20], items: byLvl.ambar },
+        { label: 'Sin señales de riesgo', bg: [232, 245, 236], fg: [40, 120, 66], items: byLvl.verde },
+      ], y)
     }
 
     if (vis.resumen_equipo && rd.resumen_equipo) {
@@ -193,24 +245,18 @@ export async function POST(request: NextRequest) {
       y = writeParagraph(doc, String(rd.resumen_equipo), y)
     }
 
-    // Panel de métricas (calculado)
+    // Panel de métricas (calculado) — como tabla
     if (vis.panel_metricas && Array.isArray(rd.panel_metricas) && rd.panel_metricas.length) {
-      y = writeSectionTitle(doc, 'Panel de métricas del equipo', y)
-      const byTest: Record<string, any[]> = {}
-      for (const s of rd.panel_metricas) (byTest[s.test_name] ||= []).push(s)
       const isEmpty = (s: any) => s.bilateral ? ((s.mean_izq ?? 0) === 0 && (s.mean_der ?? 0) === 0) : ((s.mean ?? 0) === 0 && (s.max ?? 0) === 0)
-      for (const [testName, stats] of Object.entries(byTest)) {
-        const shown = (stats as any[]).filter((s) => !isEmpty(s)) // ocultar métricas no medidas (todo a 0)
-        if (!shown.length) continue
-        y = writeSubtitle(doc, testName, y)
-        for (const s of shown) {
-          const stat = s.bilateral
-            ? `izq ${s.mean_izq ?? '—'} / der ${s.mean_der ?? '—'}`
-            : `media ${s.mean ?? '—'}${s.min != null ? ` (rango ${s.min}–${s.max})` : ''}`
-          // El "a vigilar" por métrica se omite aquí: ya está en el semáforo (evita el muro de texto).
-          y = writeParagraph(doc, `${s.label}${s.unit ? ` (${s.unit})` : ''}: ${stat}  ·  n=${s.n}`, y, { fontSize: 9 })
-        }
-        y += 1
+      const rows = (rd.panel_metricas as any[]).filter((s) => !isEmpty(s)).map((s) => ({
+        c1: `${s.test_name} · ${s.label}${s.unit ? ` (${s.unit})` : ''}`,
+        c2: s.bilateral ? `izq ${s.mean_izq ?? '—'} / der ${s.mean_der ?? '—'}` : `${s.mean ?? '—'}`,
+        c3: !s.bilateral && s.min != null ? `${s.min}–${s.max}` : '—',
+        c4: String(s.n ?? ''),
+      }))
+      if (rows.length) {
+        y = writeSectionTitle(doc, 'Panel de métricas del equipo', y)
+        y = drawPanelTable(doc, rows, y)
       }
     }
 
