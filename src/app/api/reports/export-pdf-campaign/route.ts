@@ -55,6 +55,16 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
   return y
 }
 
+// Si el bloque no cabe en lo que queda de página pero SÍ cabría en una página nueva,
+// salta de página para no dejarlo partido/huérfano. Para bloques que no caben ni en
+// una página entera, no hace nada (se dejará fluir/partir de forma natural).
+function reserve(doc: jsPDF, needed: number, y: number): number {
+  const bottom = doc.internal.pageSize.getHeight() - MARGIN_BOTTOM
+  const usable = bottom - (MARGIN_TOP + 10)
+  if (y + needed > bottom && needed <= usable) { addFooter(doc); doc.addPage(); addHeader(doc); return MARGIN_TOP + 10 }
+  return y
+}
+
 function writeParagraph(doc: jsPDF, text: string, y: number, opts?: { fontSize?: number; fontStyle?: string; color?: number[] }): number {
   const fontSize = opts?.fontSize || 10
   const fontStyle = opts?.fontStyle || 'normal'
@@ -211,9 +221,13 @@ function drawStackedRisk(doc: jsPDF, segs: { n: number; color: number[]; label: 
   let lx = MARGIN_LEFT
   doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
   for (const s of segs) {
+    if (s.n === 0) continue
+    const txt = `${s.label}: ${s.n}`
+    const tw = doc.getTextWidth(txt) + 3.4
+    if (lx + tw + 8 > PAGE_WIDTH - MARGIN_RIGHT) { lx = MARGIN_LEFT; y += 5 }
     doc.setFillColor(s.color[0], s.color[1], s.color[2]); doc.rect(lx, y - 2.4, 2.4, 2.4, 'F')
-    doc.setTextColor(70, 70, 70); doc.text(`${s.label}: ${s.n}`, lx + 3.4, y)
-    lx += doc.getTextWidth(`${s.label}: ${s.n}`) + 12
+    doc.setTextColor(70, 70, 70); doc.text(txt, lx + 3.4, y)
+    lx += tw + 10
   }
   return y + 6
 }
@@ -319,24 +333,29 @@ export async function POST(request: NextRequest) {
     // Semáforo (calculado) — con punto de color por nivel de riesgo
     if (vis.semaforo && Array.isArray(rd.semaforo) && rd.semaforo.length) {
       y = writeSectionTitle(doc, 'Semáforo de jugadores', y)
-      const byLvl: Record<string, string[]> = { rojo: [], ambar: [], verde: [] }
+      const byLvl: Record<string, string[]> = { rojo: [], ambar: [], verde: [], sindatos: [] }
       for (const r of rd.semaforo) {
+        const noData = r?.maxAsim == null && r?.worstPct == null
         const asim = r?.maxAsim != null ? ` (${Math.round(r.maxAsim)}%)` : ''
-        if (byLvl[r?.nivel]) byLvl[r.nivel].push(`${r.nombre}${asim}`)
+        const bucket = noData ? 'sindatos' : r?.nivel
+        if (byLvl[bucket]) byLvl[bucket].push(`${r.nombre}${asim}`)
       }
       y = drawSemaphore(doc, [
         { label: 'Riesgo alto', bg: [250, 232, 232], fg: [176, 42, 42], items: byLvl.rojo },
         { label: 'Riesgo medio', bg: [252, 244, 227], fg: [162, 110, 20], items: byLvl.ambar },
         { label: 'Sin señales de riesgo', bg: [232, 245, 236], fg: [40, 120, 66], items: byLvl.verde },
+        { label: 'Sin datos VALD', bg: [239, 240, 242], fg: [110, 110, 110], items: byLvl.sindatos },
       ], y)
     }
 
     // Gráficos (calculado)
     if (vis.graficos) {
       const sem: any[] = Array.isArray(rd.semaforo) ? rd.semaforo : []
-      const rj = sem.filter((r) => r?.nivel === 'rojo').length
-      const am = sem.filter((r) => r?.nivel === 'ambar').length
-      const vd = sem.filter((r) => r?.nivel === 'verde').length
+      const noData = (r: any) => r?.maxAsim == null && r?.worstPct == null
+      const rj = sem.filter((r) => r?.nivel === 'rojo' && !noData(r)).length
+      const am = sem.filter((r) => r?.nivel === 'ambar' && !noData(r)).length
+      const vd = sem.filter((r) => r?.nivel === 'verde' && !noData(r)).length
+      const sd = sem.filter(noData).length
       const asimJug = sem.filter((r) => r?.maxAsim != null).sort((a, b) => b.maxAsim - a.maxAsim)
         .map((r) => ({ label: r.nombre, value: r.maxAsim, color: RISK_RGB[r.nivel] || [120, 120, 120] }))
       const asimPrueba = (Array.isArray(rd.panel_metricas) ? rd.panel_metricas : [])
@@ -344,19 +363,22 @@ export async function POST(request: NextRequest) {
         .map((s: any) => ({ label: s.test_name, value: s.mean, color: [37, 99, 235] }))
         .sort((a: any, b: any) => b.value - a.value)
       const zonas = ((rd.lesiones?.zonas as any[]) || []).slice(0, 8).map((z) => ({ label: z.zona, value: z.n, color: [8, 145, 178] }))
-      if (rj + am + vd > 0 || asimJug.length || asimPrueba.length || zonas.length) {
+      const hbarH = (n: number) => 12 + n * 6.6 + 4 // subtítulo + barras (para no partir el gráfico)
+      if (rj + am + vd + sd > 0 || asimJug.length || asimPrueba.length || zonas.length) {
         y = writeSectionTitle(doc, 'Gráficos', y)
-        if (rj + am + vd > 0) {
+        if (rj + am + vd + sd > 0) {
+          y = reserve(doc, 32, y); y += 3
           y = writeSubtitle(doc, 'Reparto de riesgo del equipo', y)
           y = drawStackedRisk(doc, [
             { n: rj, color: [176, 42, 42], label: 'Riesgo alto' },
             { n: am, color: [162, 110, 20], label: 'Riesgo medio' },
             { n: vd, color: [40, 120, 66], label: 'Sin señales' },
+            { n: sd, color: [150, 150, 150], label: 'Sin datos VALD' },
           ], y)
         }
-        if (asimJug.length) { y = writeSubtitle(doc, 'Asimetría máxima por jugador (%)', y); y = drawHBars(doc, asimJug, y, '%') }
-        if (asimPrueba.length) { y = writeSubtitle(doc, 'Asimetría media por prueba (%)', y); y = drawHBars(doc, asimPrueba, y, '%') }
-        if (zonas.length) { y = writeSubtitle(doc, 'Lesiones por zona (24 m)', y); y = drawHBars(doc, zonas, y) }
+        if (asimJug.length) { y = reserve(doc, hbarH(asimJug.length), y); y += 3; y = writeSubtitle(doc, 'Asimetría máxima por jugador (%)', y); y = drawHBars(doc, asimJug, y, '%') }
+        if (asimPrueba.length) { y = reserve(doc, hbarH(asimPrueba.length), y); y += 3; y = writeSubtitle(doc, 'Asimetría media por prueba (%)', y); y = drawHBars(doc, asimPrueba, y, '%') }
+        if (zonas.length) { y = reserve(doc, hbarH(zonas.length), y); y += 3; y = writeSubtitle(doc, 'Lesiones por zona (24 m)', y); y = drawHBars(doc, zonas, y) }
       }
     }
 

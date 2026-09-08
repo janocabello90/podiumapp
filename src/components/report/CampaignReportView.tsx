@@ -46,12 +46,16 @@ interface TeamRoundData {
 
 interface Props { reportId: string; initialStatus: string; initialData: TeamRoundData }
 
-const LEVEL_STYLE: Record<RiskLevel, string> = {
+const LEVEL_STYLE: Record<string, string> = {
   rojo: 'bg-red-50 text-red-700',
   ambar: 'bg-amber-50 text-amber-700',
   verde: 'bg-green-50 text-green-700',
+  sin_datos: 'bg-gray-100 text-gray-500',
 }
-const LEVEL_DOT: Record<RiskLevel, string> = { rojo: 'bg-red-500', ambar: 'bg-amber-500', verde: 'bg-green-500' }
+const LEVEL_DOT: Record<string, string> = { rojo: 'bg-red-500', ambar: 'bg-amber-500', verde: 'bg-green-500', sin_datos: 'bg-gray-400' }
+// Un jugador sin asimetría ni percentil medidos no es "sin riesgo": es "sin datos VALD".
+const effLevel = (r: { maxAsim?: number | null; worstPct?: number | null; nivel: string }) =>
+  r.maxAsim == null && r.worstPct == null ? 'sin_datos' : r.nivel
 
 export default function CampaignReportView({ reportId, initialStatus, initialData }: Props) {
   const router = useRouter()
@@ -186,11 +190,14 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
       {visible.semaforo && semaforo.length > 0 && (
         <Section label="Semáforo de jugadores" note="calculado · por riesgo (asimetría · percentil · lesiones)">
           <div className="flex flex-wrap gap-2">
-            {semaforo.map((r, i) => (
-              <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${LEVEL_STYLE[r.nivel]}`} title={r.motivos.join(' · ')}>
-                <span className={`w-2 h-2 rounded-full ${LEVEL_DOT[r.nivel]}`} />{r.nombre}{r.maxAsim != null ? <span className="font-mono">· {Math.round(r.maxAsim)}%</span> : null}
-              </span>
-            ))}
+            {semaforo.map((r, i) => {
+              const lv = effLevel(r)
+              return (
+                <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${LEVEL_STYLE[lv]}`} title={(r.motivos || []).join(' · ') || 'sin datos VALD'}>
+                  <span className={`w-2 h-2 rounded-full ${LEVEL_DOT[lv]}`} />{r.nombre}{r.maxAsim != null ? <span className="font-mono">· {Math.round(r.maxAsim)}%</span> : lv === 'sin_datos' ? <span className="text-[10px]">· s/d</span> : null}
+                </span>
+              )
+            })}
           </div>
         </Section>
       )}
@@ -303,7 +310,7 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
           <div className="divide-y divide-gray-50">
             {anexo.map((r, i) => (
               <div key={i} className="flex items-center gap-3 py-2">
-                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${LEVEL_DOT[r.nivel]}`} />
+                <span className={`w-2 h-2 rounded-full flex-shrink-0 ${LEVEL_DOT[r.metricaClave == null ? 'sin_datos' : r.nivel]}`} />
                 <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-900 truncate">{r.nombre}</div>{r.titular && <div className="text-xs text-gray-500 truncate">{r.titular}</div>}</div>
                 {r.metricaClave && <span className="text-xs font-mono text-gray-600 flex-shrink-0">{r.metricaClave}</span>}
               </div>

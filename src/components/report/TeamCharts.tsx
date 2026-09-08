@@ -4,7 +4,7 @@
 // calculado (semáforo, panel, lesiones): nada estimado por IA.
 
 type RiskLevel = 'rojo' | 'ambar' | 'verde'
-interface PlayerRisk { nombre: string; maxAsim: number | null; nivel: RiskLevel }
+interface PlayerRisk { nombre: string; maxAsim: number | null; worstPct?: number | null; nivel: RiskLevel }
 interface MetricStat { test_name: string; label: string; key: string; bilateral: boolean; mean: number | null; unit?: string }
 interface Injuries { zonas?: { zona: string; n: number }[] }
 
@@ -40,14 +40,15 @@ function HBars({ data, unit = '', height }: { data: { label: string; value: numb
   )
 }
 
-function StackedRisk({ rojo, ambar, verde }: { rojo: number; ambar: number; verde: number }) {
-  const total = rojo + ambar + verde
+function StackedRisk({ rojo, ambar, verde, sinDatos = 0 }: { rojo: number; ambar: number; verde: number; sinDatos?: number }) {
+  const total = rojo + ambar + verde + sinDatos
   if (total === 0) return null
   const w = 480, h = 26
   const segs = [
     { n: rojo, c: RISK_COLOR.rojo, label: 'Riesgo alto' },
     { n: ambar, c: RISK_COLOR.ambar, label: 'Riesgo medio' },
     { n: verde, c: RISK_COLOR.verde, label: 'Sin señales' },
+    { n: sinDatos, c: '#9ca3af', label: 'Sin datos VALD' },
   ].filter((s) => s.n > 0)
   let x = 0
   return (
@@ -92,10 +93,12 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { se
     .sort((a, b) => (b.maxAsim as number) - (a.maxAsim as number))
     .map((p) => ({ label: p.nombre, value: p.maxAsim as number, color: RISK_COLOR[p.nivel] }))
 
-  // 2) Reparto de riesgo.
-  const rojo = semaforo.filter((p) => p.nivel === 'rojo').length
-  const ambar = semaforo.filter((p) => p.nivel === 'ambar').length
-  const verde = semaforo.filter((p) => p.nivel === 'verde').length
+  // 2) Reparto de riesgo (los que no tienen ni asimetría ni percentil = "sin datos", no verde).
+  const isNoData = (p: PlayerRisk) => p.maxAsim == null && p.worstPct == null
+  const rojo = semaforo.filter((p) => p.nivel === 'rojo' && !isNoData(p)).length
+  const ambar = semaforo.filter((p) => p.nivel === 'ambar' && !isNoData(p)).length
+  const verde = semaforo.filter((p) => p.nivel === 'verde' && !isNoData(p)).length
+  const sinDatos = semaforo.filter(isNoData).length
 
   // 3) Asimetría media por prueba (métricas de asimetría del panel).
   const asimPrueba = panel
@@ -106,12 +109,12 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { se
   // 4) Lesiones por zona.
   const zonas = (lesiones?.zonas || []).slice(0, 8).map((z) => ({ label: z.zona, value: z.n, color: '#0891b2' }))
 
-  const nada = asimJug.length === 0 && rojo + ambar + verde === 0 && asimPrueba.length === 0 && zonas.length === 0
+  const nada = asimJug.length === 0 && rojo + ambar + verde + sinDatos === 0 && asimPrueba.length === 0 && zonas.length === 0
   if (nada) return <p className="text-xs text-gray-400">Sin datos suficientes para los gráficos.</p>
 
   return (
     <div className="space-y-3">
-      {rojo + ambar + verde > 0 && <ChartCard title="Reparto de riesgo del equipo"><StackedRisk rojo={rojo} ambar={ambar} verde={verde} /></ChartCard>}
+      {rojo + ambar + verde + sinDatos > 0 && <ChartCard title="Reparto de riesgo del equipo"><StackedRisk rojo={rojo} ambar={ambar} verde={verde} sinDatos={sinDatos} /></ChartCard>}
       {asimJug.length > 0 && <ChartCard title="Asimetría máxima por jugador (%)"><HBars data={asimJug} unit="%" /></ChartCard>}
       <div className="grid sm:grid-cols-2 gap-3">
         {asimPrueba.length > 0 && <ChartCard title="Asimetría media por prueba (%)"><HBars data={asimPrueba} unit="%" /></ChartCard>}
