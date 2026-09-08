@@ -47,6 +47,9 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
       router.refresh()
     } catch (e: any) {
       toast.error(e.message || 'No se pudo actualizar la ronda')
+    } finally {
+      // Reset SIEMPRE: al cerrar en el sitio (misma ronda) el componente no remonta,
+      // así que hay que quitar el estado de carga a mano o el spinner se queda pegado.
       setRoundBusy(false)
     }
   }
