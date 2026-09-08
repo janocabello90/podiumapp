@@ -381,8 +381,10 @@ export async function POST(request: NextRequest) {
       const am = sem.filter((r) => r?.nivel === 'ambar' && !noData(r)).length
       const vd = sem.filter((r) => r?.nivel === 'verde' && !noData(r)).length
       const sd = sem.filter(noData).length
+      // Color por la propia ASIMETRÍA (no por el riesgo global), para que coincida con la barra.
+      const asimColor = (v: number) => v >= 30 ? RISK_RGB.rojo : v >= 15 ? RISK_RGB.ambar : RISK_RGB.verde
       const asimJug = sem.filter((r) => r?.maxAsim != null).sort((a, b) => b.maxAsim - a.maxAsim)
-        .map((r) => ({ label: r.nombre, value: r.maxAsim, color: RISK_RGB[r.nivel] || [120, 120, 120] }))
+        .map((r) => ({ label: r.nombre, value: r.maxAsim, color: asimColor(r.maxAsim) }))
       const asimPrueba = (Array.isArray(rd.panel_metricas) ? rd.panel_metricas : [])
         .filter((s: any) => /asim/i.test(s.key) && !s.bilateral && s.mean != null)
         .map((s: any) => ({ label: s.test_name, value: s.mean, color: [37, 99, 235] }))
@@ -401,7 +403,13 @@ export async function POST(request: NextRequest) {
             { n: sd, color: [150, 150, 150], label: 'Sin datos VALD' },
           ], y)
         }
-        if (asimJug.length) { y = reserve(doc, hbarH(asimJug.length), y); y += 3; y = writeSubtitle(doc, 'Asimetría máxima por jugador (%)', y); y = drawHBars(doc, asimJug, y, '%') }
+        if (asimJug.length) {
+          y = reserve(doc, hbarH(asimJug.length) + 5, y); y += 3
+          y = writeSubtitle(doc, 'Asimetría máxima por jugador (%)', y)
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130)
+          doc.text('Color por nivel de asimetría: verde <15 %, ámbar 15–30 %, rojo >30 %.', MARGIN_LEFT, y); y += 4
+          y = drawHBars(doc, asimJug, y, '%')
+        }
         if (asimPrueba.length) { y = reserve(doc, hbarH(asimPrueba.length), y); y += 3; y = writeSubtitle(doc, 'Asimetría media por prueba (%)', y); y = drawHBars(doc, asimPrueba, y, '%') }
         if (zonas.length) { y = reserve(doc, hbarH(zonas.length), y); y += 3; y = writeSubtitle(doc, 'Lesiones por zona (24 m)', y); y = drawHBars(doc, zonas, y) }
       }

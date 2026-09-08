@@ -88,10 +88,12 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
 
 export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { semaforo?: PlayerRisk[]; panel?: MetricStat[]; lesiones?: Injuries }) {
   // 1) Asimetría por jugador (con dato), ordenada desc.
+  // Color por la propia ASIMETRÍA (no por el riesgo global), para que coincida con la barra.
+  const asimColor = (v: number) => (v >= 30 ? RISK_COLOR.rojo : v >= 15 ? RISK_COLOR.ambar : RISK_COLOR.verde)
   const asimJug = semaforo
     .filter((p) => p.maxAsim != null)
     .sort((a, b) => (b.maxAsim as number) - (a.maxAsim as number))
-    .map((p) => ({ label: p.nombre, value: p.maxAsim as number, color: RISK_COLOR[p.nivel] }))
+    .map((p) => ({ label: p.nombre, value: p.maxAsim as number, color: asimColor(p.maxAsim as number) }))
 
   // 2) Reparto de riesgo (los que no tienen ni asimetría ni percentil = "sin datos", no verde).
   const isNoData = (p: PlayerRisk) => p.maxAsim == null && p.worstPct == null
@@ -115,7 +117,12 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { se
   return (
     <div className="space-y-3">
       {rojo + ambar + verde + sinDatos > 0 && <ChartCard title="Reparto de riesgo del equipo"><StackedRisk rojo={rojo} ambar={ambar} verde={verde} sinDatos={sinDatos} /></ChartCard>}
-      {asimJug.length > 0 && <ChartCard title="Asimetría máxima por jugador (%)"><HBars data={asimJug} unit="%" /></ChartCard>}
+      {asimJug.length > 0 && (
+        <ChartCard title="Asimetría máxima por jugador (%)">
+          <p className="text-[11px] text-gray-400 mb-2">Color por nivel de asimetría: verde &lt;15%, ámbar 15–30%, rojo &gt;30%.</p>
+          <HBars data={asimJug} unit="%" />
+        </ChartCard>
+      )}
       <div className="grid sm:grid-cols-2 gap-3">
         {asimPrueba.length > 0 && <ChartCard title="Asimetría media por prueba (%)"><HBars data={asimPrueba} unit="%" /></ChartCard>}
         {zonas.length > 0 && <ChartCard title="Lesiones por zona (24 m)"><HBars data={zonas} /></ChartCard>}
