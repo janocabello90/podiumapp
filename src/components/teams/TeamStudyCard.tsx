@@ -74,8 +74,10 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
 
   // Informes "por resolver" en esta ronda: fallidos (error) O incompletos sin datos de VALD
   // (p. ej. recuperados sin regenerar). Un borrador sano con métricas NO entra (solo hay que revisarlo).
+  // "Por resolver": fallidos (error) O incompletos sin datos de VALD — INCLUIDOS los aprobados
+  // sin métricas (recuperados sin regenerar): regenerar es la única forma de rellenar sus datos.
   const needsRegen = useMemo(
-    () => players.filter((p) => p.sessionId && (p.status === 'error' || (p.status !== 'approved' && p.missingMetrics))),
+    () => players.filter((p) => p.sessionId && (p.status === 'error' || p.missingMetrics)),
     [players]
   )
   const [regenSel, setRegenSel] = useState<Set<string>>(new Set())
@@ -158,7 +160,10 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
   }
 
   const statusChip = (p: RoundPlayer) =>
-    p.status === 'approved' ? <span className="text-[11px] text-green-600">✅ Aprobado</span>
+    p.status === 'approved'
+      ? (p.missingMetrics
+        ? <span className="text-[11px] font-medium text-amber-600">✅ Aprobado · ⚠️ sin datos VALD</span>
+        : <span className="text-[11px] text-green-600">✅ Aprobado</span>)
       : p.status === 'error' ? <span className="text-[11px] font-medium text-red-600">⚠️ Error al generar · regenerar</span>
         : p.missingMetrics ? <span className="text-[11px] font-medium text-red-600">⚠️ Sin datos VALD · regenerar</span>
           : p.status === 'draft' ? <span className="text-[11px] text-amber-600">📝 Pendiente</span>
@@ -250,7 +255,7 @@ export default function TeamStudyCard({ campaignId, team, rounds, playersByRound
                   </button>
                 </div>
                 <p className="text-[10px] text-red-500 leading-snug">
-                  «Recuperar» arregla gratis los que fallaron por formato (si aún guardan la respuesta). «Regenerar» pide un informe nuevo a la IA (consume créditos) y es lo único que rellena los datos de VALD que faltan.
+                  «Recuperar» arregla gratis los que fallaron por formato (si aún guardan la respuesta). «Regenerar» pide un informe nuevo a la IA (consume créditos) y es lo único que rellena los datos de VALD que faltan. Si un jugador ya estaba aprobado, la regeneración lo deja en borrador: vuelve a aprobarlo.
                 </p>
               </div>
             )}
