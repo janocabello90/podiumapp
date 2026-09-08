@@ -232,6 +232,31 @@ function drawStackedRisk(doc: jsPDF, segs: { n: number; color: number[]; label: 
   return y + 6
 }
 
+// "Jugadores a vigilar" como fichas: barra de color por riesgo + nombre + asimetría + motivo.
+function drawWatchList(doc: jsPDF, items: { nombre: string; motivo: string; nivel?: string; asim?: number | null }[], y: number): number {
+  for (const it of items) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9)
+    const motivoLines: string[] = it.motivo ? doc.splitTextToSize(it.motivo, CONTENT_WIDTH - 12) : []
+    const cardH = motivoLines.length * 4 + 9
+    y = reserve(doc, cardH + 3, y)
+    y = ensureSpace(doc, y, cardH + 3)
+    const rgb = RISK_RGB[it.nivel || ''] || [150, 150, 150]
+    doc.setFillColor(250, 250, 251); doc.roundedRect(MARGIN_LEFT, y - 4, CONTENT_WIDTH, cardH, 2, 2, 'F')
+    doc.setFillColor(rgb[0], rgb[1], rgb[2]); doc.rect(MARGIN_LEFT, y - 4, 1.8, cardH, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 40, 80)
+    doc.text(it.nombre, MARGIN_LEFT + 6, y + 0.5)
+    if (it.asim != null) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(rgb[0], rgb[1], rgb[2])
+      doc.text(`asimetría ${Math.round(it.asim)}%`, PAGE_WIDTH - MARGIN_RIGHT - 4, y + 0.5, { align: 'right' })
+    }
+    let my = y + 5.5
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(80, 80, 80)
+    for (const line of motivoLines) { doc.text(line, MARGIN_LEFT + 6, my); my += 4 }
+    y = y - 4 + cardH + 3.5
+  }
+  return y + 1
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
@@ -426,11 +451,13 @@ export async function POST(request: NextRequest) {
 
     if (vis.jugadores_a_vigilar && Array.isArray(rd.jugadores_a_vigilar) && rd.jugadores_a_vigilar.length) {
       y = writeSectionTitle(doc, 'Jugadores a vigilar', y)
-      for (const j of rd.jugadores_a_vigilar) {
-        const nombre = j?.nombre ? String(j.nombre) : ''
-        const motivo = j?.motivo ? `: ${String(j.motivo)}` : ''
-        y = writeParagraph(doc, `•  ${nombre}${motivo}`, y)
-      }
+      const semByName = new Map<string, any>()
+      for (const s of (Array.isArray(rd.semaforo) ? rd.semaforo : [])) semByName.set(String(s.nombre), s)
+      const items = rd.jugadores_a_vigilar.map((j: any) => {
+        const s = semByName.get(String(j?.nombre || ''))
+        return { nombre: String(j?.nombre || ''), motivo: String(j?.motivo || ''), nivel: s?.nivel, asim: s?.maxAsim }
+      })
+      y = drawWatchList(doc, items, y)
     }
 
     if (vis.recomendaciones && rd.recomendaciones) { y = writeSectionTitle(doc, 'Recomendaciones', y); y = writeParagraph(doc, String(rd.recomendaciones), y) }
