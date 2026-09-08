@@ -1,10 +1,10 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Sparkles } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import CloseCampaignButton from '@/components/teams/CloseCampaignButton'
-import StudyRoster from '@/components/teams/StudyRoster'
-import TeamStudyCard, { type RoundPlayer } from '@/components/teams/TeamStudyCard'
+import EstudioTabs from '@/components/teams/EstudioTabs'
+import { type RoundPlayer } from '@/components/teams/TeamStudyCard'
 import { parseMetricsSchema } from '@/lib/reports/metrics'
 
 export const dynamic = 'force-dynamic'
@@ -183,43 +183,24 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
         </div>
       </div>
 
-      {/* Informes por equipo (IA) */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-clinical-primary" />
-          <h2 className="text-sm font-semibold text-gray-900">Informes de equipo (IA)</h2>
-          <span className="text-[11px] text-gray-400">un informe por equipo y ronda · requiere los individuales aprobados</span>
-        </div>
-        {teamCards.length === 0 ? (
-          <p className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 p-4">Este estudio no tiene equipos.</p>
-        ) : (
-          <div className="space-y-4">
-            {teamCards.map((c) => (
-              <TeamStudyCard
-                key={c.team.id}
-                campaignId={campaign.id}
-                team={c.team}
-                rounds={c.rounds}
-                playersByRound={c.playersByRound}
-                reportsByRound={c.reportsByRound}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Roster por equipo con envío masivo de anamnesis */}
-      <StudyRoster
-        teams={teams}
-        players={players.map((p) => ({
-          id: p.id,
-          full_name: p.full_name,
-          team_id: p.team_id,
-          email: p.email ?? null,
-          anamnesisCompleted: anamnesisByPatient.get(p.id) === 'completed',
-          sessionCount: sessionsByPatient.get(p.id) || 0,
-        }))}
-      />
+      {/* Contenido en pestañas: Jugadores (roster + anamnesis) · Informes (por ronda) */}
+      {teams.length === 0 ? (
+        <p className="text-sm text-gray-500 bg-white rounded-2xl border border-gray-200 p-4">Este estudio no tiene equipos.</p>
+      ) : (
+        <EstudioTabs
+          campaignId={campaign.id}
+          teamCards={teamCards}
+          rosterTeams={teams}
+          rosterPlayers={players.map((p) => ({
+            id: p.id,
+            full_name: p.full_name,
+            team_id: p.team_id,
+            email: p.email ?? null,
+            anamnesisCompleted: anamnesisByPatient.get(p.id) === 'completed',
+            sessionCount: sessionsByPatient.get(p.id) || 0,
+          }))}
+        />
+      )}
     </div>
   )
 }
