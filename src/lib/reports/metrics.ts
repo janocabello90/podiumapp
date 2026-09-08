@@ -123,7 +123,8 @@ export function computeTeamMetrics(players: PlayerMetrics[]): TeamMetricStat[] {
           if (der != null) ders.push(der)
           if (izq != null || der != null) valores.push({ nombre: p.nombre, texto: `izq ${izq ?? '—'} / der ${der ?? '—'}` })
           if (m.percentil) {
-            const cand = [toNum(v.pct_izq), toNum(v.pct_der)].filter((x): x is number => x != null)
+            // Percentil <= 0 = "sin dato" (VALD no lo aporta y se guarda 0/null): ignorar.
+            const cand = [toNum(v.pct_izq), toNum(v.pct_der)].filter((x): x is number => x != null && x > 0)
             const worst = cand.length ? Math.min(...cand) : null
             if (worst != null && worst < TEAM_THRESHOLDS.percentil) outliers.push({ nombre: p.nombre, detalle: `percentil ${worst}` })
           }
@@ -131,11 +132,14 @@ export function computeTeamMetrics(players: PlayerMetrics[]): TeamMetricStat[] {
           const val = toNum(v.valor)
           if (val != null) { singles.push(val); valores.push({ nombre: p.nombre, texto: `${val}${m.unit || ''}` }) }
           const pct = toNum(v.percentil)
-          if (m.percentil && pct != null && pct < TEAM_THRESHOLDS.percentil) outliers.push({ nombre: p.nombre, detalle: `percentil ${pct}` })
+          if (m.percentil && pct != null && pct > 0 && pct < TEAM_THRESHOLDS.percentil) outliers.push({ nombre: p.nombre, detalle: `percentil ${pct}` })
           if ((m.unit === '%' || key.toLowerCase().includes('asim')) && val != null && Math.abs(val) >= TEAM_THRESHOLDS.asimetria) outliers.push({ nombre: p.nombre, detalle: `${val}%` })
         }
       }
       if (valores.length === 0) continue
+      // Suprimir métricas no medidas: todos los valores a 0 (p. ej. Fuerza ABD/ADD 45º sin datos).
+      const allVals = m.bilateral ? [...izqs, ...ders] : singles
+      if (allVals.length > 0 && allVals.every((x) => x === 0)) continue
       stats.push({
         test_name, key, label: m.label, unit: m.unit, bilateral: !!m.bilateral, percentil: !!m.percentil,
         n: valores.length,

@@ -82,6 +82,23 @@ function writeSubtitle(doc: jsPDF, title: string, y: number): number {
   return y + 6
 }
 
+// Fila de tarjetas de KPI (número grande + etiqueta), estilo cuadro de mando.
+function drawKpiCards(doc: jsPDF, cards: { n: string; t: string }[], y: number): number {
+  const gap = 4
+  const w = (CONTENT_WIDTH - gap * (cards.length - 1)) / cards.length
+  const h = 20
+  y = ensureSpace(doc, y, h + 6)
+  cards.forEach((c, i) => {
+    const x = MARGIN_LEFT + i * (w + gap)
+    doc.setFillColor(244, 246, 249); doc.roundedRect(x, y, w, h, 2, 2, 'F')
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(20, 40, 80)
+    doc.text(String(c.n), x + w / 2, y + 9.5, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(110, 110, 110)
+    doc.text(c.t, x + w / 2, y + 15, { align: 'center', maxWidth: w - 4 })
+  })
+  return y + h + 7
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
@@ -137,20 +154,19 @@ export async function POST(request: NextRequest) {
     // Solo se exportan las secciones que el fisio dejó visibles en la vista (preset/toggles).
     const vis = resolveVisibleSections(rd._view)
 
-    // KPIs (calculado)
+    // KPIs (calculado) — tarjetas
     if (vis.kpis && rd.kpis) {
       const k = rd.kpis
       y = writeSectionTitle(doc, 'Indicadores del equipo', y)
-      const parts = [
-        `${k.valorados} valorados`,
-        k.pctAsimetriaAlta != null ? `${k.pctAsimetriaAlta}% con asimetría >15%` : null,
-        `${k.conLesion24m} con lesión (24 m)`,
-        `${k.aVigilar} a vigilar`,
-      ].filter(Boolean)
-      y = writeParagraph(doc, parts.join('  ·  '), y)
+      y = drawKpiCards(doc, [
+        { n: String(k.valorados ?? '—'), t: 'valorados' },
+        { n: k.pctAsimetriaAlta != null ? `${k.pctAsimetriaAlta}%` : '—', t: 'con asimetría >15%' },
+        { n: String(k.conLesion24m ?? 0), t: 'con lesión (24 m)' },
+        { n: String(k.aVigilar ?? 0), t: 'a vigilar' },
+      ], y)
     }
 
-    // Semáforo (calculado)
+    // Semáforo (calculado) — con punto de color por nivel de riesgo
     if (vis.semaforo && Array.isArray(rd.semaforo) && rd.semaforo.length) {
       y = writeSectionTitle(doc, 'Semáforo de jugadores', y)
       const byLvl: Record<string, string[]> = { rojo: [], ambar: [], verde: [] }
@@ -158,8 +174,18 @@ export async function POST(request: NextRequest) {
         const asim = r?.maxAsim != null ? ` (${Math.round(r.maxAsim)}%)` : ''
         if (byLvl[r?.nivel]) byLvl[r.nivel].push(`${r.nombre}${asim}`)
       }
-      const lblLvl: [string, string][] = [['rojo', 'Riesgo alto'], ['ambar', 'Riesgo medio'], ['verde', 'Sin señales']]
-      for (const [lvl, label] of lblLvl) if (byLvl[lvl].length) y = writeParagraph(doc, `${label}: ${byLvl[lvl].join(', ')}`, y, { fontSize: 9 })
+      const lvlMeta: [string, string, number[]][] = [
+        ['rojo', 'Riesgo alto', [201, 63, 63]],
+        ['ambar', 'Riesgo medio', [201, 145, 32]],
+        ['verde', 'Sin señales de riesgo', [52, 150, 82]],
+      ]
+      for (const [lvl, label, rgb] of lvlMeta) {
+        if (!byLvl[lvl].length) continue
+        y = ensureSpace(doc, y, 8)
+        doc.setFillColor(rgb[0], rgb[1], rgb[2]); doc.circle(MARGIN_LEFT - 3, y - 1.3, 1.1, 'F')
+        y = writeParagraph(doc, `${label}: ${byLvl[lvl].join(', ')}`, y, { fontSize: 9 })
+        y += 0.5
+      }
     }
 
     if (vis.resumen_equipo && rd.resumen_equipo) {
@@ -172,16 +198,17 @@ export async function POST(request: NextRequest) {
       y = writeSectionTitle(doc, 'Panel de métricas del equipo', y)
       const byTest: Record<string, any[]> = {}
       for (const s of rd.panel_metricas) (byTest[s.test_name] ||= []).push(s)
+      const isEmpty = (s: any) => s.bilateral ? ((s.mean_izq ?? 0) === 0 && (s.mean_der ?? 0) === 0) : ((s.mean ?? 0) === 0 && (s.max ?? 0) === 0)
       for (const [testName, stats] of Object.entries(byTest)) {
+        const shown = (stats as any[]).filter((s) => !isEmpty(s)) // ocultar métricas no medidas (todo a 0)
+        if (!shown.length) continue
         y = writeSubtitle(doc, testName, y)
-        for (const s of stats as any[]) {
+        for (const s of shown) {
           const stat = s.bilateral
             ? `izq ${s.mean_izq ?? '—'} / der ${s.mean_der ?? '—'}`
             : `media ${s.mean ?? '—'}${s.min != null ? ` (rango ${s.min}–${s.max})` : ''}`
-          const vig = Array.isArray(s.outliers) && s.outliers.length
-            ? `  ·  a vigilar: ${s.outliers.map((o: any) => `${o.nombre} (${o.detalle})`).join(', ')}`
-            : ''
-          y = writeParagraph(doc, `${s.label}${s.unit ? ` (${s.unit})` : ''}: ${stat}  ·  n=${s.n}${vig}`, y, { fontSize: 9 })
+          // El "a vigilar" por métrica se omite aquí: ya está en el semáforo (evita el muro de texto).
+          y = writeParagraph(doc, `${s.label}${s.unit ? ` (${s.unit})` : ''}: ${stat}  ·  n=${s.n}`, y, { fontSize: 9 })
         }
         y += 1
       }

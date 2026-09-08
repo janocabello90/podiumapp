@@ -70,7 +70,8 @@ function worstPercentile(p: PlayerMetrics): number | null {
     for (const m of t.metrics) {
       if (!m.percentil) continue
       const v = (t.values as any)?.[m.key]
-      const cands = [num(v?.percentil), num(v?.pct_izq), num(v?.pct_der)].filter((x): x is number => x != null)
+      // Percentil <= 0 = "sin dato" (VALD no lo aporta): ignorar para no marcar falsos riesgos.
+      const cands = [num(v?.percentil), num(v?.pct_izq), num(v?.pct_der)].filter((x): x is number => x != null && x > 0)
       for (const c of cands) if (worst == null || c < worst) worst = c
     }
   }
