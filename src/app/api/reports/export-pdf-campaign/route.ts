@@ -3,6 +3,9 @@ import { jsPDF } from 'jspdf'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
 import { resolveVisibleSections } from '@/lib/reports/teamReportView'
+import { METODOLOGIA_JPEG_BASE64 } from '@/lib/reports/metodologiaAsset'
+
+const INTRO_TEAM = 'El presente informe recoge los resultados de la Valoración Funcional (Metodología Podium®) del equipo, un protocolo diseñado para analizar de forma objetiva el estado funcional de cada deportista e identificar los factores que influyen en su rendimiento, su tolerancia a la carga de entrenamiento y competición, y su riesgo de lesión. Integra el análisis del movimiento con la medición objetiva mediante tecnología VALD, adaptada a las demandas del deporte y del puesto.\n\nEn las siguientes páginas el cuerpo técnico encontrará una lectura de conjunto del equipo en esta ronda: indicadores, semáforo de riesgo, gráficos, síntesis por áreas, grupos de trabajo y recomendaciones, además del anexo por jugador.\n\nEl objetivo no es acumular datos, sino convertir la información en decisiones útiles de rendimiento y prevención. Los resultados son una fotografía funcional del momento actual, cuyo valor se completa al integrarse con la evolución del entrenamiento, la competición y las valoraciones sucesivas.'
 
 const MARGIN_LEFT = 25
 const MARGIN_RIGHT = 25
@@ -31,7 +34,12 @@ function addFooter(doc: jsPDF) {
   doc.text(FOOTER_TEXT, PAGE_WIDTH / 2, pageHeight - 12, { align: 'center' })
 }
 
-function addHeaderLine(doc: jsPDF) {
+// Logo de la clínica (data URL) para la cabecera de cada página. Se fija una vez por request.
+let _logo: string | null = null
+let _logoExt = 'PNG'
+
+function addHeader(doc: jsPDF) {
+  if (_logo) { const f = fitLogo(doc, _logo, 30, 12); try { doc.addImage(_logo, _logoExt, f.x, 8, f.w, f.h, 'clogo', 'FAST') } catch { /* noop */ } }
   doc.setDrawColor(218, 165, 32)
   doc.setLineWidth(0.5)
   doc.line(MARGIN_LEFT, 24, PAGE_WIDTH - MARGIN_RIGHT, 24)
@@ -41,7 +49,7 @@ function ensureSpace(doc: jsPDF, y: number, needed: number): number {
   if (y > doc.internal.pageSize.getHeight() - MARGIN_BOTTOM - needed) {
     addFooter(doc)
     doc.addPage()
-    addHeaderLine(doc)
+    addHeader(doc)
     return MARGIN_TOP + 10
   }
   return y
@@ -103,7 +111,7 @@ function drawSemaphore(doc: jsPDF, groups: { label: string; bg: number[]; fg: nu
     for (const it of g.items) {
       const w = doc.getTextWidth(it) + padX * 2
       if (x + w > PAGE_WIDTH - MARGIN_RIGHT) { x = MARGIN_LEFT; y += h + gap }
-      if (y > pageH - MARGIN_BOTTOM - h) { addFooter(doc); doc.addPage(); addHeaderLine(doc); y = MARGIN_TOP + 10; x = MARGIN_LEFT }
+      if (y > pageH - MARGIN_BOTTOM - h) { addFooter(doc); doc.addPage(); addHeader(doc); y = MARGIN_TOP + 10; x = MARGIN_LEFT }
       doc.setFillColor(g.bg[0], g.bg[1], g.bg[2]); doc.roundedRect(x, y - 4, w, h, 1.6, 1.6, 'F')
       doc.setTextColor(g.fg[0], g.fg[1], g.fg[2]); doc.text(it, x + padX, y)
       x += w + gap
@@ -245,43 +253,53 @@ export async function POST(request: NextRequest) {
     const ronda = p.ronda ?? meta.ronda
     const cobertura = p.cobertura || (meta.cobertura_valorados != null && meta.roster_total != null ? `${meta.cobertura_valorados}/${meta.roster_total}` : '')
 
-    // ── Portada (logo + título), al estilo del informe individual ──
-    let coverY = 40
-    let logoData: string | null = null
+    // ── Portada (página propia), al estilo del informe individual ──
+    _logo = null; _logoExt = 'PNG' // reset (vars de módulo, evitar arrastre entre peticiones)
     try {
       const { data: clinic } = await supabase.from('clinics').select('logo_url').eq('id', profile.clinic_id).single()
       if (clinic?.logo_url) {
         const resp = await fetch(clinic.logo_url, { signal: AbortSignal.timeout(5000) })
         if (resp.ok) {
           const ct = resp.headers.get('content-type') || 'image/png'
-          const ext = ct.includes('png') || ct.includes('svg') ? 'PNG' : 'JPEG'
-          logoData = `data:${ct};base64,${Buffer.from(await resp.arrayBuffer()).toString('base64')}`
-          const fit = fitLogo(doc, logoData, 50, 24)
-          doc.addImage(logoData, ext, fit.x, 16, fit.w, fit.h)
-          coverY = 16 + fit.h + 6
+          _logoExt = ct.includes('png') || ct.includes('svg') ? 'PNG' : 'JPEG'
+          _logo = `data:${ct};base64,${Buffer.from(await resp.arrayBuffer()).toString('base64')}`
         }
       }
     } catch (e) { console.error('Logo load error (campaign PDF):', e) }
-    if (!logoData) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(20, 40, 80)
-      doc.text('MÉTODO PODIUM', PAGE_WIDTH / 2, 26, { align: 'center' }); coverY = 34
-    }
-    // Línea dorada + título
+
+    let coverY = 44
+    if (_logo) { const f = fitLogo(doc, _logo, 55, 26); doc.addImage(_logo, _logoExt, f.x, 20, f.w, f.h, 'clogo', 'FAST'); coverY = 20 + f.h + 10 }
+    else { doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(20, 40, 80); doc.text('MÉTODO PODIUM', PAGE_WIDTH / 2, 30, { align: 'center' }) }
+
     doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.8); doc.line(MARGIN_LEFT, coverY, PAGE_WIDTH - MARGIN_RIGHT, coverY)
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(20, 40, 80)
-    doc.text('INFORME DE RENDIMIENTO Y PREVENCIÓN — EQUIPO', PAGE_WIDTH / 2, coverY + 11, { align: 'center', maxWidth: CONTENT_WIDTH })
-    // Datos del equipo (alineados a la izquierda, como los datos del paciente)
-    let y = coverY + 24
-    const field = (label: string, value: string) => {
-      y = ensureSpace(doc, y, 8)
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50); doc.text(label, MARGIN_LEFT, y)
-      doc.setFont('helvetica', 'normal'); doc.text(value, MARGIN_LEFT + doc.getTextWidth(label) + 1.5, y); y += 6
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(30, 30, 30)
+    doc.text('INFORME DE RENDIMIENTO Y PREVENCIÓN', PAGE_WIDTH / 2, coverY + 13, { align: 'center' })
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(120, 120, 120)
+    doc.text('Metodología Podium®', PAGE_WIDTH / 2, coverY + 20, { align: 'center' })
+
+    // Tarjeta de datos (recuadro)
+    const fecha = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })
+    const cardRows: [string, string][] = [['Equipo', String(equipo)]]
+    if (estudio) cardRows.push(['Estudio', `${estudio}${grupo ? ` · ${grupo}` : ''}`])
+    if (ronda != null) cardRows.push(['Ronda', String(ronda)])
+    if (cobertura) cardRows.push(['Cobertura', `${cobertura} jugadores valorados`])
+    cardRows.push(['Fecha del informe', fecha])
+    const cardY = coverY + 30, cRowH = 9, cardH = cardRows.length * cRowH + 8
+    doc.setDrawColor(226, 226, 228); doc.setLineWidth(0.3); doc.setFillColor(250, 250, 251)
+    doc.roundedRect(MARGIN_LEFT, cardY, CONTENT_WIDTH, cardH, 3, 3, 'FD')
+    let ry = cardY + 10
+    for (const [label, value] of cardRows) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(125, 125, 125); doc.text(label, MARGIN_LEFT + 8, ry)
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(40, 40, 40); doc.text(value, MARGIN_LEFT + 62, ry)
+      ry += cRowH
     }
-    field('Equipo:', ` ${equipo}`)
-    if (estudio) field('Estudio:', ` ${estudio}${grupo ? ` · ${grupo}` : ''}`)
-    if (ronda != null) field('Ronda:', ` ${ronda}`)
-    if (cobertura) field('Cobertura:', ` ${cobertura} jugadores valorados`)
-    y += 2; doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.3); doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y); y += 9
+
+    // Intro + salto a la primera página de contenido
+    let y = cardY + cardH + 12
+    y = writeParagraph(doc, INTRO_TEAM, y)
+    addFooter(doc)
+    doc.addPage(); addHeader(doc)
+    y = MARGIN_TOP + 10
 
     // Solo se exportan las secciones que el fisio dejó visibles en la vista (preset/toggles).
     const vis = resolveVisibleSections(rd._view)
@@ -419,6 +437,18 @@ export async function POST(request: NextRequest) {
     }
 
     if (rd.descargo) { y = writeSectionTitle(doc, 'Descargo de responsabilidad', y); y = writeParagraph(doc, String(rd.descargo), y, { fontSize: 8, color: [120, 120, 120] }) }
+
+    // Página final: ilustración "Metodología Podium" (asset de marca).
+    try {
+      addFooter(doc)
+      doc.addPage(); addHeader(doc)
+      const img = `data:image/jpeg;base64,${METODOLOGIA_JPEG_BASE64}`
+      const props = doc.getImageProperties(img)
+      const availW = CONTENT_WIDTH, availH = doc.internal.pageSize.getHeight() - (MARGIN_TOP + 6) - MARGIN_BOTTOM
+      const scale = Math.min(availW / props.width, availH / props.height)
+      const iw = props.width * scale, ih = props.height * scale
+      doc.addImage(img, 'JPEG', (PAGE_WIDTH - iw) / 2, MARGIN_TOP + 4, iw, ih, 'metodo', 'FAST')
+    } catch (e) { console.error('Metodologia image error:', e) }
 
     addFooter(doc)
 
