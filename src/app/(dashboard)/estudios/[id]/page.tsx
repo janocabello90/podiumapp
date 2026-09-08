@@ -54,19 +54,21 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   const statusBySession = new Map<string, 'approved' | 'draft' | 'error'>()
   const sessionIds = sessions.map((s) => s.id)
   if (sessionIds.length > 0) {
+    // Estado = el del informe MÁS RECIENTE de la sesión (no el "mejor"): si se regenera un
+    // aprobado, el nuevo borrador manda hasta que se vuelva a aprobar.
     const { data: ind } = await supabase
       .from('reports')
-      .select('session_id, status')
+      .select('session_id, status, created_at')
       .eq('scope', 'individual')
       .eq('clinic_id', profile.clinic_id)
       .in('session_id', sessionIds)
-    const rank = (v?: string) => (v === 'approved' ? 3 : v === 'draft' ? 2 : v === 'error' ? 1 : 0)
+      .order('created_at', { ascending: false })
     for (const r of ind || []) {
+      if (statusBySession.has(r.session_id)) continue // ya tenemos el más reciente de esta sesión
       const cur: 'approved' | 'draft' | 'error' =
         r.status === 'approved' || r.status === 'delivered' ? 'approved'
           : r.status === 'error' ? 'error' : 'draft'
-      const prev = statusBySession.get(r.session_id)
-      if (rank(cur) > rank(prev)) statusBySession.set(r.session_id, cur)
+      statusBySession.set(r.session_id, cur)
     }
   }
 

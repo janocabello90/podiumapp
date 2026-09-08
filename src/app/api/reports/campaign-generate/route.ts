@@ -121,11 +121,13 @@ export async function POST(request: NextRequest) {
     const { data: approved } = includedSessionIds.length
       ? await supabase
           .from('reports')
-          .select('id, session_id, report_data')
+          .select('id, session_id, report_data, created_at')
           .eq('scope', 'individual')
           .eq('status', 'approved')
           .in('session_id', includedSessionIds)
+          .order('created_at', { ascending: false })
       : { data: [] as any[] }
+    // Quedarse con el informe aprobado MÁS RECIENTE de cada sesión.
     const reportBySession = new Map<string, any>()
     for (const r of approved || []) if (!reportBySession.has(r.session_id)) reportBySession.set(r.session_id, r)
 
