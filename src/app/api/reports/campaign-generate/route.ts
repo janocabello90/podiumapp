@@ -7,6 +7,7 @@ import { DESCARGO_CAMPAIGN } from '@/lib/reports/descargo'
 import { REPORT_MODEL } from '@/lib/reports/aiConfig'
 import { callReportModel, describeModelError } from '@/lib/reports/callReportModel'
 import { parseMetricsSchema, computeTeamMetrics, TEAM_THRESHOLDS, type PlayerMetrics, type TeamMetricStat } from '@/lib/reports/metrics'
+import { buildTeamDashboard, buildDashboardSynthesis } from '@/lib/reports/teamDashboard'
 import { runReportInBackground, activeSince } from '@/lib/reports/background'
 
 // Generación en SEGUNDO PLANO (waitUntil tras responder).
@@ -16,22 +17,26 @@ export const maxDuration = 800
 // cifras) + síntesis CUALITATIVA por IA a partir de los informes individuales APROBADOS del equipo.
 const MAX_PLAYERS = 40
 
-const STRUCTURE_TEAM_ROUND = `Se te da una SÍNTESIS DE MÉTRICAS ya calculada (medias, rangos, jugadores a vigilar) y los TITULARES de los informes individuales aprobados de cada jugador. Con eso redacta una lectura de conjunto del EQUIPO en esta ronda.
+const STRUCTURE_TEAM_ROUND = `Eres fisioterapeuta especialista en readaptación y rendimiento deportivo. Redactas el INFORME DE EQUIPO (rendimiento y prevención) de una ronda de valoración, dirigido al CUERPO TÉCNICO del club. Tu misión: convertir los datos ya procesados en una LECTURA DE CONJUNTO útil para tomar decisiones de entrenamiento y prevención.
 
-Genera SOLO un JSON válido con estas claves (todo CUALITATIVO; las CIFRAS ya están calculadas, NO inventes ni recalcules medias ni porcentajes):
+Se te entrega: (a) una SÍNTESIS YA CALCULADA (KPIs, jugadores por nivel de riesgo con su motivo, patrón de lesiones, medias del panel) y (b) las CONCLUSIONES de los informes individuales ya APROBADOS por el fisio de cada jugador. NO recibes datos crudos: las cifras ya están calculadas y son la fuente de verdad.
+
+Devuelve SOLO un JSON válido con EXACTAMENTE estas claves (todo CUALITATIVO):
 {
-  "resumen_equipo": "2-3 párrafos: cómo llega el equipo en esta ronda, temas transversales, impresión global del colectivo.",
-  "patrones_y_riesgos": "Patrones transversales y posibles riesgos (de carga, lesionales, por capacidad/región). Siempre en hipótesis: 'posible', 'sugiere', 'compatible con'.",
-  "fortalezas": "Puntos fuertes del colectivo detectados en las valoraciones.",
-  "jugadores_a_vigilar": [{ "nombre": "[[JUGADOR_n]]", "motivo": "..." }],
-  "recomendaciones": "Recomendaciones colectivas priorizadas para el cuerpo técnico (prevención, trabajo por grupos, seguimiento)."
+  "resumen_equipo": "2-3 párrafos. Cómo llega el equipo en esta ronda: estado general, temas transversales y lectura global del colectivo. Integra las cifras clave dentro de la prosa (no las listes).",
+  "patrones_y_riesgos": "Patrones colectivos y riesgos (de carga, lesional, por capacidad o por región corporal). Redacta SIEMPRE en hipótesis prudente ('sugiere', 'compatible con', 'podría'): no es un diagnóstico médico.",
+  "fortalezas": "Puntos fuertes reales del colectivo detectados en las valoraciones.",
+  "grupos_de_trabajo": [{ "nombre": "Nombre corto del grupo (p. ej. 'Control lumbopélvico', 'Fuerza excéntrica de isquios')", "foco": "Objetivo de trabajo del grupo en una frase", "jugadores": ["[[JUGADOR_n]]"] }],
+  "jugadores_a_vigilar": [{ "nombre": "[[JUGADOR_n]]", "motivo": "Motivo concreto y breve" }],
+  "recomendaciones": "Recomendaciones colectivas PRIORIZADAS y accionables para el cuerpo técnico (prevención, trabajo por grupos, seguimiento). En prosa, de mayor a menor prioridad."
 }
 
-REGLAS:
-- Español clínico profesional, párrafos narrativos.
-- NO inventes cifras: usa las de la SÍNTESIS DE MÉTRICAS. No es diagnóstico médico; el informe agrega valoraciones individuales y no las sustituye.
-- Para nombrar jugadores usa EXACTAMENTE las etiquetas «[[JUGADOR_n]]» que aparecen en el contexto; no inventes nombres.
-- Responde SOLO con el JSON válido, sin texto adicional.`
+REGLAS ESTRICTAS:
+- Español clínico, profesional y claro. Párrafos narrativos; nada de listas con guiones fuera de los arrays indicados.
+- NO inventes ni recalcules cifras: usa EXCLUSIVAMENTE las de la síntesis. El informe AGREGA las valoraciones individuales, no las sustituye ni diagnostica.
+- Propón entre 2 y 4 grupos de trabajo coherentes con los hallazgos; un jugador puede estar en varios grupos; usa solo jugadores del contexto.
+- PRIVACIDAD: nombra a los jugadores EXCLUSIVAMENTE con las etiquetas «[[JUGADOR_n]]» que aparecen en el contexto; nunca inventes ni deduzcas nombres reales.
+- Responde SOLO con el JSON válido, sin texto adicional ni explicaciones.`
 
 export async function POST(request: NextRequest) {
   const requestStart = Date.now() // para registrar cuánto tarda en generarse el informe
@@ -191,46 +196,59 @@ export async function POST(request: NextRequest) {
     })
     const panel: TeamMetricStat[] = computeTeamMetrics(players)
 
-    // ===== Contexto para la IA (tokenizado) =====
+    // ===== CÁLCULO (determinista) — cuadro de mando: KPIs, semáforo, lesiones, anexo =====
+    // Lesiones por jugador desde su anamnesis (celdas libres → normalizadas en el helper).
+    const { data: anamRows } = await supabase
+      .from('anamnesis_forms')
+      .select('patient_id, form_data, created_at')
+      .in('patient_id', cappedIncluded.map((p) => p.id))
+      .order('created_at', { ascending: false })
+    const injByPatient = new Map<string, any[]>()
+    for (const a of anamRows || []) {
+      if (injByPatient.has((a as any).patient_id)) continue
+      const inj = Array.isArray((a as any).form_data?.injuries_24m) ? (a as any).form_data.injuries_24m : []
+      injByPatient.set((a as any).patient_id, inj)
+    }
+    const injuriesByName = new Map<string, any[]>()
+    for (const p of cappedIncluded) injuriesByName.set(p.full_name, injByPatient.get(p.id) || [])
+
+    const dashboard = buildTeamDashboard(players, panel, injuriesByName)
+    const synthesis = buildDashboardSynthesis(dashboard)
+
+    // Titular (1 frase) de cada informe individual aprobado → para el anexo.
+    const titularByName = new Map<string, string>()
+    for (const p of cappedIncluded) {
+      const rd = reportBySession.get(sessionByPatient.get(p.id)!)?.report_data || {}
+      const c = String(rd.conclusiones || rd.hallazgos || '').trim()
+      if (c) titularByName.set(p.full_name, (c.split(/(?<=\.)\s/)[0] || c).slice(0, 160))
+    }
+    const anexo = dashboard.anexo.map((r) => ({ ...r, titular: titularByName.get(r.nombre) || null }))
+
+    // ===== Contexto para la IA (tokenizado; SOLO síntesis + conclusiones, nada de datos crudos) =====
     const groupName = (campaign.groups as any)?.name as string | undefined
     let context = `EQUIPO: ${teamName}\nESTUDIO: ${campaign.name}\n`
     if (groupName) context += `GRUPO: ${groupName}\n`
     context += `RONDA: ${round}\nCOBERTURA: ${cappedIncluded.length} de ${rosterList.length} jugadores (excluidos: ${rosterList.length - included.length})\n`
-
+    context += `\n===== SÍNTESIS YA CALCULADA (NO inventes ni recalcules cifras) =====\n${synthesis}\n`
     if (panel.length > 0) {
       const lines = panel.map((s) => {
         const stat = s.bilateral
           ? `media izq ${s.mean_izq ?? '—'}, der ${s.mean_der ?? '—'}`
           : `media ${s.mean ?? '—'}${s.min != null ? ` (rango ${s.min}–${s.max})` : ''}`
-        const vig = s.outliers.length
-          ? ` · a vigilar: ${s.outliers.map((o) => `${tokenByName.get(o.nombre) || '[jugador]'} (${o.detalle})`).join(', ')}`
-          : ''
-        return `- ${s.test_name} · ${s.label}${s.unit ? ` (${s.unit})` : ''}: ${stat}, n=${s.n}${vig}`
+        return `- ${s.test_name} · ${s.label}${s.unit ? ` (${s.unit})` : ''}: ${stat}, n=${s.n}`
       })
-      context += `\n===== SÍNTESIS DE MÉTRICAS DEL EQUIPO (ya calculada; NO inventes cifras) =====\n${lines.join('\n')}\n`
+      context += `\n===== PANEL DE MÉTRICAS (calculado) =====\n${lines.join('\n')}\n`
     }
-
-    // Titulares de cada informe individual aprobado.
-    context += `\n===== TITULARES POR JUGADOR (de sus informes individuales aprobados) =====\n`
+    context += `\n===== CONCLUSIONES POR JUGADOR (de su informe individual aprobado) =====\n`
     for (const p of cappedIncluded) {
       const rd = reportBySession.get(sessionByPatient.get(p.id)!)?.report_data || {}
-      const re = rd.resumen_ejecutivo || {} // compat. informes antiguos (ya no se genera)
-      context += `--- ${tokenByPatient.get(p.id)} ---\n`
-      if (rd.hallazgos) context += `Hallazgos: ${rd.hallazgos}\n`
-      // Los informes nuevos integran fortalezas/riesgo/objetivo en "conclusiones".
-      if (rd.conclusiones) context += `Conclusiones: ${rd.conclusiones}\n`
-      else {
-        if (re.aspectos_mejorar) context += `A mejorar: ${re.aspectos_mejorar}\n`
-        if (re.riesgo_funcional) context += `Riesgo funcional: ${re.riesgo_funcional}\n`
-      }
-      context += `\n`
+      const concl = String(rd.conclusiones || rd.hallazgos || '').trim()
+      context += `--- ${tokenByPatient.get(p.id)} ---\n${concl ? concl.slice(0, 900) : '(sin conclusiones)'}\n\n`
     }
-
     if (included.length > MAX_PLAYERS) {
-      context += `\n(Nota: se han incluido los primeros ${MAX_PLAYERS} de ${included.length} jugadores por límite de longitud.)\n`
+      context += `\n(Nota: incluidos los primeros ${MAX_PLAYERS} de ${included.length} jugadores por límite.)\n`
     }
-
-    // Privacidad: eliminar cualquier nombre real que aún aparezca en los titulares.
+    // Privacidad: eliminar cualquier nombre real que aún aparezca (síntesis + conclusiones).
     context = redactManyNames(context, nameEntries)
 
     const reportInstructions = await getReportInstructions(supabase, profile.clinic_id, 'campaign')
@@ -284,13 +302,22 @@ export async function POST(request: NextRequest) {
         ronda: round,
         cobertura: `${cappedIncluded.length}/${rosterList.length}`,
       },
+      // ---- Calculado en código (determinista; NO pasa por la IA) ----
+      kpis: dashboard.kpis,
+      semaforo: dashboard.riesgos,
+      panel_metricas: panel,
+      lesiones: dashboard.lesiones,
+      anexo,
+      // ---- Redactado por la IA ----
       resumen_equipo: ai.resumen_equipo || '',
-      panel_metricas: panel, // CALCULADO en código
       patrones_y_riesgos: ai.patrones_y_riesgos || '',
       fortalezas: ai.fortalezas || '',
+      grupos_de_trabajo: Array.isArray(ai.grupos_de_trabajo) ? ai.grupos_de_trabajo : [],
       jugadores_a_vigilar: Array.isArray(ai.jugadores_a_vigilar) ? ai.jugadores_a_vigilar : [],
       recomendaciones: ai.recomendaciones || '',
       descargo: DESCARGO_CAMPAIGN,
+      // ---- Vista (preset por defecto; el editor la cambia sin regenerar) ----
+      _view: { preset: 'cuadro_mando' },
       _meta: {
         equipo: teamName,
         estudio: campaign.name,
@@ -301,6 +328,7 @@ export async function POST(request: NextRequest) {
         cobertura_valorados: cappedIncluded.length,
         roster_total: rosterList.length,
         umbrales: TEAM_THRESHOLDS,
+        datos_vald: 'extraidos_ia_sin_validar',
       },
     }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { jsPDF } from 'jspdf'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { drawJustifiedLine } from '@/lib/reports/pdfJustify'
+import { resolveVisibleSections } from '@/lib/reports/teamReportView'
 
 const MARGIN_LEFT = 25
 const MARGIN_RIGHT = 25
@@ -133,13 +134,41 @@ export async function POST(request: NextRequest) {
     addHeaderLine(doc)
     let y = MARGIN_TOP + 10
 
-    if (rd.resumen_equipo) {
+    // Solo se exportan las secciones que el fisio dejó visibles en la vista (preset/toggles).
+    const vis = resolveVisibleSections(rd._view)
+
+    // KPIs (calculado)
+    if (vis.kpis && rd.kpis) {
+      const k = rd.kpis
+      y = writeSectionTitle(doc, 'Indicadores del equipo', y)
+      const parts = [
+        `${k.valorados} valorados`,
+        k.pctAsimetriaAlta != null ? `${k.pctAsimetriaAlta}% con asimetría >15%` : null,
+        `${k.conLesion24m} con lesión (24 m)`,
+        `${k.aVigilar} a vigilar`,
+      ].filter(Boolean)
+      y = writeParagraph(doc, parts.join('  ·  '), y)
+    }
+
+    // Semáforo (calculado)
+    if (vis.semaforo && Array.isArray(rd.semaforo) && rd.semaforo.length) {
+      y = writeSectionTitle(doc, 'Semáforo de jugadores', y)
+      const byLvl: Record<string, string[]> = { rojo: [], ambar: [], verde: [] }
+      for (const r of rd.semaforo) {
+        const asim = r?.maxAsim != null ? ` (${Math.round(r.maxAsim)}%)` : ''
+        if (byLvl[r?.nivel]) byLvl[r.nivel].push(`${r.nombre}${asim}`)
+      }
+      const lblLvl: [string, string][] = [['rojo', 'Riesgo alto'], ['ambar', 'Riesgo medio'], ['verde', 'Sin señales']]
+      for (const [lvl, label] of lblLvl) if (byLvl[lvl].length) y = writeParagraph(doc, `${label}: ${byLvl[lvl].join(', ')}`, y, { fontSize: 9 })
+    }
+
+    if (vis.resumen_equipo && rd.resumen_equipo) {
       y = writeSectionTitle(doc, 'Resumen del equipo', y)
       y = writeParagraph(doc, String(rd.resumen_equipo), y)
     }
 
     // Panel de métricas (calculado)
-    if (Array.isArray(rd.panel_metricas) && rd.panel_metricas.length) {
+    if (vis.panel_metricas && Array.isArray(rd.panel_metricas) && rd.panel_metricas.length) {
       y = writeSectionTitle(doc, 'Panel de métricas del equipo', y)
       const byTest: Record<string, any[]> = {}
       for (const s of rd.panel_metricas) (byTest[s.test_name] ||= []).push(s)
@@ -158,10 +187,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (rd.patrones_y_riesgos) { y = writeSectionTitle(doc, 'Patrones y riesgos', y); y = writeParagraph(doc, String(rd.patrones_y_riesgos), y) }
-    if (rd.fortalezas) { y = writeSectionTitle(doc, 'Fortalezas del colectivo', y); y = writeParagraph(doc, String(rd.fortalezas), y) }
+    // Radiografía de lesiones (calculado)
+    if (vis.lesiones && rd.lesiones && (rd.lesiones.totalLesiones || 0) > 0) {
+      const l = rd.lesiones
+      y = writeSectionTitle(doc, 'Radiografía de lesiones (24 meses)', y)
+      const zonas = Array.isArray(l.zonas) ? l.zonas.slice(0, 6).map((z: any) => `${z.zona} ${z.n}`).join(', ') : ''
+      y = writeParagraph(doc, `${l.jugadoresConLesion} jugadores  ·  ${l.totalLesiones} lesiones  ·  ${l.conCirugia} con cirugía.${zonas ? `  Zonas: ${zonas}.` : ''}`, y)
+    }
 
-    if (Array.isArray(rd.jugadores_a_vigilar) && rd.jugadores_a_vigilar.length) {
+    if (vis.patrones_y_riesgos && rd.patrones_y_riesgos) { y = writeSectionTitle(doc, 'Patrones y riesgos', y); y = writeParagraph(doc, String(rd.patrones_y_riesgos), y) }
+    if (vis.fortalezas && rd.fortalezas) { y = writeSectionTitle(doc, 'Fortalezas del colectivo', y); y = writeParagraph(doc, String(rd.fortalezas), y) }
+
+    // Grupos de trabajo (IA)
+    if (vis.grupos_de_trabajo && Array.isArray(rd.grupos_de_trabajo) && rd.grupos_de_trabajo.length) {
+      y = writeSectionTitle(doc, 'Grupos de trabajo', y)
+      for (const g of rd.grupos_de_trabajo) {
+        const nombre = g?.nombre ? String(g.nombre) : 'Grupo'
+        const foco = g?.foco ? ` — ${String(g.foco)}` : ''
+        y = writeParagraph(doc, `•  ${nombre}${foco}`, y, { fontStyle: 'bold', fontSize: 9 })
+        if (Array.isArray(g?.jugadores) && g.jugadores.length) y = writeParagraph(doc, `   ${g.jugadores.join(', ')}`, y, { fontSize: 9 })
+      }
+    }
+
+    if (vis.jugadores_a_vigilar && Array.isArray(rd.jugadores_a_vigilar) && rd.jugadores_a_vigilar.length) {
       y = writeSectionTitle(doc, 'Jugadores a vigilar', y)
       for (const j of rd.jugadores_a_vigilar) {
         const nombre = j?.nombre ? String(j.nombre) : ''
@@ -170,7 +218,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (rd.recomendaciones) { y = writeSectionTitle(doc, 'Recomendaciones', y); y = writeParagraph(doc, String(rd.recomendaciones), y) }
+    if (vis.recomendaciones && rd.recomendaciones) { y = writeSectionTitle(doc, 'Recomendaciones', y); y = writeParagraph(doc, String(rd.recomendaciones), y) }
+
+    // Anexo por jugador (calculado)
+    if (vis.anexo && Array.isArray(rd.anexo) && rd.anexo.length) {
+      y = writeSectionTitle(doc, 'Anexo por jugador', y)
+      for (const r of rd.anexo) {
+        const met = r?.metricaClave ? `  ·  ${String(r.metricaClave)}` : ''
+        const tit = r?.titular ? `: ${String(r.titular)}` : ''
+        y = writeParagraph(doc, `•  ${String(r?.nombre || '')}${tit}${met}`, y, { fontSize: 9 })
+      }
+    }
+
     if (rd.descargo) { y = writeSectionTitle(doc, 'Descargo de responsabilidad', y); y = writeParagraph(doc, String(rd.descargo), y, { fontSize: 8, color: [120, 120, 120] }) }
 
     addFooter(doc)
