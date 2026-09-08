@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, Save, CheckCircle2, FileDown, Plus, Trash2, BarChart3, SlidersHorizontal } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDuration } from '@/lib/reports/formatDuration'
+import TeamCharts from '@/components/report/TeamCharts'
 import {
   TEAM_PRESETS, TEAM_PRESET_LABELS, TEAM_SECTION_LABELS, TEAM_SECTION_ORDER,
   resolveVisibleSections, type TeamView, type TeamPreset, type TeamSectionKey,
@@ -191,6 +192,13 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
               </span>
             ))}
           </div>
+        </Section>
+      )}
+
+      {/* Gráficos (calculado) */}
+      {visible.graficos && (
+        <Section label="Gráficos" note="calculado">
+          <TeamCharts semaforo={semaforo as any} panel={panel as any} lesiones={data.lesiones as any} />
         </Section>
       )}
 

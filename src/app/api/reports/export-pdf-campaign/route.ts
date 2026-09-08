@@ -152,6 +152,53 @@ function drawKpiCards(doc: jsPDF, cards: { n: string; t: string }[], y: number):
   return y + h + 7
 }
 
+const RISK_RGB: Record<string, number[]> = { rojo: [201, 63, 63], ambar: [201, 145, 32], verde: [52, 150, 82] }
+
+// Barras horizontales (gráfico) dibujadas con rects.
+function drawHBars(doc: jsPDF, rows: { label: string; value: number; color: number[] }[], y: number, unit = ''): number {
+  if (!rows.length) return y
+  const labelW = 46, barX = MARGIN_LEFT + labelW, barMaxW = CONTENT_WIDTH - labelW - 16
+  const max = Math.max(...rows.map((r) => r.value), 1)
+  const rowH = 5.4
+  for (const r of rows) {
+    y = ensureSpace(doc, y, rowH + 2)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(70, 70, 70)
+    doc.text(String(doc.splitTextToSize(r.label, labelW - 3)[0] || ''), MARGIN_LEFT, y + 3.1)
+    doc.setFillColor(238, 240, 244); doc.roundedRect(barX, y, barMaxW, rowH - 1.5, 0.8, 0.8, 'F')
+    const bw = Math.max((r.value / max) * barMaxW, 0.6)
+    doc.setFillColor(r.color[0], r.color[1], r.color[2]); doc.roundedRect(barX, y, bw, rowH - 1.5, 0.8, 0.8, 'F')
+    doc.setFontSize(7); doc.setTextColor(60, 60, 60)
+    doc.text(`${Math.round(r.value)}${unit}`, barX + bw + 1.5, y + 3.1)
+    y += rowH + 1.2
+  }
+  return y + 2
+}
+
+// Barra apilada del reparto de riesgo + leyenda.
+function drawStackedRisk(doc: jsPDF, segs: { n: number; color: number[]; label: string }[], y: number): number {
+  const total = segs.reduce((a, s) => a + s.n, 0)
+  if (!total) return y
+  y = ensureSpace(doc, y, 16)
+  const barW = CONTENT_WIDTH, h = 7
+  let x = MARGIN_LEFT
+  for (const s of segs) {
+    if (s.n === 0) continue
+    const sw = (s.n / total) * barW
+    doc.setFillColor(s.color[0], s.color[1], s.color[2]); doc.rect(x, y, sw, h, 'F')
+    if (sw > 8) { doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text(String(s.n), x + sw / 2, y + h / 2 + 1.4, { align: 'center' }) }
+    x += sw
+  }
+  y += h + 4
+  let lx = MARGIN_LEFT
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5)
+  for (const s of segs) {
+    doc.setFillColor(s.color[0], s.color[1], s.color[2]); doc.rect(lx, y - 2.4, 2.4, 2.4, 'F')
+    doc.setTextColor(70, 70, 70); doc.text(`${s.label}: ${s.n}`, lx + 3.4, y)
+    lx += doc.getTextWidth(`${s.label}: ${s.n}`) + 12
+  }
+  return y + 6
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerSupabaseClient()
@@ -238,6 +285,35 @@ export async function POST(request: NextRequest) {
         { label: 'Riesgo medio', bg: [252, 244, 227], fg: [162, 110, 20], items: byLvl.ambar },
         { label: 'Sin señales de riesgo', bg: [232, 245, 236], fg: [40, 120, 66], items: byLvl.verde },
       ], y)
+    }
+
+    // Gráficos (calculado)
+    if (vis.graficos) {
+      const sem: any[] = Array.isArray(rd.semaforo) ? rd.semaforo : []
+      const rj = sem.filter((r) => r?.nivel === 'rojo').length
+      const am = sem.filter((r) => r?.nivel === 'ambar').length
+      const vd = sem.filter((r) => r?.nivel === 'verde').length
+      const asimJug = sem.filter((r) => r?.maxAsim != null).sort((a, b) => b.maxAsim - a.maxAsim)
+        .map((r) => ({ label: r.nombre, value: r.maxAsim, color: RISK_RGB[r.nivel] || [120, 120, 120] }))
+      const asimPrueba = (Array.isArray(rd.panel_metricas) ? rd.panel_metricas : [])
+        .filter((s: any) => /asim/i.test(s.key) && !s.bilateral && s.mean != null)
+        .map((s: any) => ({ label: s.test_name, value: s.mean, color: [37, 99, 235] }))
+        .sort((a: any, b: any) => b.value - a.value)
+      const zonas = ((rd.lesiones?.zonas as any[]) || []).slice(0, 8).map((z) => ({ label: z.zona, value: z.n, color: [8, 145, 178] }))
+      if (rj + am + vd > 0 || asimJug.length || asimPrueba.length || zonas.length) {
+        y = writeSectionTitle(doc, 'Gráficos', y)
+        if (rj + am + vd > 0) {
+          y = writeSubtitle(doc, 'Reparto de riesgo del equipo', y)
+          y = drawStackedRisk(doc, [
+            { n: rj, color: [176, 42, 42], label: 'Riesgo alto' },
+            { n: am, color: [162, 110, 20], label: 'Riesgo medio' },
+            { n: vd, color: [40, 120, 66], label: 'Sin señales' },
+          ], y)
+        }
+        if (asimJug.length) { y = writeSubtitle(doc, 'Asimetría máxima por jugador (%)', y); y = drawHBars(doc, asimJug, y, '%') }
+        if (asimPrueba.length) { y = writeSubtitle(doc, 'Asimetría media por prueba (%)', y); y = drawHBars(doc, asimPrueba, y, '%') }
+        if (zonas.length) { y = writeSubtitle(doc, 'Lesiones por zona (24 m)', y); y = drawHBars(doc, zonas, y) }
+      }
     }
 
     if (vis.resumen_equipo && rd.resumen_equipo) {
