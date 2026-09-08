@@ -220,7 +220,11 @@ export async function POST(request: NextRequest) {
     for (const p of cappedIncluded) {
       const rd = reportBySession.get(sessionByPatient.get(p.id)!)?.report_data || {}
       const c = String(rd.conclusiones || rd.hallazgos || '').trim()
-      if (c) titularByName.set(p.full_name, (c.split(/(?<=\.)\s/)[0] || c).slice(0, 160))
+      if (c) {
+        let t = (c.split(/(?<=\.)\s/)[0] || c).trim() // primera frase
+        if (t.length > 200) t = t.slice(0, 200).replace(/\s+\S*$/, '') + '…' // recorte en palabra, no a medias
+        titularByName.set(p.full_name, t)
+      }
     }
     const anexo = dashboard.anexo.map((r) => ({ ...r, titular: titularByName.get(r.nombre) || null }))
 

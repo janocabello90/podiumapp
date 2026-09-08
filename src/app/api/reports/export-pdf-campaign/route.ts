@@ -12,6 +12,17 @@ const PAGE_WIDTH = 210 // A4
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT
 const FOOTER_TEXT = 'www.clinicapodium.com  -  608392019  -  C/ Almagro 16 50004 Zaragoza'
 
+// Ajusta el logo dentro de una caja maxW×maxH respetando su proporción, centrado.
+function fitLogo(doc: jsPDF, dataUrl: string, maxW: number, maxH: number): { w: number; h: number; x: number } {
+  try {
+    const props = doc.getImageProperties(dataUrl)
+    const ratio = (props.width || 1) / (props.height || 1)
+    let w = maxW, h = w / ratio
+    if (h > maxH) { h = maxH; w = h * ratio }
+    return { w, h, x: (PAGE_WIDTH - w) / 2 }
+  } catch { return { w: maxW, h: maxH, x: (PAGE_WIDTH - maxW) / 2 } }
+}
+
 function addFooter(doc: jsPDF) {
   const pageHeight = doc.internal.pageSize.getHeight()
   doc.setFont('helvetica', 'normal')
@@ -234,28 +245,43 @@ export async function POST(request: NextRequest) {
     const ronda = p.ronda ?? meta.ronda
     const cobertura = p.cobertura || (meta.cobertura_valorados != null && meta.roster_total != null ? `${meta.cobertura_valorados}/${meta.roster_total}` : '')
 
-    // Portada — banda de marca
-    doc.setFillColor(20, 40, 80); doc.rect(0, 0, PAGE_WIDTH, 64, 'F')
-    doc.setFillColor(218, 165, 32); doc.rect(0, 64, PAGE_WIDTH, 1.6, 'F')
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(218, 165, 32)
-    doc.text('MÉTODO PODIUM', PAGE_WIDTH / 2, 27, { align: 'center' })
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(21); doc.setTextColor(255, 255, 255)
-    doc.text('Informe de Rendimiento', PAGE_WIDTH / 2, 42, { align: 'center' })
-    doc.text('y Prevención de Equipo', PAGE_WIDTH / 2, 52, { align: 'center' })
-    // Datos del equipo
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(20, 40, 80)
-    doc.text(String(equipo), PAGE_WIDTH / 2, 88, { align: 'center' })
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90, 90, 90)
-    const bits = [estudio, grupo, ronda != null ? `Ronda ${ronda}` : ''].filter(Boolean)
-    if (bits.length) doc.text(bits.join('    ·    '), PAGE_WIDTH / 2, 97, { align: 'center' })
-    if (cobertura) doc.text(`Cobertura: ${cobertura} jugadores valorados`, PAGE_WIDTH / 2, 104, { align: 'center' })
-    doc.setFontSize(9); doc.setTextColor(140, 140, 140)
-    doc.text('Informe asistido por IA y revisado por fisioterapeuta colegiado', PAGE_WIDTH / 2, 122, { align: 'center', maxWidth: CONTENT_WIDTH })
-
-    addFooter(doc)
-    doc.addPage()
-    addHeaderLine(doc)
-    let y = MARGIN_TOP + 10
+    // ── Portada (logo + título), al estilo del informe individual ──
+    let coverY = 40
+    let logoData: string | null = null
+    try {
+      const { data: clinic } = await supabase.from('clinics').select('logo_url').eq('id', profile.clinic_id).single()
+      if (clinic?.logo_url) {
+        const resp = await fetch(clinic.logo_url, { signal: AbortSignal.timeout(5000) })
+        if (resp.ok) {
+          const ct = resp.headers.get('content-type') || 'image/png'
+          const ext = ct.includes('png') || ct.includes('svg') ? 'PNG' : 'JPEG'
+          logoData = `data:${ct};base64,${Buffer.from(await resp.arrayBuffer()).toString('base64')}`
+          const fit = fitLogo(doc, logoData, 50, 24)
+          doc.addImage(logoData, ext, fit.x, 16, fit.w, fit.h)
+          coverY = 16 + fit.h + 6
+        }
+      }
+    } catch (e) { console.error('Logo load error (campaign PDF):', e) }
+    if (!logoData) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(20, 40, 80)
+      doc.text('MÉTODO PODIUM', PAGE_WIDTH / 2, 26, { align: 'center' }); coverY = 34
+    }
+    // Línea dorada + título
+    doc.setDrawColor(218, 165, 32); doc.setLineWidth(0.8); doc.line(MARGIN_LEFT, coverY, PAGE_WIDTH - MARGIN_RIGHT, coverY)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(20, 40, 80)
+    doc.text('INFORME DE RENDIMIENTO Y PREVENCIÓN — EQUIPO', PAGE_WIDTH / 2, coverY + 11, { align: 'center', maxWidth: CONTENT_WIDTH })
+    // Datos del equipo (alineados a la izquierda, como los datos del paciente)
+    let y = coverY + 24
+    const field = (label: string, value: string) => {
+      y = ensureSpace(doc, y, 8)
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(50, 50, 50); doc.text(label, MARGIN_LEFT, y)
+      doc.setFont('helvetica', 'normal'); doc.text(value, MARGIN_LEFT + doc.getTextWidth(label) + 1.5, y); y += 6
+    }
+    field('Equipo:', ` ${equipo}`)
+    if (estudio) field('Estudio:', ` ${estudio}${grupo ? ` · ${grupo}` : ''}`)
+    if (ronda != null) field('Ronda:', ` ${ronda}`)
+    if (cobertura) field('Cobertura:', ` ${cobertura} jugadores valorados`)
+    y += 2; doc.setDrawColor(210, 210, 210); doc.setLineWidth(0.3); doc.line(MARGIN_LEFT, y, PAGE_WIDTH - MARGIN_RIGHT, y); y += 9
 
     // Solo se exportan las secciones que el fisio dejó visibles en la vista (preset/toggles).
     const vis = resolveVisibleSections(rd._view)
@@ -373,9 +399,22 @@ export async function POST(request: NextRequest) {
     if (vis.anexo && Array.isArray(rd.anexo) && rd.anexo.length) {
       y = writeSectionTitle(doc, 'Anexo por jugador', y)
       for (const r of rd.anexo) {
-        const met = r?.metricaClave ? `  ·  ${String(r.metricaClave)}` : ''
-        const tit = r?.titular ? `: ${String(r.titular)}` : ''
-        y = writeParagraph(doc, `•  ${String(r?.nombre || '')}${tit}${met}`, y, { fontSize: 9 })
+        y = ensureSpace(doc, y, 12)
+        const dot = RISK_RGB[r?.nivel] || [150, 150, 150]
+        doc.setFillColor(dot[0], dot[1], dot[2]); doc.circle(MARGIN_LEFT + 1, y - 1, 1.2, 'F')
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 40, 80)
+        doc.text(String(r?.nombre || ''), MARGIN_LEFT + 5, y)
+        if (r?.metricaClave) {
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(120, 120, 120)
+          doc.text(String(r.metricaClave), PAGE_WIDTH - MARGIN_RIGHT, y, { align: 'right' })
+        }
+        y += 4.5
+        if (r?.titular) {
+          let t = String(r.titular).trim()
+          if (!/[.!?…]$/.test(t)) t += '…'
+          y = writeParagraph(doc, t, y, { fontSize: 8.5, color: [95, 95, 95] })
+        } else { y += 1 }
+        y += 1.5
       }
     }
 
