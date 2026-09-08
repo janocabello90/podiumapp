@@ -184,10 +184,10 @@ function drawKpiCards(doc: jsPDF, cards: { n: string; t: string }[], y: number):
 const RISK_RGB: Record<string, number[]> = { rojo: [201, 63, 63], ambar: [201, 145, 32], verde: [52, 150, 82] }
 
 // Barras horizontales (gráfico) dibujadas con rects.
-function drawHBars(doc: jsPDF, rows: { label: string; value: number; color: number[] }[], y: number, unit = ''): number {
+function drawHBars(doc: jsPDF, rows: { label: string; value: number; color: number[] }[], y: number, unit = '', decimals = 0): number {
   if (!rows.length) return y
-  const labelW = 46, barX = MARGIN_LEFT + labelW, barMaxW = CONTENT_WIDTH - labelW - 16
-  const max = Math.max(...rows.map((r) => r.value), 1)
+  const labelW = 46, barX = MARGIN_LEFT + labelW, barMaxW = CONTENT_WIDTH - labelW - 18
+  const max = Math.max(...rows.map((r) => r.value), 0.0001)
   const rowH = 5.4
   for (const r of rows) {
     y = ensureSpace(doc, y, rowH + 2)
@@ -197,7 +197,7 @@ function drawHBars(doc: jsPDF, rows: { label: string; value: number; color: numb
     const bw = Math.max((r.value / max) * barMaxW, 0.6)
     doc.setFillColor(r.color[0], r.color[1], r.color[2]); doc.roundedRect(barX, y, bw, rowH - 1.5, 0.8, 0.8, 'F')
     doc.setFontSize(7); doc.setTextColor(60, 60, 60)
-    doc.text(`${Math.round(r.value)}${unit}`, barX + bw + 1.5, y + 3.1)
+    doc.text(`${r.value.toFixed(decimals)}${unit}`, barX + bw + 1.5, y + 3.1)
     y += rowH + 1.2
   }
   return y + 2
@@ -390,8 +390,12 @@ export async function POST(request: NextRequest) {
         .map((s: any) => ({ label: s.test_name, value: s.mean, color: [37, 99, 235] }))
         .sort((a: any, b: any) => b.value - a.value)
       const zonas = ((rd.lesiones?.zonas as any[]) || []).slice(0, 8).map((z) => ({ label: z.zona, value: z.n, color: [8, 145, 178] }))
+      const perf: any[] = Array.isArray(rd.rendimiento) ? rd.rendimiento : []
+      const saltoData = perf.filter((p) => p.salto != null).sort((a, b) => b.salto - a.salto).map((p) => ({ label: p.nombre, value: p.salto, color: [13, 148, 136] }))
+      const rsiData = perf.filter((p) => p.rsi != null).sort((a, b) => b.rsi - a.rsi).map((p) => ({ label: p.nombre, value: p.rsi, color: [79, 70, 229] }))
+      const dorsiData = perf.filter((p) => p.dorsi != null).sort((a, b) => a.dorsi - b.dorsi).map((p) => ({ label: p.nombre, value: p.dorsi, color: [234, 88, 12] }))
       const hbarH = (n: number) => 12 + n * 6.6 + 4 // subtítulo + barras (para no partir el gráfico)
-      if (rj + am + vd + sd > 0 || asimJug.length || asimPrueba.length || zonas.length) {
+      if (rj + am + vd + sd > 0 || asimJug.length || asimPrueba.length || zonas.length || saltoData.length || rsiData.length || dorsiData.length) {
         y = writeSectionTitle(doc, 'Gráficos', y)
         if (rj + am + vd + sd > 0) {
           y = reserve(doc, 32, y); y += 3
@@ -412,6 +416,15 @@ export async function POST(request: NextRequest) {
         }
         if (asimPrueba.length) { y = reserve(doc, hbarH(asimPrueba.length), y); y += 3; y = writeSubtitle(doc, 'Asimetría media por prueba (%)', y); y = drawHBars(doc, asimPrueba, y, '%') }
         if (zonas.length) { y = reserve(doc, hbarH(zonas.length), y); y += 3; y = writeSubtitle(doc, 'Lesiones por zona (24 m)', y); y = drawHBars(doc, zonas, y) }
+        // Rendimiento y capacidades (además de la asimetría)
+        if (saltoData.length || rsiData.length || dorsiData.length) {
+          y = reserve(doc, 14, y); y += 4
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
+          doc.text('Rendimiento y capacidades (además de la asimetría)', MARGIN_LEFT, y); y += 5
+          if (saltoData.length) { y = reserve(doc, hbarH(saltoData.length), y); y += 2; y = writeSubtitle(doc, 'Salto CMJ (cm) por jugador · más alto = más potencia', y); y = drawHBars(doc, saltoData, y, ' cm') }
+          if (rsiData.length) { y = reserve(doc, hbarH(rsiData.length), y); y += 2; y = writeSubtitle(doc, 'Reactividad · RSI por jugador', y); y = drawHBars(doc, rsiData, y, '', 2) }
+          if (dorsiData.length) { y = reserve(doc, hbarH(dorsiData.length), y); y += 2; y = writeSubtitle(doc, 'Dorsiflexión de tobillo (°) · lado más limitado', y); y = drawHBars(doc, dorsiData, y, '°') }
+        }
       }
     }
 

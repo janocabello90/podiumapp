@@ -205,7 +205,7 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
       {/* Gráficos (calculado) */}
       {visible.graficos && (
         <Section label="Gráficos" note="calculado">
-          <TeamCharts semaforo={semaforo as any} panel={panel as any} lesiones={data.lesiones as any} />
+          <TeamCharts semaforo={semaforo as any} panel={panel as any} lesiones={data.lesiones as any} rendimiento={(data as any).rendimiento} />
         </Section>
       )}
 

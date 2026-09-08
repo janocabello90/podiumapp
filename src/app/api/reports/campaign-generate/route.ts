@@ -313,6 +313,7 @@ export async function POST(request: NextRequest) {
       semaforo: dashboard.riesgos,
       panel_metricas: panel,
       lesiones: dashboard.lesiones,
+      rendimiento: dashboard.rendimiento,
       anexo,
       // ---- Redactado por la IA ----
       resumen_equipo: ai.resumen_equipo || '',

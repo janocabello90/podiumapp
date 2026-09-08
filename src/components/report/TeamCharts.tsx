@@ -7,6 +7,7 @@ type RiskLevel = 'rojo' | 'ambar' | 'verde'
 interface PlayerRisk { nombre: string; maxAsim: number | null; worstPct?: number | null; nivel: RiskLevel }
 interface MetricStat { test_name: string; label: string; key: string; bilateral: boolean; mean: number | null; unit?: string }
 interface Injuries { zonas?: { zona: string; n: number }[] }
+interface PerfRow { nombre: string; salto: number | null; rsi: number | null; dorsi: number | null }
 
 const RISK_COLOR: Record<RiskLevel, string> = { rojo: '#dc2626', ambar: '#d97706', verde: '#16a34a' }
 
@@ -16,12 +17,12 @@ function short(name: string, n = 18) {
 }
 
 // Barras horizontales genéricas.
-function HBars({ data, unit = '', height }: { data: { label: string; value: number; color: string }[]; unit?: string; height?: number }) {
+function HBars({ data, unit = '', decimals = 0, height }: { data: { label: string; value: number; color: string }[]; unit?: string; decimals?: number; height?: number }) {
   if (!data.length) return null
-  const rowH = 20, labelW = 118, chartW = 330, padR = 34
+  const rowH = 20, labelW = 118, chartW = 330, padR = 40
   const w = labelW + chartW + padR
   const h = height ?? data.length * rowH + 6
-  const max = Math.max(...data.map((d) => d.value), 1)
+  const max = Math.max(...data.map((d) => d.value), 0.0001)
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ maxWidth: '100%' }} role="img">
       {data.map((d, i) => {
@@ -32,7 +33,7 @@ function HBars({ data, unit = '', height }: { data: { label: string; value: numb
             <text x={labelW - 6} y={y + rowH / 2 - 3} textAnchor="end" dominantBaseline="middle" fontSize="10.5" fill="#475569">{short(d.label)}</text>
             <rect x={labelW} y={y} width={chartW} height={rowH - 8} rx="3" fill="#f1f5f9" />
             <rect x={labelW} y={y} width={bw} height={rowH - 8} rx="3" fill={d.color} />
-            <text x={labelW + bw + 4} y={y + (rowH - 8) / 2} dominantBaseline="middle" fontSize="9.5" fill="#334155">{Math.round(d.value)}{unit}</text>
+            <text x={labelW + bw + 4} y={y + (rowH - 8) / 2} dominantBaseline="middle" fontSize="9.5" fill="#334155">{d.value.toFixed(decimals)}{unit}</text>
           </g>
         )
       })}
@@ -86,7 +87,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   )
 }
 
-export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { semaforo?: PlayerRisk[]; panel?: MetricStat[]; lesiones?: Injuries }) {
+export default function TeamCharts({ semaforo = [], panel = [], lesiones, rendimiento = [] }: { semaforo?: PlayerRisk[]; panel?: MetricStat[]; lesiones?: Injuries; rendimiento?: PerfRow[] }) {
   // 1) Asimetría por jugador (con dato), ordenada desc.
   // Color por la propia ASIMETRÍA (no por el riesgo global), para que coincida con la barra.
   const asimColor = (v: number) => (v >= 30 ? RISK_COLOR.rojo : v >= 15 ? RISK_COLOR.ambar : RISK_COLOR.verde)
@@ -111,7 +112,12 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { se
   // 4) Lesiones por zona.
   const zonas = (lesiones?.zonas || []).slice(0, 8).map((z) => ({ label: z.zona, value: z.n, color: '#0891b2' }))
 
-  const nada = asimJug.length === 0 && rojo + ambar + verde + sinDatos === 0 && asimPrueba.length === 0 && zonas.length === 0
+  // 5) Rendimiento (otras capacidades, no asimetría): salto, reactividad, movilidad.
+  const saltoData = rendimiento.filter((p) => p.salto != null).sort((a, b) => (b.salto as number) - (a.salto as number)).map((p) => ({ label: p.nombre, value: p.salto as number, color: '#0d9488' }))
+  const rsiData = rendimiento.filter((p) => p.rsi != null).sort((a, b) => (b.rsi as number) - (a.rsi as number)).map((p) => ({ label: p.nombre, value: p.rsi as number, color: '#4f46e5' }))
+  const dorsiData = rendimiento.filter((p) => p.dorsi != null).sort((a, b) => (a.dorsi as number) - (b.dorsi as number)).map((p) => ({ label: p.nombre, value: p.dorsi as number, color: '#ea580c' }))
+
+  const nada = asimJug.length === 0 && rojo + ambar + verde + sinDatos === 0 && asimPrueba.length === 0 && zonas.length === 0 && saltoData.length === 0 && rsiData.length === 0 && dorsiData.length === 0
   if (nada) return <p className="text-xs text-gray-400">Sin datos suficientes para los gráficos.</p>
 
   return (
@@ -127,6 +133,19 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones }: { se
         {asimPrueba.length > 0 && <ChartCard title="Asimetría media por prueba (%)"><HBars data={asimPrueba} unit="%" /></ChartCard>}
         {zonas.length > 0 && <ChartCard title="Lesiones por zona (24 m)"><HBars data={zonas} /></ChartCard>}
       </div>
+
+      {(saltoData.length > 0 || rsiData.length > 0 || dorsiData.length > 0) && (
+        <div className="pt-1">
+          <p className="text-xs font-semibold text-gray-500 mb-2">Rendimiento y capacidades (además de la asimetría)</p>
+          <div className="space-y-3">
+            {saltoData.length > 0 && <ChartCard title="Salto CMJ (cm) por jugador · más alto = más potencia"><HBars data={saltoData} unit=" cm" /></ChartCard>}
+            <div className="grid sm:grid-cols-2 gap-3">
+              {rsiData.length > 0 && <ChartCard title="Reactividad · RSI por jugador"><HBars data={rsiData} decimals={2} /></ChartCard>}
+              {dorsiData.length > 0 && <ChartCard title="Dorsiflexión de tobillo (°) · lado más limitado"><HBars data={dorsiData} unit="°" /></ChartCard>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

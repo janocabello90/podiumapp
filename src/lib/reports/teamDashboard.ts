@@ -35,11 +35,37 @@ export interface AnexoRow {
   metricaClave: string | null // p. ej. "asim 43%" o "CMJ 41 cm"
 }
 
+export interface PerfRow {
+  nombre: string
+  salto: number | null // altura CMJ (cm)
+  rsi: number | null   // índice de fuerza reactiva (drop jump / CMJ)
+  dorsi: number | null // dorsiflexión de tobillo, lado más limitado (°)
+}
+
 export interface TeamDashboard {
   kpis: TeamKpis
   riesgos: PlayerRisk[]        // ordenados peor→mejor
   lesiones: InjurySummary
   anexo: AnexoRow[]
+  rendimiento: PerfRow[]       // otras capacidades (salto, reactividad, movilidad) por jugador
+}
+
+// Extrae, por patrones de clave, las métricas de rendimiento NO basadas en asimetría.
+function extractPerf(p: PlayerMetrics): PerfRow {
+  let salto: number | null = null, rsi: number | null = null, dorsi: number | null = null
+  for (const t of p.tests) {
+    const single = /^SL/i.test(t.test_name) // excluir pruebas unipodales para el salto/RSI "bilateral"
+    for (const m of t.metrics) {
+      const v = (t.values as any)?.[m.key]
+      if (m.key === 'altura' && !single && salto == null) salto = num(v?.valor)
+      if (/^rsi$|rsi_mod/i.test(m.key) && !single && rsi == null) rsi = num(v?.valor)
+      if (m.key === 'dorsiflex_tobillo') {
+        const lados = [num(v?.izq), num(v?.der)].filter((x): x is number => x != null)
+        if (lados.length && dorsi == null) dorsi = Math.min(...lados)
+      }
+    }
+  }
+  return { nombre: p.nombre, salto, rsi, dorsi }
 }
 
 // ---- Utilidades ----
@@ -164,7 +190,9 @@ export function buildTeamDashboard(
     metricaClave: r.maxAsim != null ? `asim ${Math.round(r.maxAsim)}%` : r.worstPct != null ? `percentil ${Math.round(r.worstPct)}` : null,
   }))
 
-  return { kpis, riesgos, lesiones, anexo }
+  const rendimiento = players.map(extractPerf)
+
+  return { kpis, riesgos, lesiones, anexo, rendimiento }
 }
 
 // Síntesis COMPACTA para la IA: lo justo para que redacte fundamentada, sin datos crudos.
