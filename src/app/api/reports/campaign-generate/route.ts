@@ -323,7 +323,7 @@ export async function POST(request: NextRequest) {
       recomendaciones: ai.recomendaciones || '',
       descargo: DESCARGO_CAMPAIGN,
       // ---- Vista (preset por defecto; el editor la cambia sin regenerar) ----
-      _view: { preset: 'cuadro_mando' },
+      _view: { preset: 'completo' },
       _meta: {
         equipo: teamName,
         estudio: campaign.name,

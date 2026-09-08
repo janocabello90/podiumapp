@@ -52,7 +52,7 @@ export interface TeamView {
 
 // Resuelve la visibilidad efectiva: base = preset; encima, los overrides manuales.
 export function resolveVisibleSections(view: TeamView | undefined): Record<TeamSectionKey, boolean> {
-  const preset = view?.preset && TEAM_PRESETS[view.preset] ? view.preset : 'cuadro_mando'
+  const preset = view?.preset && TEAM_PRESETS[view.preset] ? view.preset : 'completo'
   const base = new Set(TEAM_PRESETS[preset])
   const out = {} as Record<TeamSectionKey, boolean>
   for (const k of TEAM_SECTION_ORDER) {

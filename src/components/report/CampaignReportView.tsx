@@ -67,12 +67,12 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
   const [showToggles, setShowToggles] = useState(false)
   const approved = status === 'approved'
 
-  const view = data._view || { preset: 'cuadro_mando' as TeamPreset }
+  const view = data._view || { preset: 'completo' as TeamPreset }
   const visible = resolveVisibleSections(view)
   function setPreset(preset: TeamPreset) { setData((prev) => ({ ...prev, _view: { preset, overrides: {} } })) }
   function toggleSection(k: TeamSectionKey) {
     setData((prev) => {
-      const v = prev._view || { preset: 'cuadro_mando' as TeamPreset }
+      const v = prev._view || { preset: 'completo' as TeamPreset }
       const cur = resolveVisibleSections(v)
       return { ...prev, _view: { preset: v.preset, overrides: { ...(v.overrides || {}), [k]: !cur[k] } } }
     })
