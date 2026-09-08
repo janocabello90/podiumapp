@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import CampaignReportView from '@/components/report/CampaignReportView'
 import GeneratingPanel from '@/components/report/GeneratingPanel'
+import ReportCostPanel from '@/components/report/ReportCostPanel'
 import { isGenerationStale } from '@/lib/reports/background'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +20,9 @@ export default async function CampaignReportPage({
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return <div>No autenticado</div>
-  const { data: profile } = await supabase.from('users').select('clinic_id').eq('id', user.id).single()
+  const { data: profile } = await supabase.from('users').select('clinic_id, role').eq('id', user.id).single()
   if (!profile) return <div>Perfil no encontrado</div>
+  const isAdmin = profile.role === 'admin'
 
   const { data: campaign } = await supabase
     .from('campaigns')
@@ -36,7 +38,7 @@ export default async function CampaignReportPage({
   // Último informe de equipo para (estudio, equipo, ronda).
   let query = supabase
     .from('reports')
-    .select('id, status, report_data, team_id, campaign_round, created_at')
+    .select('id, status, report_data, team_id, campaign_round, created_at, ai_model, ai_prompt_tokens, ai_completion_tokens')
     .eq('campaign_id', campaign.id)
     .eq('scope', 'campaign')
     .eq('clinic_id', profile.clinic_id)
@@ -85,11 +87,22 @@ export default async function CampaignReportPage({
           </p>
         </div>
       ) : (
-        <CampaignReportView
-          reportId={report.id}
-          initialStatus={report.status || 'draft'}
-          initialData={rd}
-        />
+        <>
+          {isAdmin && ((report as any).ai_prompt_tokens || (report as any).ai_completion_tokens) ? (
+            <div className="mb-5">
+              <ReportCostPanel
+                model={(report as any).ai_model}
+                inTokens={(report as any).ai_prompt_tokens || 0}
+                outTokens={(report as any).ai_completion_tokens || 0}
+              />
+            </div>
+          ) : null}
+          <CampaignReportView
+            reportId={report.id}
+            initialStatus={report.status || 'draft'}
+            initialData={rd}
+          />
+        </>
       )}
     </div>
   )
