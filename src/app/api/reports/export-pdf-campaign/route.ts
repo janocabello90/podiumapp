@@ -425,7 +425,7 @@ export async function POST(request: NextRequest) {
         if (zonas.length) { y = reserve(doc, hbarH(zonas.length), y); y += 3; y = writeSubtitle(doc, 'Lesiones por zona (24 m)', y); y = drawHBars(doc, zonas, y) }
         // Rendimiento y capacidades (además de la asimetría)
         if (saltoData.length || rsiData.length || dorsiData.length) {
-          y = reserve(doc, 14, y); y += 4
+          y = reserve(doc, 16 + hbarH(saltoData.length || rsiData.length || dorsiData.length), y); y += 4
           doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
           doc.text('Rendimiento y capacidades (además de la asimetría)', MARGIN_LEFT, y); y += 5
           if (saltoData.length) { y = reserve(doc, hbarH(saltoData.length), y); y += 2; y = writeSubtitle(doc, 'Salto CMJ (cm) por jugador · más alto = más potencia', y); y = drawHBars(doc, saltoData, y, ' cm') }
@@ -434,21 +434,21 @@ export async function POST(request: NextRequest) {
         }
         // Equilibrio de fuerzas y riesgo articular
         if (anyRatio) {
-          y = reserve(doc, 14, y); y += 4
+          y = reserve(doc, 16 + hbarH(hqData.length || addabdData.length || valgoData.length || fuerzaRelData.length), y); y += 4
           doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
           doc.text('Equilibrio de fuerzas y riesgo articular', MARGIN_LEFT, y); y += 5
           if (hqData.length) {
             y = reserve(doc, hbarH(hqData.length) + 5, y); y += 2
             y = writeSubtitle(doc, 'Ratio isquios/cuádriceps (H:Q) por jugador', y)
             doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130)
-            doc.text('Referencia ≈ 0,5–0,6. Menor = mayor riesgo de isquios. Color: rojo <0,47, ámbar 0,47–0,6, verde ≥0,6.', MARGIN_LEFT, y); y += 4
+            doc.text('Referencia 0,5-0,6. Menor = mayor riesgo de isquios. Color: rojo <0,47, ámbar 0,47-0,6, verde 0,6 o más.', MARGIN_LEFT, y); y += 4
             y = drawHBars(doc, hqData, y, '', 2)
           }
           if (addabdData.length) {
             y = reserve(doc, hbarH(addabdData.length) + 5, y); y += 2
             y = writeSubtitle(doc, 'Ratio aductor/abductor por jugador', y)
             doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130)
-            doc.text('≈ 1,0 equilibrado; bajo = posible déficit de aductores.', MARGIN_LEFT, y); y += 4
+            doc.text('En torno a 1,0 = equilibrado; bajo = posible déficit de aductores.', MARGIN_LEFT, y); y += 4
             y = drawHBars(doc, addabdData, y, '', 2)
           }
           if (valgoData.length) {

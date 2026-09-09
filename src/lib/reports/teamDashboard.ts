@@ -69,7 +69,9 @@ function extractPerf(p: PlayerMetrics, weight: number | null): PerfRow {
     for (const m of t.metrics) {
       const v = (t.values as any)?.[m.key]
       if (m.key === 'altura' && !single && salto == null) salto = num(v?.valor)
-      if (/^rsi$|rsi_mod/i.test(m.key) && !single && rsi == null) rsi = num(v?.valor)
+      // RSI SIEMPRE del drop jump bilateral (mismo metric para todos, comparable): NO mezclar con
+      // el RSI-modificado del CMJ (escala distinta).
+      if (m.key === 'rsi' && /^DJ/i.test(t.test_name) && rsi == null) rsi = num(v?.valor)
       if (m.key === 'dorsiflex_tobillo') {
         const lados = [num(v?.izq), num(v?.der)].filter((x): x is number => x != null)
         if (lados.length && dorsi == null) dorsi = Math.min(...lados)
