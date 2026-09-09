@@ -2,10 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Loader2, Save, CheckCircle2, FileDown, Plus, Trash2, BarChart3, SlidersHorizontal } from 'lucide-react'
+import { Loader2, Save, CheckCircle2, FileDown, Plus, Trash2, BarChart3, SlidersHorizontal, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDuration } from '@/lib/reports/formatDuration'
 import TeamCharts from '@/components/report/TeamCharts'
+import { detectDataAlerts } from '@/lib/reports/teamAlerts'
 import {
   TEAM_PRESETS, TEAM_PRESET_LABELS, TEAM_SECTION_LABELS, TEAM_SECTION_ORDER,
   resolveVisibleSections, type TeamView, type TeamPreset, type TeamSectionKey,
@@ -120,6 +121,8 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
   const kpis = data.kpis
   const les = data.lesiones
   const anexo = data.anexo || []
+  // Aviso de calidad de datos (solo en la vista; NO se exporta al PDF).
+  const alerts = detectDataAlerts((data as any).rendimiento, semaforo)
 
   return (
     <div className="space-y-5">
@@ -161,6 +164,28 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
           </div>
         )}
       </div>
+
+      {/* Aviso de calidad de datos (solo aquí; NO sale en el PDF) */}
+      {alerts.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-800">Revisa estos datos antes de aprobar</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Valores atípicos que pueden ser un error de lectura del PDF de VALD. Compruébalos en el informe individual del jugador (el dato objetivo es editable). <strong>Este aviso no aparece en el PDF exportado.</strong>
+              </p>
+              <ul className="mt-2 space-y-1">
+                {alerts.map((a, i) => (
+                  <li key={i} className="text-xs text-amber-900">
+                    <strong>{a.nombre}</strong> · {a.metrica}: <span className="font-mono">{a.valor}{a.unidad}</span> <span className="text-amber-600">({a.motivo})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cabecera del equipo/ronda */}
       <div className="bg-white rounded-2xl border border-gray-200 p-4">
