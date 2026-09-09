@@ -234,9 +234,11 @@ export async function POST(request: NextRequest) {
       const rd = reportBySession.get(sessionByPatient.get(p.id)!)?.report_data || {}
       const c = String(rd.conclusiones || rd.hallazgos || '').trim()
       if (c) {
-        let t = (c.split(/(?<=\.)\s/)[0] || c).trim() // primera frase
-        if (t.length > 200) t = t.slice(0, 200).replace(/\s+\S*$/, '') + '…' // recorte en palabra, no a medias
-        titularByName.set(p.full_name, t)
+        // Frases COMPLETAS (nunca cortar a media idea): la 1ª y, si cabe holgada, la 2ª.
+        const frases = c.split(/(?<=[.!?])\s+/).filter(Boolean)
+        let t = frases[0] || c
+        if (frases[1] && (t.length + frases[1].length) <= 240) t = `${t} ${frases[1]}`
+        titularByName.set(p.full_name, t.trim())
       }
     }
     const anexo = dashboard.anexo.map((r) => ({ ...r, titular: titularByName.get(r.nombre) || null }))

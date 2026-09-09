@@ -342,7 +342,7 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
             {anexo.map((r, i) => (
               <div key={i} className="flex items-center gap-3 py-2">
                 <span className={`w-2 h-2 rounded-full flex-shrink-0 ${LEVEL_DOT[r.metricaClave == null ? 'sin_datos' : r.nivel]}`} />
-                <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-900 truncate">{r.nombre}</div>{r.titular && <div className="text-xs text-gray-500 truncate">{r.titular}</div>}</div>
+                <div className="flex-1 min-w-0"><div className="text-sm font-medium text-gray-900 truncate">{r.nombre}</div>{r.titular && <div className="text-xs text-gray-500">{r.titular}</div>}</div>
                 {r.metricaClave && <span className="text-xs font-mono text-gray-600 flex-shrink-0">{r.metricaClave}</span>}
               </div>
             ))}
