@@ -171,9 +171,9 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
           <div className="flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-amber-800">Revisa estos datos antes de aprobar</p>
-              <p className="text-xs text-amber-700 mt-0.5">
-                Valores atípicos que pueden ser un error de lectura del PDF de VALD. Compruébalos en el informe individual del jugador (el dato objetivo es editable). <strong>Este aviso no aparece en el PDF exportado.</strong>
+              <p className="text-sm font-semibold text-amber-800">Revisa estos datos (posible valor atípico)</p>
+              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                No tienen por qué estar mal: se marcan porque se salen de los rangos/umbrales que hemos establecido, como simple alerta. <strong>Si el valor es correcto, no hay que hacer nada.</strong> Si es un error de lectura del PDF de VALD, corrígelo a mano en el <strong>informe individual</strong> del jugador (el dato objetivo es editable; no hace falta regenerarlo, solo cambiar el número si conoces el correcto) y re-exporta su PDF si lo necesitas. Después, <strong>regenera este informe de equipo</strong> y comprueba que el aviso ya no aparece. Este aviso no sale en el PDF exportado.
               </p>
               <ul className="mt-2 space-y-1">
                 {alerts.map((a, i) => (
