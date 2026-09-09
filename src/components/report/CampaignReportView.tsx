@@ -168,22 +168,28 @@ export default function CampaignReportView({ reportId, initialStatus, initialDat
       {/* Aviso de calidad de datos (solo aquí; NO sale en el PDF) */}
       {alerts.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4">
-          <div className="flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-amber-800">Revisa estos datos (posible valor atípico)</p>
-              <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
-                No tienen por qué estar mal: se marcan porque se salen de los rangos/umbrales que hemos establecido, como simple alerta. <strong>Si el valor es correcto, no hay que hacer nada.</strong> Si es un error de lectura del PDF de VALD, corrígelo a mano en el <strong>informe individual</strong> del jugador (el dato objetivo es editable; no hace falta regenerarlo, solo cambiar el número si conoces el correcto) y re-exporta su PDF si lo necesitas. Después, <strong>regenera este informe de equipo</strong> y comprueba que el aviso ya no aparece. Este aviso no sale en el PDF exportado.
-              </p>
-              <ul className="mt-2 space-y-1">
-                {alerts.map((a, i) => (
-                  <li key={i} className="text-xs text-amber-900">
-                    <strong>{a.nombre}</strong> · {a.metrica}: <span className="font-mono">{a.valor}{a.unidad}</span> <span className="text-amber-600">({a.motivo})</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="flex items-center gap-2 mb-2.5">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <p className="text-sm font-semibold text-amber-900">
+              Revisa estos datos — {alerts.length} {alerts.length === 1 ? 'valor a comprobar' : 'valores a comprobar'}
+            </p>
           </div>
+          {/* Jugadores marcados (prominentes) */}
+          <div className="space-y-1.5 mb-3">
+            {alerts.map((a, i) => (
+              <div key={i} className="flex items-center justify-between gap-3 bg-white border border-amber-100 rounded-lg px-3 py-2">
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-gray-900 truncate">{a.nombre}</span>
+                  <span className="block text-[11px] text-amber-600">{a.metrica} · {a.motivo}</span>
+                </div>
+                <span className="text-sm font-mono font-semibold text-amber-800 bg-amber-100 px-2.5 py-1 rounded-lg flex-shrink-0">{a.valor}{a.unidad}</span>
+              </div>
+            ))}
+          </div>
+          {/* Explicación (secundaria) */}
+          <p className="text-[11px] text-amber-700 leading-relaxed">
+            No tienen por qué estar mal: es solo una alerta porque se salen de los rangos que hemos establecido. Si el valor es correcto, no hay que hacer nada. Si es un error de lectura del PDF de VALD, corrígelo a mano en el <strong>informe individual</strong> del jugador (el dato es editable; no hace falta regenerarlo) y después <strong>regenera este informe de equipo</strong> para que el aviso desaparezca. No sale en el PDF exportado.
+          </p>
         </div>
       )}
 
