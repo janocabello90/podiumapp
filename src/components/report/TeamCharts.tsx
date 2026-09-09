@@ -104,9 +104,13 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones, rendim
   const sinDatos = semaforo.filter(isNoData).length
 
   // 3) Asimetría media por prueba (métricas de asimetría del panel).
+  const asimLabel = (s: MetricStat) => {
+    const m = (s.label || '').replace(/asimetr[ií]a\s*(de\s*)?/i, '').replace(/\s*\(%\)/, '').trim()
+    return m ? `${s.test_name} · ${m}` : s.test_name
+  }
   const asimPrueba = panel
     .filter((s) => /asim/i.test(s.key) && !s.bilateral && s.mean != null)
-    .map((s) => ({ label: s.test_name, value: s.mean as number, color: '#2563eb' }))
+    .map((s) => ({ label: asimLabel(s), value: s.mean as number, color: '#2563eb' }))
     .sort((a, b) => b.value - a.value)
 
   // 4) Lesiones por zona.

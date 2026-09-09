@@ -385,9 +385,13 @@ export async function POST(request: NextRequest) {
       const asimColor = (v: number) => v >= 30 ? RISK_RGB.rojo : v >= 15 ? RISK_RGB.ambar : RISK_RGB.verde
       const asimJug = sem.filter((r) => r?.maxAsim != null).sort((a, b) => b.maxAsim - a.maxAsim)
         .map((r) => ({ label: r.nombre, value: r.maxAsim, color: asimColor(r.maxAsim) }))
+      const asimLabel = (s: any) => {
+        const m = String(s.label || '').replace(/asimetr[ií]a\s*(de\s*)?/i, '').replace(/\s*\(%\)/, '').trim()
+        return m ? `${s.test_name} · ${m}` : s.test_name
+      }
       const asimPrueba = (Array.isArray(rd.panel_metricas) ? rd.panel_metricas : [])
         .filter((s: any) => /asim/i.test(s.key) && !s.bilateral && s.mean != null)
-        .map((s: any) => ({ label: s.test_name, value: s.mean, color: [37, 99, 235] }))
+        .map((s: any) => ({ label: asimLabel(s), value: s.mean, color: [37, 99, 235] }))
         .sort((a: any, b: any) => b.value - a.value)
       const zonas = ((rd.lesiones?.zonas as any[]) || []).slice(0, 8).map((z) => ({ label: z.zona, value: z.n, color: [8, 145, 178] }))
       const perf: any[] = Array.isArray(rd.rendimiento) ? rd.rendimiento : []
