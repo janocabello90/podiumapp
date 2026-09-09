@@ -44,11 +44,35 @@ export function redactPatientName(text: string, fullName: string): string {
 }
 
 // Caso agregado (informe de estudio): redacta VARIOS nombres, cada uno con su marcador.
-// Redacta primero los nombres completos más largos para minimizar colisiones parciales.
+// IMPORTANTE (equipos con nombres repetidos, p. ej. dos "Raúl" o dos "Ivan"): una palabra
+// COMPARTIDA (nombre de pila) NO se puede redactar suelta, porque se asignaría al marcador del
+// primer jugador y corromperia las menciones del otro (→ hallazgos atribuidos al jugador
+// equivocado). Por eso: (1) se redactan los nombres COMPLETOS, y (2) las palabras sueltas SOLO
+// si son ÚNICAS de un jugador (apellidos, nombres no repetidos).
 export function redactManyNames(text: string, entries: { name: string; token: string }[]): string {
   let out = text
-  const ordered = [...entries].sort((a, b) => (b.name || '').length - (a.name || '').length)
-  for (const e of ordered) out = redactNameWith(out, e.name, e.token)
+  // 1) Nombres completos, del más largo al más corto (sin ambigüedad).
+  const byLen = [...entries].sort((a, b) => (b.name || '').length - (a.name || '').length)
+  for (const e of byLen) {
+    const full = (e.name || '').trim()
+    if (full) out = out.replace(new RegExp(escapeRegExp(full), 'gi'), e.token)
+  }
+  // 2) Palabras sueltas SOLO si pertenecen a un único jugador.
+  const owners = new Map<string, Set<string>>() // palabra (minúsculas) → tokens que la usan
+  for (const e of entries) {
+    for (const w of nameParts(e.name).slice(1)) {
+      const k = w.toLowerCase()
+      if (!owners.has(k)) owners.set(k, new Set())
+      owners.get(k)!.add(e.token)
+    }
+  }
+  for (const e of entries) {
+    for (const w of nameParts(e.name).slice(1)) {
+      if ((owners.get(w.toLowerCase())?.size ?? 0) === 1) {
+        out = out.replace(new RegExp(`\\b${escapeRegExp(w)}\\b`, 'gi'), e.token)
+      }
+    }
+  }
   return out
 }
 
