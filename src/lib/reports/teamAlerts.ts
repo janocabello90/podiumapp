@@ -38,8 +38,9 @@ export function detectDataAlerts(rendimiento: any[] | undefined, semaforo: any[]
   for (const m of METRICS) {
     const src = (m.from === 'rend' ? rendimiento : semaforo) || []
     const rows = src
-      .map((r) => ({ nombre: String(r?.nombre || ''), v: Number(r?.[m.key]) }))
-      .filter((r) => Number.isFinite(r.v))
+      // OJO: filtrar los null ANTES de convertir; Number(null) === 0 colaría como un "0 real".
+      .filter((r) => typeof r?.[m.key] === 'number' && Number.isFinite(r[m.key]))
+      .map((r) => ({ nombre: String(r?.nombre || ''), v: Number(r[m.key]) }))
     if (rows.length === 0) continue
     // Outlier extremo frente al grupo (si hay muestra suficiente).
     let hi = Infinity, lo = -Infinity
