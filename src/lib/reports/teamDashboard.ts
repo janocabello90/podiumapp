@@ -230,5 +230,13 @@ export function buildDashboardSynthesis(d: TeamDashboard): string {
     const z = d.lesiones.zonas.slice(0, 5).map((x) => `${x.zona} ${x.n}`).join(', ')
     lines.push(`Lesiones 24m: ${d.lesiones.totalLesiones} en ${d.lesiones.jugadoresConLesion} jugadores (cirugía: ${d.lesiones.conCirugia}). Zonas: ${z}.`)
   }
+  // Capacidades CALCULADAS (para que la IA se atenga a ellas y no atribuya ratios que no salen aquí).
+  const perf = d.rendimiento || []
+  const hqLow = perf.filter((p) => p.hq != null && (p.hq as number) < 0.6).sort((a, b) => (a.hq as number) - (b.hq as number))
+  const valgoHi = perf.filter((p) => p.valgo != null && (p.valgo as number) >= 10).sort((a, b) => (b.valgo as number) - (a.valgo as number))
+  const dorsiLow = perf.filter((p) => p.dorsi != null && (p.dorsi as number) < 20).sort((a, b) => (a.dorsi as number) - (b.dorsi as number))
+  if (hqLow.length) lines.push(`Ratio isquios/cuádriceps (H:Q) por debajo de 0,6 (referencia; solo estos): ${hqLow.map((p) => `${p.nombre} (${p.hq})`).join(', ')}.`)
+  if (valgoHi.length) lines.push(`Valgo dinámico de rodilla destacado (>=10°): ${valgoHi.map((p) => `${p.nombre} (${p.valgo}°)`).join(', ')}.`)
+  if (dorsiLow.length) lines.push(`Dorsiflexión de tobillo limitada (<20°): ${dorsiLow.map((p) => `${p.nombre} (${p.dorsi}°)`).join(', ')}.`)
   return lines.join('\n')
 }

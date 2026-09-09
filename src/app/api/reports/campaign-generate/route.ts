@@ -34,6 +34,7 @@ Devuelve SOLO un JSON válido con EXACTAMENTE estas claves (todo CUALITATIVO):
 REGLAS ESTRICTAS:
 - Español clínico, profesional y claro. Párrafos narrativos; nada de listas con guiones fuera de los arrays indicados.
 - NO inventes ni recalcules cifras: usa EXCLUSIVAMENTE las de la síntesis. El informe AGREGA las valoraciones individuales, no las sustituye ni diagnostica.
+- CAPACIDADES OBJETIVAS (ratio isquios/cuádriceps H:Q, valgo de rodilla, dorsiflexión): atente a lo que diga la SÍNTESIS. NO atribuyas un ratio H:Q desfavorable, un valgo alto ni una dorsiflexión limitada a un jugador que NO aparezca listado en esos apartados de la síntesis, aunque su informe individual mencione una lesión previa en esa zona. Un antecedente de lesión de isquios NO implica un ratio H:Q malo: son cosas distintas; puedes mencionar el antecedente, pero no lo conviertas en un dato de ratio que no está en la síntesis.
 - Propón entre 2 y 4 grupos de trabajo coherentes con los hallazgos; un jugador puede estar en varios grupos; usa solo jugadores del contexto.
 - PRIVACIDAD: nombra a los jugadores EXCLUSIVAMENTE con las etiquetas «[[JUGADOR_n]]» que aparecen en el contexto; nunca inventes ni deduzcas nombres reales.
 - Responde SOLO con el JSON válido, sin texto adicional ni explicaciones.`
