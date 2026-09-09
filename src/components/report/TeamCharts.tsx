@@ -7,7 +7,7 @@ type RiskLevel = 'rojo' | 'ambar' | 'verde'
 interface PlayerRisk { nombre: string; maxAsim: number | null; worstPct?: number | null; nivel: RiskLevel }
 interface MetricStat { test_name: string; label: string; key: string; bilateral: boolean; mean: number | null; unit?: string }
 interface Injuries { zonas?: { zona: string; n: number }[] }
-interface PerfRow { nombre: string; salto: number | null; rsi: number | null; dorsi: number | null }
+interface PerfRow { nombre: string; salto: number | null; rsi: number | null; dorsi: number | null; hq?: number | null; addabd?: number | null; valgo?: number | null; fuerzaRel?: number | null }
 
 const RISK_COLOR: Record<RiskLevel, string> = { rojo: '#dc2626', ambar: '#d97706', verde: '#16a34a' }
 
@@ -117,7 +117,16 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones, rendim
   const rsiData = rendimiento.filter((p) => p.rsi != null).sort((a, b) => (b.rsi as number) - (a.rsi as number)).map((p) => ({ label: p.nombre, value: p.rsi as number, color: '#4f46e5' }))
   const dorsiData = rendimiento.filter((p) => p.dorsi != null).sort((a, b) => (a.dorsi as number) - (b.dorsi as number)).map((p) => ({ label: p.nombre, value: p.dorsi as number, color: '#ea580c' }))
 
-  const nada = asimJug.length === 0 && rojo + ambar + verde + sinDatos === 0 && asimPrueba.length === 0 && zonas.length === 0 && saltoData.length === 0 && rsiData.length === 0 && dorsiData.length === 0
+  // 6) Equilibrio de fuerzas y riesgo articular.
+  const hqColor = (v: number) => (v < 0.47 ? '#dc2626' : v < 0.6 ? '#d97706' : '#16a34a')
+  const hqData = rendimiento.filter((p) => p.hq != null).sort((a, b) => (a.hq as number) - (b.hq as number)).map((p) => ({ label: p.nombre, value: p.hq as number, color: hqColor(p.hq as number) }))
+  const addabdData = rendimiento.filter((p) => p.addabd != null).sort((a, b) => (a.addabd as number) - (b.addabd as number)).map((p) => ({ label: p.nombre, value: p.addabd as number, color: '#7c3aed' }))
+  const valgoData = rendimiento.filter((p) => p.valgo != null).sort((a, b) => (b.valgo as number) - (a.valgo as number)).map((p) => ({ label: p.nombre, value: p.valgo as number, color: '#e11d48' }))
+  const fuerzaRelData = rendimiento.filter((p) => p.fuerzaRel != null).sort((a, b) => (b.fuerzaRel as number) - (a.fuerzaRel as number)).map((p) => ({ label: p.nombre, value: p.fuerzaRel as number, color: '#0284c7' }))
+
+  const nada = asimJug.length === 0 && rojo + ambar + verde + sinDatos === 0 && asimPrueba.length === 0 && zonas.length === 0
+    && saltoData.length === 0 && rsiData.length === 0 && dorsiData.length === 0
+    && hqData.length === 0 && addabdData.length === 0 && valgoData.length === 0 && fuerzaRelData.length === 0
   if (nada) return <p className="text-xs text-gray-400">Sin datos suficientes para los gráficos.</p>
 
   return (
@@ -143,6 +152,29 @@ export default function TeamCharts({ semaforo = [], panel = [], lesiones, rendim
               {rsiData.length > 0 && <ChartCard title="Reactividad · RSI por jugador"><HBars data={rsiData} decimals={2} /></ChartCard>}
               {dorsiData.length > 0 && <ChartCard title="Dorsiflexión de tobillo (°) · lado más limitado"><HBars data={dorsiData} unit="°" /></ChartCard>}
             </div>
+          </div>
+        </div>
+      )}
+
+      {(hqData.length > 0 || addabdData.length > 0 || valgoData.length > 0 || fuerzaRelData.length > 0) && (
+        <div className="pt-1">
+          <p className="text-xs font-semibold text-gray-500 mb-2">Equilibrio de fuerzas y riesgo articular</p>
+          <div className="space-y-3">
+            {hqData.length > 0 && (
+              <ChartCard title="Ratio isquios/cuádriceps (H:Q) por jugador">
+                <p className="text-[11px] text-gray-400 mb-2">Referencia ≈ 0,5–0,6. Menor = mayor riesgo de isquios. Color: rojo &lt;0,47, ámbar 0,47–0,6, verde ≥0,6.</p>
+                <HBars data={hqData} decimals={2} />
+              </ChartCard>
+            )}
+            <div className="grid sm:grid-cols-2 gap-3">
+              {addabdData.length > 0 && <ChartCard title="Ratio aductor/abductor por jugador"><p className="text-[11px] text-gray-400 mb-2">≈1,0 equilibrado; bajo = posible déficit de aductores.</p><HBars data={addabdData} decimals={2} /></ChartCard>}
+              {valgoData.length > 0 && <ChartCard title="Valgo dinámico de rodilla (°) · peor lado"><p className="text-[11px] text-gray-400 mb-2">Mayor ángulo = más valgo (posible riesgo de rodilla).</p><HBars data={valgoData} unit="°" /></ChartCard>}
+            </div>
+            {fuerzaRelData.length > 0 && (
+              <ChartCard title="Fuerza de isquios relativa (N/kg) por jugador · mayor = más fuerza">
+                <HBars data={fuerzaRelData} decimals={2} />
+              </ChartCard>
+            )}
           </div>
         </div>
       )}

@@ -394,8 +394,15 @@ export async function POST(request: NextRequest) {
       const saltoData = perf.filter((p) => p.salto != null).sort((a, b) => b.salto - a.salto).map((p) => ({ label: p.nombre, value: p.salto, color: [13, 148, 136] }))
       const rsiData = perf.filter((p) => p.rsi != null).sort((a, b) => b.rsi - a.rsi).map((p) => ({ label: p.nombre, value: p.rsi, color: [79, 70, 229] }))
       const dorsiData = perf.filter((p) => p.dorsi != null).sort((a, b) => a.dorsi - b.dorsi).map((p) => ({ label: p.nombre, value: p.dorsi, color: [234, 88, 12] }))
+      const hqColor = (v: number): number[] => (v < 0.47 ? [220, 38, 38] : v < 0.6 ? [217, 119, 6] : [22, 163, 74])
+      const hqData = perf.filter((p) => p.hq != null).sort((a, b) => a.hq - b.hq).map((p) => ({ label: p.nombre, value: p.hq, color: hqColor(p.hq) }))
+      const addabdData = perf.filter((p) => p.addabd != null).sort((a, b) => a.addabd - b.addabd).map((p) => ({ label: p.nombre, value: p.addabd, color: [124, 58, 237] }))
+      const valgoData = perf.filter((p) => p.valgo != null).sort((a, b) => b.valgo - a.valgo).map((p) => ({ label: p.nombre, value: p.valgo, color: [225, 29, 72] }))
+      const fuerzaRelData = perf.filter((p) => p.fuerzaRel != null).sort((a, b) => b.fuerzaRel - a.fuerzaRel).map((p) => ({ label: p.nombre, value: p.fuerzaRel, color: [2, 132, 199] }))
       const hbarH = (n: number) => 12 + n * 6.6 + 4 // subtítulo + barras (para no partir el gráfico)
-      if (rj + am + vd + sd > 0 || asimJug.length || asimPrueba.length || zonas.length || saltoData.length || rsiData.length || dorsiData.length) {
+      const anyPerf = saltoData.length || rsiData.length || dorsiData.length
+      const anyRatio = hqData.length || addabdData.length || valgoData.length || fuerzaRelData.length
+      if (rj + am + vd + sd > 0 || asimJug.length || asimPrueba.length || zonas.length || anyPerf || anyRatio) {
         y = writeSectionTitle(doc, 'Gráficos', y)
         if (rj + am + vd + sd > 0) {
           y = reserve(doc, 32, y); y += 3
@@ -424,6 +431,38 @@ export async function POST(request: NextRequest) {
           if (saltoData.length) { y = reserve(doc, hbarH(saltoData.length), y); y += 2; y = writeSubtitle(doc, 'Salto CMJ (cm) por jugador · más alto = más potencia', y); y = drawHBars(doc, saltoData, y, ' cm') }
           if (rsiData.length) { y = reserve(doc, hbarH(rsiData.length), y); y += 2; y = writeSubtitle(doc, 'Reactividad · RSI por jugador', y); y = drawHBars(doc, rsiData, y, '', 2) }
           if (dorsiData.length) { y = reserve(doc, hbarH(dorsiData.length), y); y += 2; y = writeSubtitle(doc, 'Dorsiflexión de tobillo (°) · lado más limitado', y); y = drawHBars(doc, dorsiData, y, '°') }
+        }
+        // Equilibrio de fuerzas y riesgo articular
+        if (anyRatio) {
+          y = reserve(doc, 14, y); y += 4
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(60, 60, 60)
+          doc.text('Equilibrio de fuerzas y riesgo articular', MARGIN_LEFT, y); y += 5
+          if (hqData.length) {
+            y = reserve(doc, hbarH(hqData.length) + 5, y); y += 2
+            y = writeSubtitle(doc, 'Ratio isquios/cuádriceps (H:Q) por jugador', y)
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130)
+            doc.text('Referencia ≈ 0,5–0,6. Menor = mayor riesgo de isquios. Color: rojo <0,47, ámbar 0,47–0,6, verde ≥0,6.', MARGIN_LEFT, y); y += 4
+            y = drawHBars(doc, hqData, y, '', 2)
+          }
+          if (addabdData.length) {
+            y = reserve(doc, hbarH(addabdData.length) + 5, y); y += 2
+            y = writeSubtitle(doc, 'Ratio aductor/abductor por jugador', y)
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130)
+            doc.text('≈ 1,0 equilibrado; bajo = posible déficit de aductores.', MARGIN_LEFT, y); y += 4
+            y = drawHBars(doc, addabdData, y, '', 2)
+          }
+          if (valgoData.length) {
+            y = reserve(doc, hbarH(valgoData.length) + 5, y); y += 2
+            y = writeSubtitle(doc, 'Valgo dinámico de rodilla (°) · peor lado', y)
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5); doc.setTextColor(130, 130, 130)
+            doc.text('Mayor ángulo = más valgo (posible riesgo de rodilla).', MARGIN_LEFT, y); y += 4
+            y = drawHBars(doc, valgoData, y, '°')
+          }
+          if (fuerzaRelData.length) {
+            y = reserve(doc, hbarH(fuerzaRelData.length), y); y += 2
+            y = writeSubtitle(doc, 'Fuerza de isquios relativa (N/kg) · mayor = más fuerza', y)
+            y = drawHBars(doc, fuerzaRelData, y, '', 2)
+          }
         }
       }
     }

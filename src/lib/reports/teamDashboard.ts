@@ -37,9 +37,13 @@ export interface AnexoRow {
 
 export interface PerfRow {
   nombre: string
-  salto: number | null // altura CMJ (cm)
-  rsi: number | null   // índice de fuerza reactiva (drop jump / CMJ)
-  dorsi: number | null // dorsiflexión de tobillo, lado más limitado (°)
+  salto: number | null    // altura CMJ (cm)
+  rsi: number | null       // índice de fuerza reactiva (drop jump / CMJ)
+  dorsi: number | null     // dorsiflexión de tobillo, lado más limitado (°)
+  hq: number | null        // ratio isquios/cuádriceps (H:Q)
+  addabd: number | null    // ratio aductor/abductor
+  valgo: number | null     // valgo dinámico de rodilla, peor lado (°)
+  fuerzaRel: number | null // fuerza de isquios relativa al peso (N/kg)
 }
 
 export interface TeamDashboard {
@@ -50,11 +54,18 @@ export interface TeamDashboard {
   rendimiento: PerfRow[]       // otras capacidades (salto, reactividad, movilidad) por jugador
 }
 
-// Extrae, por patrones de clave, las métricas de rendimiento NO basadas en asimetría.
-function extractPerf(p: PlayerMetrics): PerfRow {
+const round2 = (x: number | null): number | null => (x == null ? null : Math.round(x * 100) / 100)
+const meanBil = (v: any): number | null => {
+  const arr = [num(v?.izq), num(v?.der)].filter((x): x is number => x != null)
+  return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : num(v?.valor)
+}
+
+// Extrae, por patrones de clave, las métricas de rendimiento y de riesgo NO basadas en asimetría.
+function extractPerf(p: PlayerMetrics, weight: number | null): PerfRow {
   let salto: number | null = null, rsi: number | null = null, dorsi: number | null = null
+  let isqF: number | null = null, q60F: number | null = null, addabd: number | null = null, valgo: number | null = null
   for (const t of p.tests) {
-    const single = /^SL/i.test(t.test_name) // excluir pruebas unipodales para el salto/RSI "bilateral"
+    const single = /^SL/i.test(t.test_name) // excluir unipodales para el salto/RSI "bilateral"
     for (const m of t.metrics) {
       const v = (t.values as any)?.[m.key]
       if (m.key === 'altura' && !single && salto == null) salto = num(v?.valor)
@@ -63,9 +74,18 @@ function extractPerf(p: PlayerMetrics): PerfRow {
         const lados = [num(v?.izq), num(v?.der)].filter((x): x is number => x != null)
         if (lados.length && dorsi == null) dorsi = Math.min(...lados)
       }
+      if (m.key === 'fuerza_max' && /isq/i.test(t.test_name) && isqF == null) isqF = meanBil(v)
+      if (m.key === 'fuerza_max' && /q\s*60|cu[aá]dr|quad/i.test(t.test_name) && q60F == null) q60F = meanBil(v)
+      if (m.key === 'ratio_add_abd' && addabd == null) addabd = meanBil(v)
+      if (m.key === 'valgo_rodilla') {
+        const lados = [num(v?.izq), num(v?.der)].filter((x): x is number => x != null)
+        if (lados.length && valgo == null) valgo = Math.max(...lados)
+      }
     }
   }
-  return { nombre: p.nombre, salto, rsi, dorsi }
+  const hq = isqF != null && q60F != null && q60F > 0 ? round2(isqF / q60F) : null
+  const fuerzaRel = isqF != null && weight != null && weight > 0 ? round2(isqF / weight) : null
+  return { nombre: p.nombre, salto, rsi, dorsi, hq, addabd: round2(addabd), valgo, fuerzaRel }
 }
 
 // ---- Utilidades ----
@@ -145,6 +165,7 @@ export function buildTeamDashboard(
   players: PlayerMetrics[],
   panel: TeamMetricStat[],
   injuriesByName: Map<string, any[]>,
+  weightByName?: Map<string, number>,
 ): TeamDashboard {
   const riesgos: PlayerRisk[] = players.map((p) => {
     const maxAsim = maxAsymmetry(p)
@@ -190,7 +211,7 @@ export function buildTeamDashboard(
     metricaClave: r.maxAsim != null ? `asim ${Math.round(r.maxAsim)}%` : r.worstPct != null ? `percentil ${Math.round(r.worstPct)}` : null,
   }))
 
-  const rendimiento = players.map(extractPerf)
+  const rendimiento = players.map((p) => extractPerf(p, weightByName?.get(p.nombre) ?? null))
 
   return { kpis, riesgos, lesiones, anexo, rendimiento }
 }

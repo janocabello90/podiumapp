@@ -214,7 +214,17 @@ export async function POST(request: NextRequest) {
     const injuriesByName = new Map<string, any[]>()
     for (const p of cappedIncluded) injuriesByName.set(p.full_name, injByPatient.get(p.id) || [])
 
-    const dashboard = buildTeamDashboard(players, panel, injuriesByName)
+    // Peso por jugador (de la anamnesis) para la fuerza relativa.
+    const weightByPatient = new Map<string, number>()
+    for (const a of anamRows || []) {
+      if (weightByPatient.has((a as any).patient_id)) continue
+      const w = Number((a as any).form_data?.weight_kg)
+      if (Number.isFinite(w) && w > 0) weightByPatient.set((a as any).patient_id, w)
+    }
+    const weightByName = new Map<string, number>()
+    for (const p of cappedIncluded) { const w = weightByPatient.get(p.id); if (w) weightByName.set(p.full_name, w) }
+
+    const dashboard = buildTeamDashboard(players, panel, injuriesByName, weightByName)
     const synthesis = buildDashboardSynthesis(dashboard)
 
     // Titular (1 frase) de cada informe individual aprobado → para el anexo.
